@@ -4,15 +4,22 @@ package net.psforever.packet.game
 import net.psforever.packet.{GamePacketOpcode, Marshallable, PacketHelpers, PlanetSideGamePacket}
 import scodec.Codec
 import scodec.codecs._
+//import shapeless.{::, HNil}
 
-/*
-8783a81b0d141700b82435b6e30002c9befb1f0483cdf9c00380081c0fa8fcbdd22d8e132cff007ed008451bc2fbb4020d1b132a04817708
- */
+/**
+  * A deployable object's `List` entry.
+  * @param objClass the type of deployable item
+  * @param unk na
+  */
+final case class DeploymentCount(objClass : Long,
+                                 unk : Long)
 
-final case class DeploymentCount(unk1 : Long,
-                                 unk2 : Long)
-
-final case class ObjectDeployedCountMessage(player_guid : PlanetSideGUID,
+/**
+  * na
+  * @param guid na
+  * @param deployments a `List` of `DeploymentCount` data
+  */
+final case class ObjectDeployedCountMessage(guid : PlanetSideGUID,
                                             deployments : List[DeploymentCount]
                                            ) extends PlanetSideGamePacket {
   type Packet = ObjectDeployedCountMessage
@@ -21,13 +28,28 @@ final case class ObjectDeployedCountMessage(player_guid : PlanetSideGUID,
 }
 
 object ObjectDeployedCountMessage extends Marshallable[ObjectDeployedCountMessage] {
+  //TODO use this when ObjectClass has been converted from an object containing numeric constants to an Enumeration?
+//  private val objClass_32u : Codec[Long] = uintL(11).hlist.xmap[Long] (
+//    {
+//      case n :: HNil =>
+//        n.toLong
+//    },
+//    {
+//      case n =>
+//        n.toInt :: HNil
+//    }
+//  )
+
+  /**
+    * `Codec` for `DeploymentCount` data.
+    */
   final val count_codec : Codec[DeploymentCount] = (
-    ("unk1" | uint32L) ::
-      ("unk2" | uint32L)
+    ("objClass" | uint32L) ::
+      ("unk" | uint32L)
     ).as[DeploymentCount]
 
   implicit val codec : Codec[ObjectDeployedCountMessage] = (
-    ("player_guid" | PlanetSideGUID.codec) ::
+    ("guid" | PlanetSideGUID.codec) ::
       ("deployments" | PacketHelpers.listOfNAligned(uint32L, 0, count_codec))
     ).as[ObjectDeployedCountMessage]
 }
