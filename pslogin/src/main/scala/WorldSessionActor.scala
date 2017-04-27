@@ -217,7 +217,32 @@ class WorldSessionActor extends Actor with MDCContextAware {
               sendResponse(PacketCoding.CreateGamePacket(0, SetCurrentAvatarMessage(guid,0,0)))
               sendResponse(PacketCoding.CreateGamePacket(0, CreateShortcutMessage(guid, 1, 0, true, Shortcut.MEDKIT)))
               sendResponse(PacketCoding.CreateGamePacket(0, ReplicationStreamMessage(5, Some(6), Vector(SquadListing(255))))) //clear squad list
-
+sendResponse(PacketCoding.CreateGamePacket(0,
+  EmpireBenefitsMessage(
+    ContinentBenefit(PlanetSideEmpire.TR, BenefitCondition.TrLockedVsHomeContinents) ::
+      ContinentBenefit(PlanetSideEmpire.TR, BenefitCondition.TrLockedNcHomeContinents) ::
+      ContinentBenefit(PlanetSideEmpire.TR, BenefitCondition.LockedIshundar) ::
+      ContinentBenefit(PlanetSideEmpire.NC, BenefitCondition.NcLockedTrHomeContinents) ::
+      ContinentBenefit(PlanetSideEmpire.NC, BenefitCondition.NcLockedVsHomeContinents) ::
+      ContinentBenefit(PlanetSideEmpire.NC, BenefitCondition.LockedCyssor) ::
+      ContinentBenefit(PlanetSideEmpire.VS, BenefitCondition.VsLockedNcHomeContinents) ::
+      ContinentBenefit(PlanetSideEmpire.VS, BenefitCondition.VsLockedTrHomeContinents) ::
+      ContinentBenefit(PlanetSideEmpire.VS, BenefitCondition.LockedSearhus) ::
+      ContinentBenefit(PlanetSideEmpire.VS, BenefitCondition.LockedBattleIslands) ::
+      Nil,
+    EmpireBenefitsExtra(PlanetSideEmpire.TR, 1) :: //TrLockedVsHomeContinents
+      EmpireBenefitsExtra(PlanetSideEmpire.TR, 8) :: //TrLockedNcHomeContinents
+      EmpireBenefitsExtra(PlanetSideEmpire.TR, 9) :: //LockedIshundar
+      EmpireBenefitsExtra(PlanetSideEmpire.NC, 6) :: //NcLockedTrHomeContinents
+      EmpireBenefitsExtra(PlanetSideEmpire.NC, 7) :: //NcLockedVsHomeContinents
+      EmpireBenefitsExtra(PlanetSideEmpire.NC, 9) :: //LockedCyssor
+      EmpireBenefitsExtra(PlanetSideEmpire.VS, 3) :: //VsLockedNcHomeContinents
+      EmpireBenefitsExtra(PlanetSideEmpire.VS, 4) :: //VsLockedTrHomeContinents
+      EmpireBenefitsExtra(PlanetSideEmpire.VS, 7) :: //LockedSearhus
+      EmpireBenefitsExtra(PlanetSideEmpire.VS, 8) :: //LockedBattleIslands
+      Nil
+  )
+))
               import scala.concurrent.duration._
               import scala.concurrent.ExecutionContext.Implicits.global
               clientKeepAlive = context.system.scheduler.schedule(0 seconds, 500 milliseconds, self, PokeClient())
