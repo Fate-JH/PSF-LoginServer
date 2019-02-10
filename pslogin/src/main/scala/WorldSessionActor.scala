@@ -2464,6 +2464,9 @@ class WorldSessionActor extends Actor with MDCContextAware {
       })
     StopBundlingPackets()
     drawDeloyableIcon = DontRedrawIcons
+    sendResponse(PlanetsideAttributeMessage(guid, 77, 5)) //cavern caps
+    sendResponse(PlanetsideAttributeMessage(guid, 78, 75)) //cavern kills
+    sendResponse(GenericActionMessage(24)) //imprints
   }
 
   def handleControlPkt(pkt : PlanetSideControlPacket) = {
@@ -2524,6 +2527,9 @@ class WorldSessionActor extends Actor with MDCContextAware {
       avatar.Certifications += AssaultEngineering
       avatar.Certifications += Hacking
       avatar.Certifications += AdvancedHacking
+      avatar.Certifications += BattleFrameRobotics
+      avatar.Certifications += BFRAntiInfantry
+      avatar.Certifications += BFRAntiAircraft
       this.avatar = avatar
 
       InitializeDeployableQuantities(avatar) //set deployables ui elements

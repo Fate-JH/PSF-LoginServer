@@ -48,7 +48,9 @@ object CertTerminalDefinition {
     "virus_hacking" -> CertificationType.DataCorruption,
     "electronics_expert" -> CertificationType.ElectronicsExpert,
     "Medical" -> CertificationType.Medical,
-    "advanced_medical" -> CertificationType.AdvancedMedical
-    //TODO bfr certification entries
+    "advanced_medical" -> CertificationType.AdvancedMedical,
+    "bfr_basic" -> CertificationType.BattleFrameRobotics,
+    "bfr_ai_gunnery" -> CertificationType.BFRAntiInfantry,
+    "bfr_aa_gunnery" -> CertificationType.BFRAntiAircraft
   )
 }

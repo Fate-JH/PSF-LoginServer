@@ -160,8 +160,46 @@ object WeaponData extends Marshallable[WeaponData] {
           Attempt.successful(data :: fmode :: false :: Some(InventoryData(ammo)) :: unk :: HNil)
         }
 
-      case _ =>
-        Attempt.failure(Err("invalid weapon data format"))
+      case data =>
+        Attempt.failure(Err(s"invalid weapon data format - $data"))
+    }
+  )
+
+  implicit val codec2 : Codec[WeaponData] = (
+    ("data" | CommonFieldData.codec2) ::
+      ("fire_mode" | int8) ::
+      bool ::
+      optional(bool, "ammo" | InventoryData.codec) ::
+      ("unk" | bool)
+    ).exmap[WeaponData] (
+    {
+      case data :: fmode :: false :: Some(InventoryData(ammo)) :: unk :: HNil =>
+        val magSize = ammo.size
+        if(magSize == 0) {
+          Attempt.failure(Err("weapon must decode some ammunition"))
+        }
+        else {
+          Attempt.successful(WeaponData(data, fmode, ammo, unk))
+        }
+
+      case data =>
+        Attempt.failure(Err(s"invalid weapon data format - $data"))
+    },
+    {
+      case WeaponData(data, fmode, ammo, unk) =>
+        val magSize = ammo.size
+        if(magSize == 0) {
+          Attempt.failure(Err("weapon must encode some ammunition"))
+        }
+        else if(magSize >= 255) {
+          Attempt.failure(Err("weapon encodes too much ammunition (255+ types!)"))
+        }
+        else {
+          Attempt.successful(data(false) :: fmode :: false :: Some(InventoryData(ammo)) :: unk :: HNil)
+        }
+
+      case data =>
+        Attempt.failure(Err(s"invalid weapon data format - $data"))
     }
   )
 }
