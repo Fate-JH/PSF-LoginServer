@@ -788,6 +788,12 @@ object GlobalDefinitions {
   val energy_gun_tr = ToolDefinition(ObjectClass.energy_gun_tr)
 
   val energy_gun_vs = ToolDefinition(ObjectClass.energy_gun_vs)
+
+  val aphelion_ppa_left = ToolDefinition(ObjectClass.aphelion_ppa_left)
+
+  val aphelion_ppa_right = ToolDefinition(ObjectClass.aphelion_ppa_right)
+
+  val aphelion_plasma_rocket_pod = ToolDefinition(ObjectClass.aphelion_plasma_rocket_pod)
   init_tools()
 
   /*
@@ -4778,6 +4784,33 @@ object GlobalDefinitions {
     energy_gun_vs.FireModes.head.AmmoTypeIndices += 0
     energy_gun_vs.FireModes.head.AmmoSlotIndex = 0
     energy_gun_vs.FireModes.head.Magazine = 100
+
+    aphelion_ppa_left.Name = "aphelion_ppa_left"
+    aphelion_ppa_left.Size = EquipmentSize.BFRArmWeapon
+    aphelion_ppa_left.AmmoTypes += aphelion_ppa_ammo
+    aphelion_ppa_left.ProjectileTypes += aphelion_ppa_projectile
+    aphelion_ppa_left.FireModes += new FireModeDefinition
+    aphelion_ppa_left.FireModes.head.AmmoTypeIndices += 0
+    aphelion_ppa_left.FireModes.head.AmmoSlotIndex = 0
+    aphelion_ppa_left.FireModes.head.Magazine = 25
+
+    aphelion_ppa_right.Name = "aphelion_ppa_right"
+    aphelion_ppa_right.Size = EquipmentSize.BFRArmWeapon
+    aphelion_ppa_right.AmmoTypes += aphelion_ppa_ammo
+    aphelion_ppa_right.ProjectileTypes += aphelion_ppa_projectile
+    aphelion_ppa_right.FireModes += new FireModeDefinition
+    aphelion_ppa_right.FireModes.head.AmmoTypeIndices += 0
+    aphelion_ppa_right.FireModes.head.AmmoSlotIndex = 0
+    aphelion_ppa_right.FireModes.head.Magazine = 25
+
+    aphelion_plasma_rocket_pod.Name = "aphelion_plasma_rocket_pod"
+    aphelion_plasma_rocket_pod.Size = EquipmentSize.BFRGunnerWeapon
+    aphelion_plasma_rocket_pod.AmmoTypes += aphelion_plasma_rocket_ammo
+    aphelion_plasma_rocket_pod.ProjectileTypes += aphelion_plasma_rocket_projectile
+    aphelion_plasma_rocket_pod.FireModes += new FireModeDefinition
+    aphelion_plasma_rocket_pod.FireModes.head.AmmoTypeIndices += 0
+    aphelion_plasma_rocket_pod.FireModes.head.AmmoSlotIndex = 0
+    aphelion_plasma_rocket_pod.FireModes.head.Magazine = 40
   }
 
   /**
@@ -5538,6 +5571,7 @@ object GlobalDefinitions {
     phantasm.Packet = variantConverter
     phantasm.DestroyedModel = None //the adb calls out a phantasm_destroyed but no such asset exists
 
+    val battleFrameConverter = new BattleFrameRoboticsConverter
     aphelion_gunner.Name = "aphelion_gunner"
     aphelion_gunner.MaxHealth = 4500
     aphelion_gunner.MaxShields = 3000 + 1
@@ -5545,14 +5579,15 @@ object GlobalDefinitions {
     aphelion_gunner.Seats(0).ControlledWeapon = Set(2, 3)
     aphelion_gunner.Seats += 1 -> new SeatDefinition()
     aphelion_gunner.Seats(1).ControlledWeapon = 4
-    aphelion_gunner.Weapons(2 -> fury_weapon_systema)
-    aphelion_gunner.Weapons(3 -> fury_weapon_systema)
-    aphelion_gunner.Weapons(4 -> fury_weapon_systema)
+    aphelion_gunner.Weapons(2 -> aphelion_ppa_left)
+    aphelion_gunner.Weapons(3 -> aphelion_ppa_right)
+    aphelion_gunner.Weapons(4 -> aphelion_plasma_rocket_pod)
     aphelion_gunner.MountPoints += 1 -> 0
     aphelion_gunner.MountPoints += 2 -> 1
     aphelion_gunner.TrunkSize = InventoryTile.Tile1511
     aphelion_gunner.TrunkOffset = 30
     aphelion_gunner.AutoPilotSpeeds = (24, 10)
+    aphelion_gunner.Packet = battleFrameConverter
     aphelion_gunner.DestroyedModel = None
   }
 

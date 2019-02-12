@@ -268,16 +268,22 @@ object VehicleData extends Marshallable[VehicleData] {
     )
   }
 
+  //TODO actually figure out how character names are measured and improve the counting system
   /**
     * Distance from the length field of a vehicle creation packet up until the start of the vehicle's inventory data.
     * The only field excluded belongs to the original opcode for the packet.
     * The parameters outline reasons why the length of the stream would be different
     * and are used to determine the exact difference value.<br>
-    * Note:<br>
-    * 198 includes the `ObjectCreateMessage` packet fields, without parent data,
-    * the `VehicleData` fields,
-    * and the first three fields of the `InternalSlot`.
-    * @see `ObjectCreateMessage`
+    * <br>
+    * The value 198 as the base size includes:
+    * the `ObjectCreateMessage` packet fields, without opcode or parent data (60),
+    * the position fields without velocity (81),
+    * the common fields (24),
+    * the `VehicleData` specific fields (23),
+    * and size and padding of inventory data (10),
+    * and the first three fields of the `InternalSlot` (35).
+    * @see `ObjectCreateBase`
+    * @see `InternalSlot`
     * @param hasVelocity the presence of a velocity field - `vel` - in the `PlacementData` object for this vehicle
     * @param format the `Codec` subtype for this vehicle
     * @return the length of the bitstream
@@ -288,6 +294,7 @@ object VehicleData extends Marshallable[VehicleData] {
       (format match {
         case VehicleFormat.Utility => 6
         case VehicleFormat.Variant => 8
+        case VehicleFormat.Battleframe => 26
         case _ => 0
       })
   }
