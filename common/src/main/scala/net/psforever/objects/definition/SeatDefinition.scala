@@ -12,15 +12,15 @@ class SeatDefinition extends BasicDefinition {
   /** the user can escape while the vehicle is moving */
   private var bailable : Boolean = false
   /** any controlled weapon */
-  private var weaponMount : Option[Int] = None
+  private var weaponMount : Option[Set[Int]] = None
   Name = "seat"
 
   def ArmorRestriction : SeatArmorRestriction.Value = {
-    this.armorRestriction
+    armorRestriction
   }
 
   def ArmorRestriction_=(restriction : SeatArmorRestriction.Value) : SeatArmorRestriction.Value = {
-    this.armorRestriction = restriction
+    armorRestriction = restriction
     restriction
   }
 
@@ -29,20 +29,20 @@ class SeatDefinition extends BasicDefinition {
   }
 
   def Bailable_=(canBail : Boolean) : Boolean = {
-    this.bailable = canBail
+    bailable = canBail
     canBail
   }
 
-  def ControlledWeapon : Option[Int] = {
-    this.weaponMount
+  def ControlledWeapon : Set[Int] = {
+    weaponMount.getOrElse(Set.empty[Int])
   }
 
-  def ControlledWeapon_=(wep : Int) : Option[Int] = {
-    ControlledWeapon_=(Some(wep))
+  def ControlledWeapon_=(wep : Int) : Set[Int] = {
+    ControlledWeapon_=(Set(wep))
   }
 
-  def ControlledWeapon_=(wep : Option[Int]) : Option[Int] = {
-    this.weaponMount = wep
+  def ControlledWeapon_=(wep : Set[Int]) : Set[Int] = {
+    weaponMount = Some(wep)
     ControlledWeapon
   }
 }

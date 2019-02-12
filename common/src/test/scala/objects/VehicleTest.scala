@@ -28,13 +28,13 @@ class VehicleTest extends Specification {
       val t_seat = new SeatDefinition
       t_seat.ArmorRestriction mustEqual SeatArmorRestriction.NoMax
       t_seat.Bailable mustEqual false
-      t_seat.ControlledWeapon mustEqual None
+      t_seat.ControlledWeapon mustEqual Set.empty
     }
 
     "define (custom)" in {
       seat.ArmorRestriction mustEqual SeatArmorRestriction.MaxOnly
       seat.Bailable mustEqual true
-      seat.ControlledWeapon mustEqual Some(5)
+      seat.ControlledWeapon mustEqual Set(5)
     }
   }
 
@@ -45,7 +45,7 @@ class VehicleTest extends Specification {
       fury.CanCloak mustEqual false
       fury.Seats.size mustEqual 1
       fury.Seats(0).Bailable mustEqual true
-      fury.Seats(0).ControlledWeapon mustEqual Some(1)
+      fury.Seats(0).ControlledWeapon mustEqual Set(1)
       fury.MountPoints.size mustEqual 2
       fury.MountPoints.get(1) mustEqual Some(0)
       fury.MountPoints.get(2) mustEqual Some(0)
@@ -68,7 +68,7 @@ class VehicleTest extends Specification {
       val seat = new Seat(seat_def)
       seat.ArmorRestriction mustEqual SeatArmorRestriction.MaxOnly
       seat.Bailable mustEqual true
-      seat.ControlledWeapon mustEqual Some(5)
+      seat.ControlledWeapon mustEqual Set(5)
       seat.isOccupied mustEqual false
       seat.Occupant mustEqual None
     }
@@ -140,7 +140,7 @@ class VehicleTest extends Specification {
       fury_vehicle.Seats(0).isOccupied mustEqual false
       fury_vehicle.Seats(0).Occupant mustEqual None
       fury_vehicle.Seats(0).Bailable mustEqual true
-      fury_vehicle.Seats(0).ControlledWeapon mustEqual Some(1)
+      fury_vehicle.Seats(0).ControlledWeapon mustEqual Set(1)
       fury_vehicle.PermissionGroup(0) mustEqual Some(VehicleLockState.Locked) //driver
       fury_vehicle.PermissionGroup(1) mustEqual Some(VehicleLockState.Empire) //gunner
       fury_vehicle.PermissionGroup(2) mustEqual Some(VehicleLockState.Empire) //passenger
@@ -150,7 +150,7 @@ class VehicleTest extends Specification {
       fury_vehicle.Weapons.get(1).isDefined mustEqual true
       fury_vehicle.Weapons(1).Equipment.isDefined mustEqual true
       fury_vehicle.Weapons(1).Equipment.get.Definition mustEqual GlobalDefinitions.fury.Weapons(1)
-      fury_vehicle.WeaponControlledFromSeat(0) mustEqual fury_vehicle.Weapons(1).Equipment
+      fury_vehicle.WeaponControlledFromSeat(0) mustEqual Seq(fury_vehicle.Weapons(1).Equipment)
       fury_vehicle.Trunk.Width mustEqual 11
       fury_vehicle.Trunk.Height mustEqual 11
       fury_vehicle.Trunk.Offset mustEqual 30
@@ -257,8 +257,8 @@ class VehicleTest extends Specification {
       val chaingun_p = harasser_vehicle.Weapons(2).Equipment
       chaingun_p.isDefined mustEqual true
 
-      harasser_vehicle.WeaponControlledFromSeat(0) mustEqual None
-      harasser_vehicle.WeaponControlledFromSeat(1) mustEqual chaingun_p
+      harasser_vehicle.WeaponControlledFromSeat(0) mustEqual Nil
+      harasser_vehicle.WeaponControlledFromSeat(1) mustEqual Seq(chaingun_p)
     }
 
     "can filter utilities with indices that are natural numbers" in {

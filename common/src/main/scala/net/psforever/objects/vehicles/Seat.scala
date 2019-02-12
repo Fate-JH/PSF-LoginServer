@@ -66,7 +66,7 @@ class Seat(private val seatDef : SeatDefinition) {
     seatDef.Bailable
   }
 
-  def ControlledWeapon : Option[Int] = {
+  def ControlledWeapon : Set[Int] = {
     seatDef.ControlledWeapon
   }
 

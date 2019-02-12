@@ -3,7 +3,7 @@ package net.psforever.objects
 
 import akka.actor.ActorRef
 import net.psforever.objects.definition.VehicleDefinition
-import net.psforever.objects.equipment.{Equipment, EquipmentSize, EquipmentSlot}
+import net.psforever.objects.equipment.{Equipment, EquipmentSlot}
 import net.psforever.objects.inventory.{Container, GridInventory, InventoryTile}
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.PlanetSideServerObject
@@ -324,11 +324,11 @@ class Vehicle(private val vehicleDef : VehicleDefinition) extends PlanetSideServ
     else {
       Seat(seatNumber) match {
         case Some(seat) =>
-          seat.ControlledWeapon match {
-            case Some(_) =>
-              Some(AccessPermissionGroup.Gunner)
-            case None =>
-              Some(AccessPermissionGroup.Passenger)
+          if(seat.ControlledWeapon.isEmpty) {
+            Some(AccessPermissionGroup.Passenger)
+          }
+          else {
+            Some(AccessPermissionGroup.Gunner)
           }
         case None =>
           CargoHold(seatNumber) match {
@@ -342,6 +342,17 @@ class Vehicle(private val vehicleDef : VehicleDefinition) extends PlanetSideServ
   }
 
   def Weapons : Map[Int, EquipmentSlot] = weapons
+
+  def ControlledWeapon(wepNumber : Seq[Int]) : Option[Seq[Equipment]] = {
+    wepNumber
+      .map { ControlledWeapon }
+      .collect { case Some(wep) => wep } match {
+      case Nil =>
+        None
+      case list =>
+        Some(list)
+    }
+  }
 
   /**
     * Get the weapon at the index.
@@ -415,7 +426,7 @@ class Vehicle(private val vehicleDef : VehicleDefinition) extends PlanetSideServ
 
   def Inventory : GridInventory = trunk
 
-  def VisibleSlots : Set[Int] = weapons.keySet
+  def VisibleSlots : Set[Int] = Definition.WeaponSlots.toSet
 
   override def Slot(slotNum : Int) : EquipmentSlot = {
     weapons.get(slotNum)
@@ -619,11 +630,16 @@ object Vehicle {
     //general stuff
     vehicle.Health = vdef.MaxHealth
     //create weapons
-    vehicle.weapons = vdef.Weapons.map({case (num, definition) =>
-      val slot = EquipmentSlot(EquipmentSize.VehicleWeapon)
-      slot.Equipment = Tool(definition)
-      num -> slot
-    }).toMap
+    vehicle.weapons = vdef.WeaponSlotSizes
+      .map { case (num, size) => (num, EquipmentSlot(size), vdef.Weapons.get(num)) }
+      .map {
+        case (num, slot, Some(definition)) => //defaulted weapon
+          slot.Equipment = Tool(definition)
+          num -> slot
+        case (num, slot, None) => //empty equipment slot
+          num -> slot
+      }
+      .toMap
     //create seats
     vehicle.seats = vdef.Seats.map({ case(num, definition) => num -> Seat(definition)}).toMap
     // create cargo holds

@@ -24,7 +24,7 @@ class ImplantTerminalMechTest extends Specification {
       implant_terminal_mech.Seats(0).isInstanceOf[SeatDefinition] mustEqual true
       implant_terminal_mech.Seats(0).ArmorRestriction mustEqual net.psforever.objects.vehicles.SeatArmorRestriction.NoMax
       implant_terminal_mech.Seats(0).Bailable mustEqual false
-      implant_terminal_mech.Seats(0).ControlledWeapon mustEqual None
+      implant_terminal_mech.Seats(0).ControlledWeapon mustEqual Set.empty
     }
   }
 
@@ -39,19 +39,19 @@ class ImplantTerminalMechTest extends Specification {
 
     "get seat from mount points" in {
       val obj = ImplantTerminalMech(GlobalDefinitions.implant_terminal_mech)
-      obj.GetSeatFromMountPoint(0) mustEqual None
-      obj.GetSeatFromMountPoint(1) mustEqual Some(0)
-      obj.GetSeatFromMountPoint(2) mustEqual None
+      obj.GetSeatFromMountPoint(0) mustEqual Set.empty
+      obj.GetSeatFromMountPoint(1) mustEqual Set(0)
+      obj.GetSeatFromMountPoint(2) mustEqual Set.empty
     }
 
     "get passenger in a seat" in {
       val player = Player(Avatar("test", PlanetSideEmpire.TR, CharacterGender.Male, 0, CharacterVoice.Mute))
       val obj = ImplantTerminalMech(GlobalDefinitions.implant_terminal_mech)
-      obj.PassengerInSeat(player) mustEqual None
+      obj.PassengerInSeat(player) mustEqual Set.empty
       obj.Seats(0).Occupant = player
-      obj.PassengerInSeat(player) mustEqual Some(0)
+      obj.PassengerInSeat(player) mustEqual Set(0)
       obj.Seats(0).Occupant = None
-      obj.PassengerInSeat(player) mustEqual None
+      obj.PassengerInSeat(player) mustEqual Set.empty
     }
   }
 }

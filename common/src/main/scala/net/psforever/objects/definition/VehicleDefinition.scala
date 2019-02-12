@@ -2,6 +2,7 @@
 package net.psforever.objects.definition
 
 import net.psforever.objects.definition.converter.VehicleConverter
+import net.psforever.objects.equipment.EquipmentSize
 import net.psforever.objects.inventory.InventoryTile
 import net.psforever.objects.vehicles.{DestroyedVehicle, UtilityType}
 import net.psforever.objects.vital._
@@ -26,8 +27,12 @@ class VehicleDefinition(objectId : Int) extends ObjectDefinition(objectId)
   private val cargo : mutable.HashMap[Int, CargoDefinition] = mutable.HashMap[Int, CargoDefinition]()
   /* key - entry point index, value - seat index */
   private val mountPoints : mutable.HashMap[Int, Int] = mutable.HashMap()
-  /* key - seat index (where this weapon attaches during object construction), value - the weapon on an EquipmentSlot */
-  private val weapons : mutable.HashMap[Int, ToolDefinition] = mutable.HashMap[Int, ToolDefinition]()
+  /* seat index (where a weapon attaches during object construction) */
+  private val weaponSlots : mutable.Set[Int] = mutable.Set[Int]()
+  /* key - seat index (where a weapon attaches during object construction), value - the equipment size of this slot */
+  private val weaponSlotSizes : mutable.HashMap[Int, EquipmentSize.Value] = mutable.HashMap[Int, EquipmentSize.Value]()
+  /* key - seat index (where a weapon attaches during object construction), value - a weapon definition */
+  private val weaponDefaults : mutable.HashMap[Int, ToolDefinition] = mutable.HashMap[Int, ToolDefinition]()
   private var deployment : Boolean = false
   private val utilities : mutable.HashMap[Int, UtilityType.Value] = mutable.HashMap()
   private val utilityOffsets : mutable.HashMap[Int, Vector3] = mutable.HashMap()
@@ -81,7 +86,36 @@ class VehicleDefinition(objectId : Int) extends ObjectDefinition(objectId)
     CanCloak
   }
 
-  def Weapons : mutable.HashMap[Int, ToolDefinition] = weapons
+  def Weapons : mutable.HashMap[Int, ToolDefinition] = weaponDefaults
+
+  def Weapons(kv : (Int, ToolDefinition)) : mutable.HashMap[Int, ToolDefinition] = {
+    val (slot, d) = kv
+    weaponSlots += slot
+    weaponSlotSizes += slot -> d.Size
+    weaponDefaults += kv
+    weaponDefaults
+  }
+
+  def WeaponSlots : mutable.Set[Int] = weaponSlots
+
+  def WeaponSlots(slot : Int) : mutable.Set[Int] = {
+    if(!weaponSlots.contains(slot)) {
+      weaponSlots += slot
+      weaponSlotSizes += slot -> EquipmentSize.VehicleWeapon
+    }
+    weaponSlots
+  }
+
+  def WeaponSlotSizes : mutable.HashMap[Int, EquipmentSize.Value] = weaponSlotSizes
+
+  def WeaponSlotSizes(kv : (Int, EquipmentSize.Value)) : mutable.HashMap[Int, EquipmentSize.Value] = {
+    val (slot, _) = kv
+    if(!weaponDefaults.contains(slot) && !weaponSlots.contains(slot)) {
+      weaponSlots += slot
+      weaponSlotSizes += kv
+    }
+    weaponSlotSizes
+  }
 
   def Deployment : Boolean = deployment
 

@@ -18,7 +18,7 @@ trait WeaponTurret extends FactionAffinity
   private var health : Int = 1
   private var jammered : Boolean = false
   /** manned turrets have just one seat; this is just standard interface */
-  protected val seats : Map[Int, Chair] = Map(0 -> Chair(new SeatDefinition() { ControlledWeapon = Some(1) }))
+  protected val seats : Map[Int, Chair] = Map(0 -> Chair(new SeatDefinition() { ControlledWeapon = 1 }))
   /** turrets have just one weapon; this is just standard interface */
   protected var weapons : Map[Int, EquipmentSlot] = Map.empty
   /** may or may not have inaccessible inventory space

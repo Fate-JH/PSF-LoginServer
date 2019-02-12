@@ -17,23 +17,19 @@ trait MountedWeapons {
     * @param seatNumber the seat number
     * @return a mounted weapon by index, or `None` if either the seat doesn't exist or there is no controlled weapon
     */
-  def WeaponControlledFromSeat(seatNumber : Int) : Option[Equipment] = {
+  def WeaponControlledFromSeat(seatNumber : Int) : Seq[Equipment] = {
     Seat(seatNumber) match {
       case Some(seat) =>
         wepFromSeat(seat)
       case None =>
-        None
+        Seq.empty
     }
   }
 
-  private def wepFromSeat(seat : Chair) : Option[Equipment] = {
-    seat.ControlledWeapon match {
-      case Some(index) =>
-        ControlledWeapon(index)
-      case None =>
-        None
-    }
-  }
+  private def wepFromSeat(seat : Chair) : Seq[Equipment] =
+    ControlledWeapon(seat.ControlledWeapon.toSeq).getOrElse(Seq.empty)
+
+  def ControlledWeapon(wepNumber : Seq[Int]) : Option[Seq[Equipment]]
 
   def ControlledWeapon(wepNumber : Int) : Option[Equipment]
 }

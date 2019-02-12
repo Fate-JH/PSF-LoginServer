@@ -37,7 +37,7 @@ class FacilityTurretTest extends Specification {
           ko
       }
       obj.Seats.size mustEqual 1
-      obj.Seats(0).ControlledWeapon mustEqual Some(1)
+      obj.Seats(0).ControlledWeapon mustEqual Set(1)
       obj.MountPoints.size mustEqual 1
       obj.MountPoints(1) mustEqual 0
       obj.Health mustEqual 3600

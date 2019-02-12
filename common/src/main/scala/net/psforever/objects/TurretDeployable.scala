@@ -5,6 +5,7 @@ import akka.actor.{Actor, ActorContext, Props}
 import net.psforever.objects.ce.{Deployable, DeployedItem}
 import net.psforever.objects.definition.{BaseDeployableDefinition, DeployableDefinition}
 import net.psforever.objects.definition.converter.SmallTurretConverter
+import net.psforever.objects.equipment.Equipment
 import net.psforever.objects.serverobject.PlanetSideServerObject
 import net.psforever.objects.serverobject.affinity.{FactionAffinity, FactionAffinityBehavior}
 import net.psforever.objects.serverobject.hackable.Hackable
@@ -38,6 +39,17 @@ class TurretDeployable(tdef : TurretDeployableDefinition) extends PlanetSideServ
   override def Health : Int = super[Deployable].Health
   //override to clarify inheritance conflict
   override def Health_=(toHealth : Int) : Int = super[Deployable].Health_=(toHealth)
+
+  def ControlledWeapon(wepNumber : Seq[Int]) : Option[Seq[Equipment]] = {
+    wepNumber
+      .map { ControlledWeapon }
+      .collect { case Some(wep) => wep } match {
+      case Nil =>
+        None
+      case list =>
+        Some(list)
+    }
+  }
 
   override def Definition = tdef
 }

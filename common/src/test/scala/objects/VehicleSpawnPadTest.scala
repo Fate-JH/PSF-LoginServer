@@ -326,7 +326,7 @@ object VehicleSpawnPadControlTest {
 
     val zone = new Zone("test-zone", map, 0)  { override def SetupNumberPools() = { } }
     val vehicle = Vehicle(GlobalDefinitions.two_man_assault_buggy)
-    val weapon = vehicle.WeaponControlledFromSeat(1).get.asInstanceOf[Tool]
+    val weapon = vehicle.WeaponControlledFromSeat(1).asInstanceOf[Tool]
     val guid : NumberPoolHub = new NumberPoolHub(LimitedNumberSource(5))
     guid.AddPool("test-pool", (0 to 2).toList)
     guid.register(vehicle, "test-pool")

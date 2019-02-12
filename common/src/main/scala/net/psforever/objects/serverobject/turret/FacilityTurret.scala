@@ -1,6 +1,7 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.serverobject.turret
 
+import net.psforever.objects.equipment.Equipment
 import net.psforever.objects.serverobject.structures.Amenity
 import net.psforever.types.Vector3
 import net.psforever.objects.vital.{DamageResistanceModel, StandardResistanceProfile, Vitality}
@@ -34,6 +35,17 @@ class FacilityTurret(tDef : TurretDefinition) extends Amenity
   }
 
   def DamageModel = Definition.asInstanceOf[DamageResistanceModel]
+
+  def ControlledWeapon(wepNumber : Seq[Int]) : Option[Seq[Equipment]] = {
+    wepNumber
+      .map { ControlledWeapon }
+      .collect { case Some(wep) => wep } match {
+      case Nil =>
+        None
+      case list =>
+        Some(list)
+    }
+  }
 
   def Definition : TurretDefinition = tDef
 }
