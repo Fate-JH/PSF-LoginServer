@@ -1830,6 +1830,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
       case Terminal.BuyVehicle(vehicle, weapons, trunk) =>
         continent.Map.TerminalToSpawnPad.get(msg.terminal_guid.guid) match {
           case Some(pad_guid) =>
+            sendResponse(ItemTransactionResultMessage(msg.terminal_guid, msg.transaction_type, true))
             val toFaction = tplayer.Faction
             val pad = continent.GUID(pad_guid).get.asInstanceOf[VehicleSpawnPad]
             vehicle.Faction = toFaction
@@ -1857,7 +1858,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
               vTrunk += entry.start -> entry.obj
             })
             taskResolver ! RegisterNewVehicle(vehicle, pad)
-            sendResponse(ItemTransactionResultMessage(msg.terminal_guid, TransactionType.Buy, true))
 
           case None =>
             log.error(s"$tplayer wanted to spawn a vehicle, but there was no spawn pad associated with terminal ${msg.terminal_guid} to accept it")
@@ -1916,6 +1916,11 @@ class WorldSessionActor extends Actor with MDCContextAware {
       case VehicleResponse.EquipmentInSlot(pkt) =>
         if(tplayer_guid != guid) {
           sendResponse(pkt)
+        }
+
+      case VehicleResponse.FrameVehicleState(vehicle_guid, unk1, pos, orient, vel, unk2, unk3, unk4, is_crouched, unk6, unk7, unk8, unk9, unkA) =>
+        if(tplayer_guid == guid) {
+          sendResponse(FrameVehicleStateMessage(vehicle_guid, unk1, pos, orient, vel, unk2, unk3, unk4, is_crouched, unk6, unk7, unk8, unk9, unkA))
         }
 
       case VehicleResponse.HitHint(source_guid) =>
@@ -2922,6 +2927,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
       }
 
     case msg @ VehicleStateMessage(vehicle_guid, unk1, pos, ang, vel, unk5, unk6, unk7, wheels, unk9, unkA) =>
+      //log.info(s"VehicleState: $msg")
       continent.GUID(vehicle_guid) match {
         case Some(obj : Vehicle) =>
           val seat = obj.Seat(0).get
@@ -2940,10 +2946,30 @@ class WorldSessionActor extends Actor with MDCContextAware {
         case _ =>
           log.warn(s"VehicleState: no vehicle $vehicle_guid found in zone")
       }
-      //log.info(s"VehicleState: $msg")
 
     case msg @ VehicleSubStateMessage(vehicle_guid, player_guid, vehicle_pos, vehicle_ang, vel, unk1, unk2) =>
     //log.info(s"VehicleSubState: $vehicle_guid, $player_guid, $vehicle_pos, $vehicle_ang, $vel, $unk1, $unk2")
+
+    case msg @ FrameVehicleStateMessage(vehicle_guid, u1, pos, ang, vel, u2, u3, u4, is_crouched, u6, u7, u8, u9, uA) =>
+      //log.info(s"FrameVehicleState: $msg")
+      continent.GUID(vehicle_guid) match {
+        case Some(obj : Vehicle) =>
+          val seat = obj.Seat(0).get
+          if(seat.Occupant.contains(player)) {
+            //we're driving the vehicle
+            player.Position = pos //convenient
+            if(seat.ControlledWeapon.isEmpty) {
+              player.Orientation = Vector3.z(ang.z) //convenient
+            }
+            obj.Position = pos
+            obj.Orientation = ang
+            obj.Velocity = vel
+            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.FrameVehicleState(player.GUID, vehicle_guid, u1, pos, ang, vel, u2, u3, u4, is_crouched, u6, u7, u8, u9, uA))
+          }
+        //TODO placing a "not driving" warning here may trigger as we are disembarking the vehicle
+        case _ =>
+          log.warn(s"FrameVehicleState: no vehicle $vehicle_guid found in zone")
+      }
 
     case msg @ ProjectileStateMessage(projectile_guid, shot_pos, shot_vector, unk1, unk2, unk3, unk4, time_alive) =>
     //log.info("ProjectileState: " + msg)

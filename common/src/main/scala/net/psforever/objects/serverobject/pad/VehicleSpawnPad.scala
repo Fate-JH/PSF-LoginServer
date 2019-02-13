@@ -189,13 +189,26 @@ object VehicleSpawnPad {
     * @return the `VehicleSpawnPad` object
     */
   def Constructor(pos : Vector3, orient : Vector3)(id : Int, context : ActorContext) : VehicleSpawnPad = {
-    import akka.actor.Props
     import net.psforever.objects.GlobalDefinitions
+    Constructor(GlobalDefinitions.spawn_pad, pos, orient)(id, context)
+  }
 
-    val obj = VehicleSpawnPad(GlobalDefinitions.spawn_pad)
+  /**
+    * Instantiate and configure a specific `VehicleSpawnPad` object
+    * @param sdef the vehicle spawn pad definition
+    * @param pos the position (used to determine spawn point)
+    * @param orient the orientation (used to indicate spawn direction)
+    * @param id the unique id that will be assigned to this entity
+    * @param context a context to allow the object to properly set up `ActorSystem` functionality
+    * @return the `VehicleSpawnPad` object
+    */
+  def Constructor(sdef : VehicleSpawnPadDefinition , pos : Vector3, orient : Vector3)(id : Int, context : ActorContext) : VehicleSpawnPad = {
+    import akka.actor.Props
+
+    val obj = VehicleSpawnPad(sdef)
     obj.Position = pos
     obj.Orientation = orient
-    obj.Actor = context.actorOf(Props(classOf[VehicleSpawnControl], obj), s"${GlobalDefinitions.spawn_pad.Name}_$id")
+    obj.Actor = context.actorOf(Props(classOf[VehicleSpawnControl], obj), s"${sdef.Name}_$id")
     obj
   }
 }

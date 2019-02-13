@@ -1187,6 +1187,10 @@ object Maps {
     def Building2() : Unit = {
       //Anguta
       LocalBuilding(2, FoundationBuilder(Building.Structure(StructureType.Facility, Vector3(3974.2344f, 4287.914f, 0))))
+      LocalObject(152,
+        VehicleSpawnPad.Constructor(bfr_door, Vector3(3954.1172f, 4178.4453f, 267.28125f), Vector3.z(45))
+      )
+      LocalObject(161, Terminal.Constructor(bfr_terminal))
       LocalObject(180, CaptureTerminal.Constructor(capture_terminal))
       LocalObject(222, Door.Constructor) //air term building, bay door
       LocalObject(370, Door.Constructor) //courtyard
@@ -1310,6 +1314,8 @@ object Maps {
       LocalObject(223,
         VehicleSpawnPad.Constructor(Vector3(4012.3594f, 4364.8047f, 271.90625f), Vector3.Zero)
       )
+      ObjectToBuilding(152, 2)
+      ObjectToBuilding(161, 2)
       ObjectToBuilding(180, 2)
       ObjectToBuilding(222, 2)
       ObjectToBuilding(223, 2)
@@ -1443,6 +1449,7 @@ object Maps {
       DoorToLock(638, 882)
       DoorToLock(642, 884)
       DoorToLock(715, 751)
+      TerminalToSpawnPad(161, 152)
       TerminalToSpawnPad(224, 223)
       TerminalToSpawnPad(2419, 1479)
       TurretToWeapon(1418, 5000)

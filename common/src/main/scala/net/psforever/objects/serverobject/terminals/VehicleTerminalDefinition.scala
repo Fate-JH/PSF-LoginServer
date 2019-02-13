@@ -74,7 +74,7 @@ object VehicleTerminalDefinition {
     //    "colossus_flight" -> (()=>Unit),
     //    "peregrine_gunner" -> (()=>Unit),
     //    "peregrine_flight" -> (()=>Unit),
-    //    "aphelion_gunner" -> (()=>Unit),
+        "aphelion_gunner" -> MakeVehicle(aphelion_gunner)//,
     //    "aphelion_flight" -> (()=>Unit)
   )
 
@@ -95,6 +95,7 @@ object VehicleTerminalDefinition {
     val ammo_mortar = ShorthandAmmoBox(heavy_grenade_mortar, heavy_grenade_mortar.Capacity)
     val ammo_flux = ShorthandAmmoBox(flux_cannon_thresher_battery, flux_cannon_thresher_battery.Capacity)
     val ammo_bomb = ShorthandAmmoBox(liberator_bomb, liberator_bomb.Capacity)
+    val ammo_ppa = ShorthandAmmoBox(aphelion_ppa_ammo, aphelion_ppa_ammo.Capacity)
     Map(
       //"quadstealth" -> VehicleLoadout("default_quadstealth", List(), List(), quadstealth),
       "quadassault" -> VehicleLoadout("default_quadassault", List(),
@@ -471,9 +472,29 @@ object VehicleTerminalDefinition {
           SimplifiedEntry(ammo_mortar, 186)
         ),
         galaxy_gunship
-      )
+      ),
       //"phantasm" -> VehicleLoadout("default_phantasm", List(), List(), phantasm),
       //"lodestar" -> VehicleLoadout("default_lodestar", List(), List(), lodestar),
+      {
+        val ammo = ShorthandAmmoBox(aphelion_plasma_rocket_ammo, aphelion_plasma_rocket_ammo.Capacity)
+        "aphelion_gunner" -> VehicleLoadout("aphelion_gunner", List(),
+          List(
+            SimplifiedEntry(ammo_ppa, 30),
+            SimplifiedEntry(ammo_ppa, 34),
+            SimplifiedEntry(ammo_ppa, 38),
+            SimplifiedEntry(ammo_ppa, 90),
+            SimplifiedEntry(ammo_ppa, 94),
+            SimplifiedEntry(ammo_ppa, 98),
+            SimplifiedEntry(ammo, 150),
+            SimplifiedEntry(ammo, 155),
+            SimplifiedEntry(ammo, 160),
+            SimplifiedEntry(ammo, 225),
+            SimplifiedEntry(ammo, 230),
+            SimplifiedEntry(ammo, 235)
+          ),
+          aphelion_gunner
+        )
+      }
     )
   }
 

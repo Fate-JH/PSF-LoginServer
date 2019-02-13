@@ -36,6 +36,7 @@ object InventoryTile {
   final val Tile1209 = InventoryTile(12, 9) //reinforced exo-suit inventory
   final val Tile1511 = InventoryTile(15,11) //common medium trunk capacity
   final val Tile1515 = InventoryTile(15,15) //common large trunk capacity
+  final val Tile1518 = InventoryTile(15,18) //uncommon trunk capacity - bfr
   final val Tile1611 = InventoryTile(16,11) //uncommon medium trunk capacity - vulture
   final val Tile1612 = InventoryTile(16,12) //MAX; uncommon medium trunk capacity - lodestar
   final val Tile1816 = InventoryTile(18,16) //uncommon massive trunk capacity - galaxy_gunship

@@ -19,6 +19,7 @@ object VehicleResponse {
   final case class DetachFromRails(vehicle_guid : PlanetSideGUID, rails_guid : PlanetSideGUID, rails_pos : Vector3, rails_rot : Float) extends Response
   final case class DismountVehicle(bailType : BailType.Value , unk2 : Boolean) extends Response
   final case class EquipmentInSlot(pkt : ObjectCreateMessage) extends Response
+  final case class FrameVehicleState(vehicle_guid : PlanetSideGUID, unk1 : Int, pos : Vector3, orient : Vector3, vel : Option[Vector3], unk2 : Boolean, unk3 : Int, unk4 : Int, is_crouched : Boolean, unk6 : Boolean, unk7 : Boolean, unk8 : Int, unk9 : Long, unkA : Long) extends Response
   final case class HitHint(source_guid : PlanetSideGUID) extends Response
   final case class InventoryState(obj : PlanetSideGameObject, parent_guid : PlanetSideGUID, start : Int, con_data : ConstructorData) extends Response
   final case class InventoryState2(obj_guid : PlanetSideGUID, parent_guid : PlanetSideGUID, value : Int) extends Response

@@ -7,6 +7,6 @@ import net.psforever.objects.definition.ObjectDefinition
   * The definition for any `VehicleSpawnPad`.
   * Object Id 800.
   */
-class VehicleSpawnPadDefinition extends ObjectDefinition(800) {
+class VehicleSpawnPadDefinition(objectId : Int) extends ObjectDefinition(objectId) {
   Name = "spawn_pad"
 }

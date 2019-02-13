@@ -522,8 +522,15 @@ object GlobalDefinitions {
   val spitfire_aa_ammo = AmmoBoxDefinition(Ammo.spitfire_aa_ammo)
 
   val energy_gun_ammo = AmmoBoxDefinition(Ammo.energy_gun_ammo)
+
+  val armor_siphon_ammo = AmmoBoxDefinition(Ammo.armor_siphon_ammo)
+
+  val ntu_siphon_ammo = AmmoBoxDefinition(Ammo.ntu_siphon_ammo)
   init_ammo()
 
+  /*
+  Weapons and Tools
+   */
   val chainblade = ToolDefinition(ObjectClass.chainblade)
 
   val magcutter = ToolDefinition(ObjectClass.magcutter)
@@ -789,11 +796,39 @@ object GlobalDefinitions {
 
   val energy_gun_vs = ToolDefinition(ObjectClass.energy_gun_vs)
 
+  val aphelion_armor_siphon = ToolDefinition(ObjectClass.aphelion_armor_siphon)
+
+  val aphelion_armor_siphon_left = ToolDefinition(ObjectClass.aphelion_armor_siphon_left)
+
+  val aphelion_armor_siphon_right = ToolDefinition(ObjectClass.aphelion_armor_siphon_right)
+
+  val aphelion_laser = ToolDefinition(ObjectClass.aphelion_laser)
+
+  val aphelion_laser_left = ToolDefinition(ObjectClass.aphelion_laser_left)
+
+  val aphelion_laser_right = ToolDefinition(ObjectClass.aphelion_laser_right)
+
+  val aphelion_ntu_siphon = ToolDefinition(ObjectClass.aphelion_ntu_siphon)
+
+  val aphelion_ntu_siphon_left = ToolDefinition(ObjectClass.aphelion_ntu_siphon_left)
+
+  val aphelion_ntu_siphon_right = ToolDefinition(ObjectClass.aphelion_ntu_siphon_right)
+
+  val aphelion_ppa = ToolDefinition(ObjectClass.aphelion_ppa)
+
   val aphelion_ppa_left = ToolDefinition(ObjectClass.aphelion_ppa_left)
 
   val aphelion_ppa_right = ToolDefinition(ObjectClass.aphelion_ppa_right)
 
+  val aphelion_starfire = ToolDefinition(ObjectClass.aphelion_starfire)
+
+  val aphelion_starfire_left = ToolDefinition(ObjectClass.aphelion_starfire_left)
+
+  val aphelion_starfire_right = ToolDefinition(ObjectClass.aphelion_starfire_right)
+
   val aphelion_plasma_rocket_pod = ToolDefinition(ObjectClass.aphelion_plasma_rocket_pod)
+
+  val aphelion_immolation_cannon = ToolDefinition(ObjectClass.aphelion_immolation_cannon)
   init_tools()
 
   /*
@@ -972,7 +1007,9 @@ object GlobalDefinitions {
 
   val repair_silo = new MedicalTerminalDefinition(729)
 
-  val spawn_pad = new VehicleSpawnPadDefinition
+  val spawn_pad = new VehicleSpawnPadDefinition(800) //TODO incorrect; vehicle_creation_pad category
+
+  val bfr_door = new VehicleSpawnPadDefinition(141)
 
   val mb_locker = new LockerDefinition
 
@@ -1731,16 +1768,22 @@ object GlobalDefinitions {
     bullet_150mm.Tile = InventoryTile.Tile44
 
     phalanx_ammo.Name = "phalanx_ammo"
-    phalanx_ammo.Size = EquipmentSize.Inventory
+    phalanx_ammo.Size = EquipmentSize.Blocked
 
     spitfire_ammo.Name = "spitfire_ammo"
-    spitfire_ammo.Size = EquipmentSize.Inventory
+    spitfire_ammo.Size = EquipmentSize.Blocked
 
     spitfire_aa_ammo.Name = "spitfire_aa_ammo"
-    spitfire_aa_ammo.Size = EquipmentSize.Inventory
+    spitfire_aa_ammo.Size = EquipmentSize.Blocked
 
     energy_gun_ammo.Name = "energy_gun_ammo"
-    energy_gun_ammo.Size = EquipmentSize.Inventory
+    energy_gun_ammo.Size = EquipmentSize.Blocked
+
+    armor_siphon_ammo.Name = "armor_siphon_ammo"
+    armor_siphon_ammo.Size = EquipmentSize.Blocked
+
+    ntu_siphon_ammo.Name = "ntu_siphon_ammo"
+    ntu_siphon_ammo.Size = EquipmentSize.Blocked
   }
 
   /**
@@ -4785,6 +4828,96 @@ object GlobalDefinitions {
     energy_gun_vs.FireModes.head.AmmoSlotIndex = 0
     energy_gun_vs.FireModes.head.Magazine = 100
 
+    aphelion_armor_siphon.Name = "aphelion_armor_siphon"
+    aphelion_armor_siphon.Size = EquipmentSize.BFRArmWeapon
+    aphelion_armor_siphon.AmmoTypes += armor_siphon_ammo
+    aphelion_armor_siphon.ProjectileTypes += aphelion_laser_projectile
+    aphelion_armor_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_armor_siphon.FireModes.head.AmmoTypeIndices += 0
+    aphelion_armor_siphon.FireModes.head.AmmoSlotIndex = 0
+    aphelion_armor_siphon.FireModes.head.Magazine = 100
+
+    aphelion_armor_siphon_left.Name = "aphelion_armor_siphon_left"
+    aphelion_armor_siphon_left.Size = EquipmentSize.BFRArmWeapon
+    aphelion_armor_siphon_left.AmmoTypes += armor_siphon_ammo
+    aphelion_armor_siphon_left.ProjectileTypes += aphelion_laser_projectile
+    aphelion_armor_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_armor_siphon_left.FireModes.head.AmmoTypeIndices += 0
+    aphelion_armor_siphon_left.FireModes.head.AmmoSlotIndex = 0
+    aphelion_armor_siphon_left.FireModes.head.Magazine = 100
+
+    aphelion_armor_siphon_right.Name = "aphelion_ntu_siphon_right"
+    aphelion_armor_siphon_right.Size = EquipmentSize.BFRArmWeapon
+    aphelion_armor_siphon_right.AmmoTypes += armor_siphon_ammo
+    aphelion_armor_siphon_right.ProjectileTypes += aphelion_laser_projectile
+    aphelion_armor_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_armor_siphon_right.FireModes.head.AmmoTypeIndices += 0
+    aphelion_armor_siphon_right.FireModes.head.AmmoSlotIndex = 0
+    aphelion_armor_siphon_right.FireModes.head.Magazine = 100
+
+    aphelion_laser.Name = "aphelion_laser"
+    aphelion_laser.Size = EquipmentSize.BFRArmWeapon
+    aphelion_laser.AmmoTypes += aphelion_laser_ammo
+    aphelion_laser.ProjectileTypes += aphelion_laser_projectile
+    aphelion_laser.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_laser.FireModes.head.AmmoTypeIndices += 0
+    aphelion_laser.FireModes.head.AmmoSlotIndex = 0
+    aphelion_laser.FireModes.head.Magazine = 350
+
+    aphelion_laser_left.Name = "aphelion_laser_left"
+    aphelion_laser_left.Size = EquipmentSize.BFRArmWeapon
+    aphelion_laser_left.AmmoTypes += aphelion_laser_ammo
+    aphelion_laser_left.ProjectileTypes += aphelion_laser_projectile
+    aphelion_laser_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_laser_left.FireModes.head.AmmoTypeIndices += 0
+    aphelion_laser_left.FireModes.head.AmmoSlotIndex = 0
+    aphelion_laser_left.FireModes.head.Magazine = 350
+
+    aphelion_laser_right.Name = "aphelion_laser_right"
+    aphelion_laser_right.Size = EquipmentSize.BFRArmWeapon
+    aphelion_laser_right.AmmoTypes += aphelion_laser_ammo
+    aphelion_laser_right.ProjectileTypes += aphelion_laser_projectile
+    aphelion_laser_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_laser_right.FireModes.head.AmmoTypeIndices += 0
+    aphelion_laser_right.FireModes.head.AmmoSlotIndex = 0
+    aphelion_laser_right.FireModes.head.Magazine = 350
+
+    aphelion_ntu_siphon.Name = "aphelion_ntu_siphon"
+    aphelion_ntu_siphon.Size = EquipmentSize.BFRArmWeapon
+    aphelion_ntu_siphon.AmmoTypes += ntu_siphon_ammo
+    aphelion_ntu_siphon.ProjectileTypes += aphelion_laser_projectile
+    aphelion_ntu_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_ntu_siphon.FireModes.head.AmmoTypeIndices += 0
+    aphelion_ntu_siphon.FireModes.head.AmmoSlotIndex = 0
+    aphelion_ntu_siphon.FireModes.head.Magazine = 150
+
+    aphelion_ntu_siphon_left.Name = "aphelion_ntu_siphon_left"
+    aphelion_ntu_siphon_left.Size = EquipmentSize.BFRArmWeapon
+    aphelion_ntu_siphon_left.AmmoTypes += ntu_siphon_ammo
+    aphelion_ntu_siphon_left.ProjectileTypes += aphelion_laser_projectile
+    aphelion_ntu_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_ntu_siphon_left.FireModes.head.AmmoTypeIndices += 0
+    aphelion_ntu_siphon_left.FireModes.head.AmmoSlotIndex = 0
+    aphelion_ntu_siphon_left.FireModes.head.Magazine = 150
+
+    aphelion_ntu_siphon_right.Name = "aphelion_ntu_siphon_right"
+    aphelion_ntu_siphon_right.Size = EquipmentSize.BFRArmWeapon
+    aphelion_ntu_siphon_right.AmmoTypes += ntu_siphon_ammo
+    aphelion_ntu_siphon_right.ProjectileTypes += aphelion_laser_projectile
+    aphelion_ntu_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    aphelion_ntu_siphon_right.FireModes.head.AmmoTypeIndices += 0
+    aphelion_ntu_siphon_right.FireModes.head.AmmoSlotIndex = 0
+    aphelion_ntu_siphon_right.FireModes.head.Magazine = 150
+
+    aphelion_ppa.Name = "aphelion_ppa"
+    aphelion_ppa.Size = EquipmentSize.BFRArmWeapon
+    aphelion_ppa.AmmoTypes += aphelion_ppa_ammo
+    aphelion_ppa.ProjectileTypes += aphelion_ppa_projectile
+    aphelion_ppa.FireModes += new FireModeDefinition
+    aphelion_ppa.FireModes.head.AmmoTypeIndices += 0
+    aphelion_ppa.FireModes.head.AmmoSlotIndex = 0
+    aphelion_ppa.FireModes.head.Magazine = 25
+
     aphelion_ppa_left.Name = "aphelion_ppa_left"
     aphelion_ppa_left.Size = EquipmentSize.BFRArmWeapon
     aphelion_ppa_left.AmmoTypes += aphelion_ppa_ammo
@@ -4803,6 +4936,33 @@ object GlobalDefinitions {
     aphelion_ppa_right.FireModes.head.AmmoSlotIndex = 0
     aphelion_ppa_right.FireModes.head.Magazine = 25
 
+    aphelion_starfire.Name = "aphelion_starfire"
+    aphelion_starfire.Size = EquipmentSize.BFRArmWeapon
+    aphelion_starfire.AmmoTypes += aphelion_starfire_ammo
+    aphelion_starfire.ProjectileTypes += aphelion_starfire_projectile
+    aphelion_starfire.FireModes += new FireModeDefinition
+    aphelion_starfire.FireModes.head.AmmoTypeIndices += 0
+    aphelion_starfire.FireModes.head.AmmoSlotIndex = 0
+    aphelion_starfire.FireModes.head.Magazine = 20
+
+    aphelion_starfire_left.Name = "aphelion_starfire_left"
+    aphelion_starfire_left.Size = EquipmentSize.BFRArmWeapon
+    aphelion_starfire_left.AmmoTypes += aphelion_starfire_ammo
+    aphelion_starfire_left.ProjectileTypes += aphelion_starfire_projectile
+    aphelion_starfire_left.FireModes += new FireModeDefinition
+    aphelion_starfire_left.FireModes.head.AmmoTypeIndices += 0
+    aphelion_starfire_left.FireModes.head.AmmoSlotIndex = 0
+    aphelion_starfire_left.FireModes.head.Magazine = 20
+
+    aphelion_starfire_right.Name = "aphelion_starfire_right"
+    aphelion_starfire_right.Size = EquipmentSize.BFRArmWeapon
+    aphelion_starfire_right.AmmoTypes += aphelion_laser_ammo
+    aphelion_starfire_right.ProjectileTypes += aphelion_laser_projectile
+    aphelion_starfire_right.FireModes += new FireModeDefinition
+    aphelion_starfire_right.FireModes.head.AmmoTypeIndices += 0
+    aphelion_starfire_right.FireModes.head.AmmoSlotIndex = 0
+    aphelion_starfire_right.FireModes.head.Magazine = 20
+
     aphelion_plasma_rocket_pod.Name = "aphelion_plasma_rocket_pod"
     aphelion_plasma_rocket_pod.Size = EquipmentSize.BFRGunnerWeapon
     aphelion_plasma_rocket_pod.AmmoTypes += aphelion_plasma_rocket_ammo
@@ -4811,6 +4971,15 @@ object GlobalDefinitions {
     aphelion_plasma_rocket_pod.FireModes.head.AmmoTypeIndices += 0
     aphelion_plasma_rocket_pod.FireModes.head.AmmoSlotIndex = 0
     aphelion_plasma_rocket_pod.FireModes.head.Magazine = 40
+
+    aphelion_immolation_cannon.Name = "aphelion_immolation_cannon"
+    aphelion_immolation_cannon.Size = EquipmentSize.BFRGunnerWeapon
+    aphelion_immolation_cannon.AmmoTypes += aphelion_immolation_cannon_ammo
+    aphelion_immolation_cannon.ProjectileTypes += aphelion_immolation_cannon_projectile
+    aphelion_immolation_cannon.FireModes += new FireModeDefinition
+    aphelion_immolation_cannon.FireModes.head.AmmoTypeIndices += 0
+    aphelion_immolation_cannon.FireModes.head.AmmoSlotIndex = 0
+    aphelion_immolation_cannon.FireModes.head.Magazine = 25
   }
 
   /**
@@ -5584,7 +5753,7 @@ object GlobalDefinitions {
     aphelion_gunner.Weapons(4 -> aphelion_plasma_rocket_pod)
     aphelion_gunner.MountPoints += 1 -> 0
     aphelion_gunner.MountPoints += 2 -> 1
-    aphelion_gunner.TrunkSize = InventoryTile.Tile1511
+    aphelion_gunner.TrunkSize = InventoryTile.Tile1518 //adb reports 15x11, but the graphic uses 15x18
     aphelion_gunner.TrunkOffset = 30
     aphelion_gunner.AutoPilotSpeeds = (24, 10)
     aphelion_gunner.Packet = battleFrameConverter
@@ -5802,7 +5971,7 @@ object GlobalDefinitions {
     vehicle_terminal_combined.Tab += 4 -> OrderTerminalDefinition.VehicleLoadoutPage()
 
     bfr_terminal.Name = "bfr_terminal"
-    bfr_terminal.Tab += 46769 -> OrderTerminalDefinition.VehiclePage(VehicleTerminalDefinition.bfrVehicles, VehicleTerminalDefinition.trunk)
+    bfr_terminal.Tab += 0 -> OrderTerminalDefinition.VehiclePage(VehicleTerminalDefinition.bfrVehicles, VehicleTerminalDefinition.trunk)
     bfr_terminal.Tab += 4 -> OrderTerminalDefinition.VehicleLoadoutPage()
 
     teleportpad_terminal.Name = "teleportpad_terminal"
@@ -5852,6 +6021,8 @@ object GlobalDefinitions {
     pad_landing_tower_frame.HealAmount = 60
     pad_landing_tower_frame.UseRadius = 20
     pad_landing_tower_frame.TargetValidation += ProximityTarget.Aircraft -> ProximityTerminalControl.Validation.PadLanding
+
+    bfr_door.Name = "bfr_door"
 
     repair_silo.Name = "repair_silo"
     repair_silo.Interval = 1000

@@ -17,6 +17,7 @@ object VehicleAction {
   final case class DeployRequest(player_guid : PlanetSideGUID, object_guid : PlanetSideGUID, state : DriveState.Value, unk1 : Int, unk2 : Boolean, pos : Vector3) extends Action
   final case class DismountVehicle(player_guid : PlanetSideGUID, bailType : BailType.Value, unk2 : Boolean) extends Action
   final case class EquipmentInSlot(player_guid : PlanetSideGUID, target_guid : PlanetSideGUID, slot : Int, equipment : Equipment) extends Action
+  final case class FrameVehicleState(player_guid : PlanetSideGUID, vehicle_guid : PlanetSideGUID, unk1 : Int, pos : Vector3, orient : Vector3, vel : Option[Vector3], unk2 : Boolean, unk3 : Int, unk4 : Int, is_crouched : Boolean, unk6 : Boolean, unk7 : Boolean, unk8 : Int, unk9 : Long, unkA : Long) extends Action
   final case class InventoryState(player_guid : PlanetSideGUID, obj : PlanetSideGameObject, parent_guid : PlanetSideGUID, start : Int, con_data : ConstructorData) extends Action
   final case class InventoryState2(player_guid : PlanetSideGUID, obj_guid : PlanetSideGUID, parent_guid : PlanetSideGUID, value : Int) extends Action
   final case class KickPassenger(player_guid : PlanetSideGUID, unk1 : Int, unk2 : Boolean, vehicle_guid : PlanetSideGUID) extends Action
