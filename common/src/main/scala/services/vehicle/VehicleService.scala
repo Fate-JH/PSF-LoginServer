@@ -90,6 +90,10 @@ class VehicleService extends Actor {
           VehicleEvents.publish(
             VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.KickPassenger(seat_num, kickedByDriver, vehicle_guid))
           )
+        case VehicleAction.GenericObjectAction(player_guid, object_guid, code) =>
+          VehicleEvents.publish(
+            VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.GenericObjectAction(object_guid, code))
+          )
         case VehicleAction.LoadVehicle(player_guid, vehicle, vtype, vguid, vdata) =>
           VehicleEvents.publish(
             VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.LoadVehicle(vehicle, vtype, vguid, vdata))

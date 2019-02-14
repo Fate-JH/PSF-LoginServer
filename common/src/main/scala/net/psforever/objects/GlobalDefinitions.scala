@@ -1387,13 +1387,22 @@ object GlobalDefinitions {
     }
   }
 
+  def isBattleFrameVehicle(vdef : VehicleDefinition) : Boolean = {
+    vdef match {
+      case `colossus_gunner` | `colossus_flight` | `peregrine_gunner` | `peregrine_flight` | `aphelion_gunner` | `aphelion_flight` =>
+        true
+      case _ =>
+        false
+    }
+  }
+
   /**
     * Using the definition for a `Vehicle` determine whether it can rotate its body without forward acceleration.
     * @param vdef the `VehicleDefinition` of the vehicle
     * @return `true`, if it is; `false`, otherwise
     */
   def canStationaryRotate(vdef : VehicleDefinition) : Boolean = {
-    if(isFlightVehicle(vdef) || isHoverVehicle(vdef)) {
+    if(isFlightVehicle(vdef) || isHoverVehicle(vdef) || isBattleFrameVehicle(vdef)) {
       true
     }
     else {

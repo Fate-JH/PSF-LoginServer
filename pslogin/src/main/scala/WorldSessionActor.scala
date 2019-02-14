@@ -1368,6 +1368,10 @@ class WorldSessionActor extends Actor with MDCContextAware {
         }
         AccessContents(obj)
         MountingAction(tplayer, obj, seat_num)
+        if(GlobalDefinitions.isBattleFrameVehicle(obj.Definition)) {
+          sendResponse(GenericObjectActionMessage(obj.GUID, 176))
+          vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(tplayer.GUID, obj.GUID, 176))
+        }
 
       case Mountable.CanMount(obj : PlanetSideGameObject with WeaponTurret, seat_num) =>
         obj.WeaponControlledFromSeat(seat_num) foreach {
@@ -1958,6 +1962,11 @@ class WorldSessionActor extends Actor with MDCContextAware {
       case VehicleResponse.InventoryState2(obj_guid, parent_guid, value) =>
         if(tplayer_guid != guid) {
           sendResponse(InventoryStateMessage(obj_guid, 0, parent_guid, value))
+        }
+
+      case VehicleResponse.GenericObjectAction(obj_guid, code) =>
+        if(tplayer_guid != guid) {
+          sendResponse(GenericObjectActionMessage(obj_guid, code))
         }
 
       case VehicleResponse.LoadVehicle(vehicle, vtype, vguid, vdata) =>
@@ -4044,6 +4053,10 @@ class WorldSessionActor extends Actor with MDCContextAware {
             log.info(s"GenericObject: $player is MAX with an unexpected weapon - ${definition.Name}")
         }
       }
+
+    case msg @ GenericObjectActionMessage(object_guid, code) =>
+      log.info(s"GenericObjectAction: $msg")
+      vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(player.GUID, object_guid, code))
 
     case msg @ ItemTransactionMessage(terminal_guid, transaction_type, _, _, _, _) =>
       log.info("ItemTransaction: " + msg)

@@ -23,6 +23,7 @@ object VehicleResponse {
   final case class HitHint(source_guid : PlanetSideGUID) extends Response
   final case class InventoryState(obj : PlanetSideGameObject, parent_guid : PlanetSideGUID, start : Int, con_data : ConstructorData) extends Response
   final case class InventoryState2(obj_guid : PlanetSideGUID, parent_guid : PlanetSideGUID, value : Int) extends Response
+  final case class GenericObjectAction(obj_guid : PlanetSideGUID, code : Int) extends Response
   final case class KickPassenger(seat_num : Int, kickedByDriver : Boolean, vehicle_guid : PlanetSideGUID) extends Response
   final case class LoadVehicle(vehicle : Vehicle, vtype : Int, vguid : PlanetSideGUID, vdata : ConstructorData) extends Response
   final case class MountVehicle(object_guid : PlanetSideGUID, seat : Int) extends Response
