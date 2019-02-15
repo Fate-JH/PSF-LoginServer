@@ -1922,11 +1922,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
           sendResponse(pkt)
         }
 
-      case VehicleResponse.FrameVehicleState(vehicle_guid, unk1, pos, orient, vel, unk2, unk3, unk4, is_crouched, unk6, unk7, unk8, unk9, unkA) =>
-        if(tplayer_guid == guid) {
-          sendResponse(FrameVehicleStateMessage(vehicle_guid, unk1, pos, orient, vel, unk2, unk3, unk4, is_crouched, unk6, unk7, unk8, unk9, unkA))
-        }
-
       case VehicleResponse.HitHint(source_guid) =>
         if(player.isAlive) {
           sendResponse(HitHint(source_guid, player.GUID))
@@ -2973,7 +2968,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
             obj.Position = pos
             obj.Orientation = ang
             obj.Velocity = vel
-            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.FrameVehicleState(player.GUID, vehicle_guid, u1, pos, ang, vel, u2, u3, u4, is_crouched, u6, u7, u8, u9, uA))
+            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.VehicleState(player.GUID, vehicle_guid, u1, pos, ang, vel, None, 0, 0, 0, false, false))
           }
         //TODO placing a "not driving" warning here may trigger as we are disembarking the vehicle
         case _ =>
