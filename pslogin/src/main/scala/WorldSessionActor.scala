@@ -82,7 +82,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
   var player : Player = null
   var avatar : Avatar = null
   var progressBarValue : Option[Float] = None
-  var shooting : Option[PlanetSideGUID] = None //ChangeFireStateMessage_Start
+  var shooting : scala.collection.mutable.Set[PlanetSideGUID] = scala.collection.mutable.Set.empty //ChangeFireStateMessage_Start
   var prefire : Option[PlanetSideGUID] = None //if WeaponFireMessage precedes ChangeFireStateMessage_Start
   var accessedContainer : Option[PlanetSideGameObject with Container] = None
   var flying : Boolean = false
@@ -1922,6 +1922,16 @@ class WorldSessionActor extends Actor with MDCContextAware {
           sendResponse(pkt)
         }
 
+      case VehicleResponse.FrameVehicleState(vehicle_guid, unk1, pos, orient, vel, unk2, unk3, unk4, is_crouched, unk6, unk7, unk8, unk9, unkA) =>
+        if(tplayer_guid != guid) {
+          sendResponse(FrameVehicleStateMessage(vehicle_guid, unk1, pos, orient, vel, unk2, unk3, unk4, is_crouched, unk6, unk7, unk8, unk9, unkA))
+        }
+
+      case VehicleResponse.GenericObjectAction(obj_guid, code) =>
+        if(tplayer_guid != guid) {
+          sendResponse(GenericObjectActionMessage(obj_guid, code))
+        }
+
       case VehicleResponse.HitHint(source_guid) =>
         if(player.isAlive) {
           sendResponse(HitHint(source_guid, player.GUID))
@@ -1942,6 +1952,11 @@ class WorldSessionActor extends Actor with MDCContextAware {
           )
         }
 
+      case VehicleResponse.InventoryState2(obj_guid, parent_guid, value) =>
+        if(tplayer_guid != guid) {
+          sendResponse(InventoryStateMessage(obj_guid, 0, parent_guid, value))
+        }
+
       case msg@VehicleResponse.KickPassenger(seat_num, wasKickedByDriver, vehicle_guid) =>
         // seat_num seems to be correct if passenger is kicked manually by driver, but always seems to return 4 if user is kicked by seat permissions
         log.info(s"$msg")
@@ -1952,16 +1967,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
               UnAccessContents(obj)
             case _ => ;
           }
-        }
-
-      case VehicleResponse.InventoryState2(obj_guid, parent_guid, value) =>
-        if(tplayer_guid != guid) {
-          sendResponse(InventoryStateMessage(obj_guid, 0, parent_guid, value))
-        }
-
-      case VehicleResponse.GenericObjectAction(obj_guid, code) =>
-        if(tplayer_guid != guid) {
-          sendResponse(GenericObjectActionMessage(obj_guid, code))
         }
 
       case VehicleResponse.LoadVehicle(vehicle, vtype, vguid, vdata) =>
@@ -2938,7 +2943,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
           if(seat.Occupant.contains(player)) {
             //we're driving the vehicle
             player.Position = pos //convenient
-            if(seat.ControlledWeapon.isEmpty) {
+            if(seat.ControlledWeapon.nonEmpty) {
               player.Orientation = Vector3.z(ang.z) //convenient
             }
             obj.Position = pos
@@ -2962,13 +2967,13 @@ class WorldSessionActor extends Actor with MDCContextAware {
           if(seat.Occupant.contains(player)) {
             //we're driving the vehicle
             player.Position = pos //convenient
-            if(seat.ControlledWeapon.isEmpty) {
+            if(seat.ControlledWeapon.nonEmpty) {
               player.Orientation = Vector3.z(ang.z) //convenient
             }
             obj.Position = pos
             obj.Orientation = ang
             obj.Velocity = vel
-            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.VehicleState(player.GUID, vehicle_guid, u1, pos, ang, vel, None, 0, 0, 0, false, false))
+            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.FrameVehicleState(player.GUID, vehicle_guid, u1, pos, ang, vel, u2, u3, u4, is_crouched, u6, u7, u8, u9, uA))
           }
         //TODO placing a "not driving" warning here may trigger as we are disembarking the vehicle
         case _ =>
@@ -3179,7 +3184,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
           case tool : Tool =>
             if(tool.Magazine > 0 || prefire.contains(item_guid)) {
               prefire = None
-              shooting = Some(item_guid)
+              shooting += item_guid
               avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.ChangeFireState_Start(player.GUID, item_guid))
             }
             else {
@@ -3188,8 +3193,18 @@ class WorldSessionActor extends Actor with MDCContextAware {
             }
           case _ => //permissible, for now
             prefire = None
-            shooting = Some(item_guid)
+            shooting += item_guid
             avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.ChangeFireState_Start(player.GUID, item_guid))
+        }
+      }
+      else {
+        //potentially, we are in a BFR, where having two weapons fire at once is possible
+        continent.GUID(player.VehicleSeated) match {
+          case Some(o : Vehicle) =>
+            if(GlobalDefinitions.isBattleFrameVehicle(o.Definition)) {
+              shooting += item_guid
+            }
+          case _ => ;
         }
       }
 
@@ -3198,7 +3213,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
       prefire = None
       val urWeapon = FindEquipment.filter(_.GUID == item_guid)
       val weapon : Option[Equipment] = if(shooting.contains(item_guid)) {
-        shooting = None
+        shooting -= item_guid
         avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.ChangeFireState_Stop(player.GUID, item_guid))
         urWeapon.headOption
       }
@@ -4131,7 +4146,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
                 EmptyMagazine(weapon_guid, tool)
               }
               else { //shooting
-                prefire = shooting.orElse(Some(weapon_guid))
+                prefire = shooting.headOption.orElse(Some(weapon_guid))
                 tool.Discharge
                 val projectileIndex = projectile_guid.guid - Projectile.BaseUID
                 val projectilePlace = projectiles(projectileIndex)
@@ -6206,14 +6221,12 @@ class WorldSessionActor extends Actor with MDCContextAware {
 
       case None => ;
     }
-    shooting match {
-      case Some(guid) =>
-        sendResponse(ChangeFireStateMessage_Stop(guid))
-        avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.ChangeFireState_Stop(player.GUID, guid))
-        prefire = None
-        shooting = None
-      case None => ;
+    shooting.foreach { guid =>
+      sendResponse(ChangeFireStateMessage_Stop(guid))
+      avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.ChangeFireState_Stop(player.GUID, guid))
     }
+    shooting = scala.collection.mutable.Set.empty
+    prefire = None
     if(flying) {
       sendResponse(ChatMsg(ChatMessageType.CMT_FLY, false, "", "off", None))
       flying = false

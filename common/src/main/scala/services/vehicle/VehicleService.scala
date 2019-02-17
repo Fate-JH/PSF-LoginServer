@@ -72,6 +72,14 @@ class VehicleService extends Actor {
           VehicleEvents.publish(
             VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.EquipmentInSlot(pkt))
           )
+        case VehicleAction.FrameVehicleState(player_guid, vehicle_guid, unk1, pos, orient, vel, unk2, unk3, unk4, is_crouched, unk6, unk7, unk8, unk9, unkA) =>
+          VehicleEvents.publish(
+            VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.FrameVehicleState(vehicle_guid, unk1, pos, orient, vel, unk2, unk3, unk4, is_crouched, unk6, unk7, unk8, unk9, unkA))
+          )
+        case VehicleAction.GenericObjectAction(player_guid, object_guid, code) =>
+          VehicleEvents.publish(
+            VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.GenericObjectAction(object_guid, code))
+          )
         case VehicleAction.InventoryState(player_guid, obj, parent_guid, start, con_data) =>
           VehicleEvents.publish(
             VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.InventoryState(obj, parent_guid, start, con_data))
@@ -83,10 +91,6 @@ class VehicleService extends Actor {
         case VehicleAction.KickPassenger(player_guid, seat_num, kickedByDriver, vehicle_guid) =>
           VehicleEvents.publish(
             VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.KickPassenger(seat_num, kickedByDriver, vehicle_guid))
-          )
-        case VehicleAction.GenericObjectAction(player_guid, object_guid, code) =>
-          VehicleEvents.publish(
-            VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.GenericObjectAction(object_guid, code))
           )
         case VehicleAction.LoadVehicle(player_guid, vehicle, vtype, vguid, vdata) =>
           VehicleEvents.publish(
