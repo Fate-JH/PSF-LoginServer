@@ -25,6 +25,8 @@ object InventoryTile {
   final val Tile42 = InventoryTile(4,2) //medkit
   final val Tile33 = InventoryTile(3,3) //ammo box, pistols, ace
   final val Tile44 = InventoryTile(4,4) //large ammo box
+  final val Tile48 = InventoryTile(4,8) //bfr arm weapons
+  final val Tile410 = InventoryTile(4,10) //bfr gunner weapons
   final val Tile55 = InventoryTile(5,5) //bfr ammo box
   final val Tile66 = InventoryTile(6,6) //infiltration suit inventory
   final val Tile63 = InventoryTile(6,3) //rifles

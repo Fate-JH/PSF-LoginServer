@@ -150,6 +150,9 @@ object ObjectClass {
   final val bolt_driver = 146
   final val chainblade = 175
   final val chaingun_p = 177
+  final val colossus_armor_siphon = 182
+  final val colossus_armor_siphon_left = 183
+  final val colossus_armor_siphon_right = 184
   final val colossus_burster = 185
   final val colossus_burster_left = 187
   final val colossus_burster_right = 189
@@ -158,6 +161,9 @@ object ObjectClass {
   final val colossus_chaingun_right = 194
   final val colossus_cluster_bomb_pod = 196
   final val colossus_dual_100mm_cannons = 198
+  final val colossus_ntu_siphon = 201
+  final val colossus_ntu_siphon_left = 202
+  final val colossus_ntu_siphon_right = 203
   final val colossus_tank_cannon = 204
   final val colossus_tank_cannon_left = 206
   final val colossus_tank_cannon_right = 208
@@ -209,6 +215,9 @@ object ObjectClass {
   final val oicw = 599
   final val particle_beam_magrider = 628
   final val pellet_gun = 629
+  final val peregrine_armor_siphon = 633
+  final val peregrine_armor_siphon_left = 634
+  final val peregrine_armor_siphon_right = 635
   final val peregrine_dual_machine_gun = 636
   final val peregrine_dual_machine_gun_left = 638
   final val peregrine_dual_machine_gun_right = 640
@@ -216,6 +225,9 @@ object ObjectClass {
   final val peregrine_mechhammer = 644
   final val peregrine_mechhammer_left = 646
   final val peregrine_mechhammer_right = 648
+  final val peregrine_ntu_siphon = 649
+  final val peregrine_ntu_siphon_left = 650
+  final val peregrine_ntu_siphon_right = 651
   final val peregrine_particle_cannon = 652
   final val peregrine_sparrow = 658
   final val peregrine_sparrow_left = 660
@@ -838,6 +850,9 @@ object ObjectClass {
       case ObjectClass.bolt_driver => ConstructorData(WeaponData.codec, "weapon")
       case ObjectClass.chainblade => ConstructorData(WeaponData.codec, "weapon")
       case ObjectClass.chaingun_p => ConstructorData(WeaponData.codec, "weapon")
+      case ObjectClass.colossus_armor_siphon => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.colossus_armor_siphon_left => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.colossus_armor_siphon_right => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.colossus_burster => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.colossus_burster_left => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.colossus_burster_right => ConstructorData(WeaponData.codec2, "weapon")
@@ -846,6 +861,9 @@ object ObjectClass {
       case ObjectClass.colossus_chaingun_right => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.colossus_cluster_bomb_pod => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.colossus_dual_100mm_cannons => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.colossus_ntu_siphon => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.colossus_ntu_siphon_left => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.colossus_ntu_siphon_right => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.colossus_tank_cannon => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.colossus_tank_cannon_left => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.colossus_tank_cannon_right => ConstructorData(WeaponData.codec2, "weapon")
@@ -894,6 +912,9 @@ object ObjectClass {
       case ObjectClass.oicw => ConstructorData(WeaponData.codec, "weapon")
       case ObjectClass.particle_beam_magrider => ConstructorData(WeaponData.codec, "weapon")
       case ObjectClass.pellet_gun => ConstructorData(WeaponData.codec, "weapon")
+      case ObjectClass.peregrine_armor_siphon => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.peregrine_armor_siphon_left => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.peregrine_armor_siphon_right => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.peregrine_dual_machine_gun => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.peregrine_dual_machine_gun_left => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.peregrine_dual_machine_gun_right => ConstructorData(WeaponData.codec2, "weapon")
@@ -901,6 +922,9 @@ object ObjectClass {
       case ObjectClass.peregrine_mechhammer => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.peregrine_mechhammer_left => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.peregrine_mechhammer_right => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.peregrine_ntu_siphon => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.peregrine_ntu_siphon_left => ConstructorData(WeaponData.codec2, "weapon")
+      case ObjectClass.peregrine_ntu_siphon_right => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.peregrine_particle_cannon => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.peregrine_sparrow => ConstructorData(WeaponData.codec2, "weapon")
       case ObjectClass.peregrine_sparrow_left => ConstructorData(WeaponData.codec2, "weapon")
@@ -1255,13 +1279,13 @@ object ObjectClass {
       case ObjectClass.apc_tr => ConstructorData(VehicleData.codec, "vehicle")
       case ObjectClass.apc_vs => ConstructorData(VehicleData.codec, "vehicle")
       //case ObjectClass.aphelion_destroyed => normal @ 0 health
-      case ObjectClass.aphelion_flight => ConstructorData(BattleFrameRoboticsData.codec, "bfr")
+      case ObjectClass.aphelion_flight => ConstructorData(BattleFrameRoboticsData.codec_flight, "bfr")
       case ObjectClass.aphelion_gunner => ConstructorData(BattleFrameRoboticsData.codec, "bfr")
       case ObjectClass.aurora => ConstructorData(VehicleData.codec, "vehicle")
       case ObjectClass.battlewagon => ConstructorData(VehicleData.codec, "vehicle")
       //case ObjectClass.colossus_destroyed => normal @ 0 health
-      case ObjectClass.colossus_flight => ConstructorData(BattleFrameRoboticsData.codec)
-      case ObjectClass.colossus_gunner => ConstructorData(BattleFrameRoboticsData.codec)
+      case ObjectClass.colossus_flight => ConstructorData(BattleFrameRoboticsData.codec_flight, "bfr")
+      case ObjectClass.colossus_gunner => ConstructorData(BattleFrameRoboticsData.codec, "bfr")
       case ObjectClass.droppod => ConstructorData(DroppodData.codec, "droppod")
       case ObjectClass.dropship => ConstructorData(VehicleData.codec(VehicleFormat.Variant), "vehicle")
       case ObjectClass.dropship_destroyed => ConstructorData(DestroyedVehicleData.codec, "wreckage")
@@ -1285,8 +1309,8 @@ object ObjectClass {
       case ObjectClass.mosquito_destroyed => ConstructorData(DestroyedVehicleData.codec, "wreckage")
       case ObjectClass.orbital_shuttle => ConstructorData(OrbitalShuttleData.codec_pos, "HART")
       //case ObjectClass.peregrine_destroyed => normal @ 0 health
-      case ObjectClass.peregrine_flight => ConstructorData(BattleFrameRoboticsData.codec)
-      case ObjectClass.peregrine_gunner => ConstructorData(BattleFrameRoboticsData.codec)
+      case ObjectClass.peregrine_flight => ConstructorData(BattleFrameRoboticsData.codec_flight, "bfr")
+      case ObjectClass.peregrine_gunner => ConstructorData(BattleFrameRoboticsData.codec, "bfr")
       case ObjectClass.phantasm => ConstructorData(VehicleData.codec(VehicleFormat.Variant), "vehicle")
       //case ObjectClass.phantasm_destroyed => normal @ 0 health
       case ObjectClass.prowler => ConstructorData(VehicleData.codec, "vehicle")

@@ -9,7 +9,7 @@ import net.psforever.packet.game.objectcreate._
 
 import scala.util.{Failure, Success, Try}
 
-class BattleFrameRoboticsConverter extends ObjectCreateConverter[Vehicle]() {
+class BattleFrameFlightConverter extends ObjectCreateConverter[Vehicle]() {
   override def DetailedConstructorData(obj : Vehicle) : Try[BattleFrameRoboticsData] =
     Failure(new Exception("VehicleConverter should not be used to generate detailed VehicleData (nothing should)"))
 
@@ -42,7 +42,7 @@ class BattleFrameRoboticsConverter extends ObjectCreateConverter[Vehicle]() {
           proper_anim = true,
           unk3 = 0,
           show_bfr_shield = false,
-          unk4 = None,
+          unk4 = Some(false),
           Some(InventoryData(MakeDriverSeat(obj) ++ MakeUtilities(obj) ++ MakeMountings(obj)))
         )
       )
@@ -71,7 +71,7 @@ class BattleFrameRoboticsConverter extends ObjectCreateConverter[Vehicle]() {
           proper_anim = true,
           unk3 = 0,
           show_bfr_shield = false,
-          unk4 = None,
+          unk4 = Some(false),
           inventory = None
         )
       )

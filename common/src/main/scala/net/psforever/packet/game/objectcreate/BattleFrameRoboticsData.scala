@@ -41,55 +41,24 @@ final case class BattleFrameRoboticsData(pos : PlacementData,
                                          proper_anim : Boolean,
                                          unk3 : Int,
                                          show_bfr_shield : Boolean,
+                                         unk4 : Option[Boolean],
                                          inventory : Option[InventoryData] = None) extends ConstructorData {
   override def bitsize : Long = {
     val posSize : Long = pos.bitsize
     val dataSize : Long = data.bitsize
+    val unk4Size = unk4 match {
+      case Some(_) => 1L
+      case None => 0L
+    }
     val inventorySize = inventory match {
       case Some(inv) => inv.bitsize
       case None => 0L
     }
-    49L + posSize + dataSize + inventorySize
+    49L + posSize + dataSize + unk4Size + inventorySize
   }
 }
 
 object BattleFrameRoboticsData extends Marshallable[BattleFrameRoboticsData] {
-//  /**
-//    * Overloaded constructor for specifically handling `Normal` vehicle format.
-//    * @param basic a field that encompasses some data used by the vehicle, including `faction` and `owner`
-//    * @param health the amount of health the vehicle has, as a percentage of a filled bar (255)
-//    * @param driveState a representation for the current mobility state
-//    * @param cloak if a vehicle (that can cloak) is cloaked
-//    * @param inventory the seats, mounted weapons, and utilities (such as terminals) that are currently included
-//    */
-//  def apply(pos : PlacementData, basic : CommonFieldData, health : Int, driveState : DriveState.Value, cloak : Boolean, inventory : Option[InventoryData]) : BattleFrameRoboticsData = {
-//    BattleFrameRoboticsData(pos, basic, false, health, false, false, driveState, false, false, cloak, None, inventory)
-//  }
-//
-//  /**
-//    * Overloaded constructor for specifically handling `Utility` vehicle format.
-//    * @param basic a field that encompasses some data used by the vehicle, including `faction` and `owner`
-//    * @param health the amount of health the vehicle has, as a percentage of a filled bar (255)
-//    * @param driveState a representation for the current mobility state
-//    * @param cloak if a vehicle (that can cloak) is cloaked
-//    * @param inventory the seats, mounted weapons, and utilities (such as terminals) that are currently included
-//    */
-//  def apply(pos : PlacementData, basic : CommonFieldData, health : Int, driveState : DriveState.Value, cloak : Boolean, format : UtilityVehicleData, inventory : Option[InventoryData]) : BattleFrameRoboticsData = {
-//    BattleFrameRoboticsData(pos, basic, false, health, false, false, driveState, false, false, cloak, None, inventory)
-//  }
-//
-//  /**
-//    * Overloaded constructor for specifically handling `Variant` vehicle format.
-//    * @param basic a field that encompasses some data used by the vehicle, including `faction` and `owner`
-//    * @param health the amount of health the vehicle has, as a percentage of a filled bar (255)
-//    * @param driveState a representation for the current mobility state
-//    * @param cloak if a vehicle (that can cloak) is cloaked
-//    * @param inventory the seats, mounted weapons, and utilities (such as terminals) that are currently included
-//    */
-//  def apply(pos : PlacementData, basic : CommonFieldData, health : Int, driveState : DriveState.Value, cloak : Boolean, format : VariantVehicleData, inventory : Option[InventoryData]) : BattleFrameRoboticsData = {
-//    BattleFrameRoboticsData(pos, basic, false, health, false, false, driveState, false, false, cloak, None, inventory)
-//  }
-
   import net.psforever.packet.game.objectcreate.{PlayerData => Player_Data}
   /**
     * Constructor that ignores the coordinate information
@@ -149,14 +118,49 @@ object BattleFrameRoboticsData extends Marshallable[BattleFrameRoboticsData] {
       ).exmap[BattleFrameRoboticsData] (
       {
         case pos :: data :: health :: shield :: 0 :: u2 :: no_mount :: drive :: proper_anim :: u3 :: show_bfr_shield :: inv :: HNil =>
-          Attempt.successful(BattleFrameRoboticsData(pos, data, health, shield, 0, u2, no_mount, drive, proper_anim, u3, show_bfr_shield, inv))
+          Attempt.successful(BattleFrameRoboticsData(pos, data, health, shield, 0, u2, no_mount, drive, proper_anim, u3, show_bfr_shield, None, inv))
 
         case data =>
           Attempt.failure(Err(s"decoding invalid battleframe data - $data"))
       },
       {
-        case obj @ BattleFrameRoboticsData(pos, data, health, shield, 0, u2, no_mount, drive, proper_anim, u3, show_bfr_shield, inv) =>
+        case obj @ BattleFrameRoboticsData(pos, data, health, shield, 0, u2, no_mount, drive, proper_anim, u3, show_bfr_shield, None, inv) =>
           Attempt.successful(pos :: data :: health :: shield :: 0 :: u2 :: no_mount :: drive :: proper_anim :: u3 :: show_bfr_shield :: inv :: HNil)
+
+        case data =>
+          Attempt.failure(Err(s"encoding invalid battleframe data - $data"))
+      }
+    )
+  }
+
+  val codec_flight : Codec[BattleFrameRoboticsData] = {
+    import shapeless.::
+    (
+      ("pos" | PlacementData.codec) >>:~ { pos =>
+        ("data" | CommonFieldData.codec(false)) ::
+          ("health" | uint8L) ::
+          ("shield" | uint8L) ::
+          ("unk1" | uint16) :: //usually 0
+          ("unk2" | bool) ::
+          ("no_mount_points" | bool) ::
+          ("driveState" | uint8L) :: //used for deploy state
+          ("proper_anim" | bool) :: //when unflagged, bfr stands, even if unmanned
+          ("unk3" | uint4) ::
+          ("show_bfr_shield" | bool) ::
+          ("unk4" | bool) ::
+          optional(bool, "inventory" | custom_inventory_codec(InitialStreamLengthToSeatEntries(pos.vel.isDefined)))
+      }
+      ).exmap[BattleFrameRoboticsData] (
+      {
+        case pos :: data :: health :: shield :: 0 :: u2 :: no_mount :: drive :: proper_anim :: u3 :: show_bfr_shield :: unk4 :: inv :: HNil =>
+          Attempt.successful(BattleFrameRoboticsData(pos, data, health, shield, 0, u2, no_mount, drive, proper_anim, u3, show_bfr_shield, Some(unk4), inv))
+
+        case data =>
+          Attempt.failure(Err(s"decoding invalid battleframe data - $data"))
+      },
+      {
+        case obj @ BattleFrameRoboticsData(pos, data, health, shield, 0, u2, no_mount, drive, proper_anim, u3, show_bfr_shield, Some(unk4), inv) =>
+          Attempt.successful(pos :: data :: health :: shield :: 0 :: u2 :: no_mount :: drive :: proper_anim :: u3 :: show_bfr_shield :: unk4 :: inv :: HNil)
 
         case data =>
           Attempt.failure(Err(s"encoding invalid battleframe data - $data"))

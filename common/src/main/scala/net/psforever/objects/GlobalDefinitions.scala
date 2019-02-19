@@ -829,6 +829,74 @@ object GlobalDefinitions {
   val aphelion_plasma_rocket_pod = ToolDefinition(ObjectClass.aphelion_plasma_rocket_pod)
 
   val aphelion_immolation_cannon = ToolDefinition(ObjectClass.aphelion_immolation_cannon)
+
+  val colossus_armor_siphon = ToolDefinition(ObjectClass.colossus_armor_siphon)
+
+  val colossus_armor_siphon_left = ToolDefinition(ObjectClass.colossus_armor_siphon_left)
+
+  val colossus_armor_siphon_right = ToolDefinition(ObjectClass.colossus_armor_siphon_right)
+
+  val colossus_burster = ToolDefinition(ObjectClass.colossus_burster)
+
+  val colossus_burster_left = ToolDefinition(ObjectClass.colossus_burster_left)
+
+  val colossus_burster_right = ToolDefinition(ObjectClass.colossus_burster_right)
+
+  val colossus_chaingun = ToolDefinition(ObjectClass.colossus_chaingun)
+
+  val colossus_chaingun_left = ToolDefinition(ObjectClass.colossus_chaingun_left)
+
+  val colossus_chaingun_right = ToolDefinition(ObjectClass.colossus_chaingun_right)
+
+  val colossus_ntu_siphon = ToolDefinition(ObjectClass.colossus_ntu_siphon)
+
+  val colossus_ntu_siphon_left = ToolDefinition(ObjectClass.colossus_ntu_siphon_left)
+
+  val colossus_ntu_siphon_right = ToolDefinition(ObjectClass.colossus_ntu_siphon_right)
+
+  val colossus_tank_cannon = ToolDefinition(ObjectClass.colossus_tank_cannon)
+
+  val colossus_tank_cannon_left = ToolDefinition(ObjectClass.colossus_tank_cannon_left)
+
+  val colossus_tank_cannon_right = ToolDefinition(ObjectClass.colossus_tank_cannon_right)
+
+  val colossus_dual_100mm_cannons = ToolDefinition(ObjectClass.colossus_dual_100mm_cannons)
+
+  val colossus_cluster_bomb_pod = ToolDefinition(ObjectClass.colossus_cluster_bomb_pod)
+
+  val peregrine_armor_siphon = ToolDefinition(ObjectClass.peregrine_armor_siphon)
+
+  val peregrine_armor_siphon_left = ToolDefinition(ObjectClass.peregrine_armor_siphon_left)
+
+  val peregrine_armor_siphon_right = ToolDefinition(ObjectClass.peregrine_armor_siphon_right)
+
+  val peregrine_dual_machine_gun = ToolDefinition(ObjectClass.peregrine_dual_machine_gun)
+
+  val peregrine_dual_machine_gun_left = ToolDefinition(ObjectClass.peregrine_dual_machine_gun_left)
+
+  val peregrine_dual_machine_gun_right = ToolDefinition(ObjectClass.peregrine_dual_machine_gun_right)
+
+  val peregrine_mechhammer = ToolDefinition(ObjectClass.peregrine_mechhammer)
+
+  val peregrine_mechhammer_left = ToolDefinition(ObjectClass.peregrine_mechhammer_left)
+
+  val peregrine_mechhammer_right = ToolDefinition(ObjectClass.peregrine_mechhammer_right)
+
+  val peregrine_sparrow = ToolDefinition(ObjectClass.peregrine_sparrow)
+
+  val peregrine_sparrow_left = ToolDefinition(ObjectClass.peregrine_sparrow_left)
+
+  val peregrine_sparrow_right = ToolDefinition(ObjectClass.peregrine_sparrow_right)
+
+  val peregrine_particle_cannon = ToolDefinition(ObjectClass.peregrine_particle_cannon)
+
+  val peregrine_dual_rocket_pods = ToolDefinition(ObjectClass.peregrine_dual_rocket_pods)
+
+  val peregrine_ntu_siphon = ToolDefinition(ObjectClass.peregrine_ntu_siphon)
+
+  val peregrine_ntu_siphon_left = ToolDefinition(ObjectClass.peregrine_ntu_siphon_left)
+
+  val peregrine_ntu_siphon_right = ToolDefinition(ObjectClass.peregrine_ntu_siphon_right)
   init_tools()
 
   /*
@@ -900,6 +968,10 @@ object GlobalDefinitions {
 
   val phantasm = VehicleDefinition(ObjectClass.phantasm)
 
+  val aphelion_gunner = VehicleDefinition(ObjectClass.aphelion_gunner)
+
+  val aphelion_flight = VehicleDefinition(ObjectClass.aphelion_flight) //eclipse
+
   val colossus_gunner = VehicleDefinition(ObjectClass.colossus_gunner)
 
   val colossus_flight = VehicleDefinition(ObjectClass.colossus_flight) //invader
@@ -907,10 +979,6 @@ object GlobalDefinitions {
   val peregrine_gunner = VehicleDefinition(ObjectClass.peregrine_gunner)
 
   val peregrine_flight = VehicleDefinition(ObjectClass.peregrine_flight) //eagle
-
-  val aphelion_gunner = VehicleDefinition(ObjectClass.aphelion_gunner)
-
-  val aphelion_flight = VehicleDefinition(ObjectClass.aphelion_flight) //eclipse
   init_vehicles()
 
   /*
@@ -4840,7 +4908,7 @@ object GlobalDefinitions {
     aphelion_armor_siphon.Name = "aphelion_armor_siphon"
     aphelion_armor_siphon.Size = EquipmentSize.BFRArmWeapon
     aphelion_armor_siphon.AmmoTypes += armor_siphon_ammo
-    aphelion_armor_siphon.ProjectileTypes += aphelion_laser_projectile
+    aphelion_armor_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct?
     aphelion_armor_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_armor_siphon.FireModes.head.AmmoTypeIndices += 0
     aphelion_armor_siphon.FireModes.head.AmmoSlotIndex = 0
@@ -4849,7 +4917,7 @@ object GlobalDefinitions {
     aphelion_armor_siphon_left.Name = "aphelion_armor_siphon_left"
     aphelion_armor_siphon_left.Size = EquipmentSize.BFRArmWeapon
     aphelion_armor_siphon_left.AmmoTypes += armor_siphon_ammo
-    aphelion_armor_siphon_left.ProjectileTypes += aphelion_laser_projectile
+    aphelion_armor_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct?
     aphelion_armor_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_armor_siphon_left.FireModes.head.AmmoTypeIndices += 0
     aphelion_armor_siphon_left.FireModes.head.AmmoSlotIndex = 0
@@ -4858,7 +4926,7 @@ object GlobalDefinitions {
     aphelion_armor_siphon_right.Name = "aphelion_ntu_siphon_right"
     aphelion_armor_siphon_right.Size = EquipmentSize.BFRArmWeapon
     aphelion_armor_siphon_right.AmmoTypes += armor_siphon_ammo
-    aphelion_armor_siphon_right.ProjectileTypes += aphelion_laser_projectile
+    aphelion_armor_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct?
     aphelion_armor_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_armor_siphon_right.FireModes.head.AmmoTypeIndices += 0
     aphelion_armor_siphon_right.FireModes.head.AmmoSlotIndex = 0
@@ -4989,6 +5057,338 @@ object GlobalDefinitions {
     aphelion_immolation_cannon.FireModes.head.AmmoTypeIndices += 0
     aphelion_immolation_cannon.FireModes.head.AmmoSlotIndex = 0
     aphelion_immolation_cannon.FireModes.head.Magazine = 25
+
+    colossus_armor_siphon.Name = "colossus_armor_siphon"
+    colossus_armor_siphon.Size = EquipmentSize.BFRArmWeapon
+    colossus_armor_siphon.AmmoTypes += armor_siphon_ammo
+    colossus_armor_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_armor_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    colossus_armor_siphon.FireModes.head.AmmoTypeIndices += 0
+    colossus_armor_siphon.FireModes.head.AmmoSlotIndex = 0
+    colossus_armor_siphon.FireModes.head.Magazine = 100
+
+    colossus_armor_siphon_left.Name = "colossus_armor_siphon_left"
+    colossus_armor_siphon_left.Size = EquipmentSize.BFRArmWeapon
+    colossus_armor_siphon_left.AmmoTypes += armor_siphon_ammo
+    colossus_armor_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_armor_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    colossus_armor_siphon_left.FireModes.head.AmmoTypeIndices += 0
+    colossus_armor_siphon_left.FireModes.head.AmmoSlotIndex = 0
+    colossus_armor_siphon_left.FireModes.head.Magazine = 100
+
+    colossus_armor_siphon_right.Name = "colossus_armor_siphon_right"
+    colossus_armor_siphon_right.Size = EquipmentSize.BFRArmWeapon
+    colossus_armor_siphon_right.AmmoTypes += armor_siphon_ammo
+    colossus_armor_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_armor_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    colossus_armor_siphon_right.FireModes.head.AmmoTypeIndices += 0
+    colossus_armor_siphon_right.FireModes.head.AmmoSlotIndex = 0
+    colossus_armor_siphon_right.FireModes.head.Magazine = 100
+
+    colossus_burster.Name = "colossus_burster"
+    colossus_burster.Size = EquipmentSize.BFRArmWeapon
+    colossus_burster.AmmoTypes += colossus_burster_ammo
+    colossus_burster.ProjectileTypes += colossus_burster_projectile
+    colossus_burster.FireModes += new FireModeDefinition
+    colossus_burster.FireModes.head.AmmoTypeIndices += 0
+    colossus_burster.FireModes.head.AmmoSlotIndex = 0
+    colossus_burster.FireModes.head.Magazine = 25
+
+    colossus_burster_left.Name = "colossus_burster_left"
+    colossus_burster_left.Size = EquipmentSize.BFRArmWeapon
+    colossus_burster_left.AmmoTypes += colossus_burster_ammo
+    colossus_burster_left.ProjectileTypes += colossus_burster_projectile
+    colossus_burster_left.FireModes += new FireModeDefinition
+    colossus_burster_left.FireModes.head.AmmoTypeIndices += 0
+    colossus_burster_left.FireModes.head.AmmoSlotIndex = 0
+    colossus_burster_left.FireModes.head.Magazine = 25
+
+    colossus_burster_right.Name = "colossus_burster_right"
+    colossus_burster_right.Size = EquipmentSize.BFRArmWeapon
+    colossus_burster_right.AmmoTypes += colossus_burster_ammo
+    colossus_burster_right.ProjectileTypes += colossus_burster_projectile
+    colossus_burster_right.FireModes += new FireModeDefinition
+    colossus_burster_right.FireModes.head.AmmoTypeIndices += 0
+    colossus_burster_right.FireModes.head.AmmoSlotIndex = 0
+    colossus_burster_right.FireModes.head.Magazine = 25
+
+    colossus_chaingun.Name = "colossus_chaingun"
+    colossus_chaingun.Size = EquipmentSize.BFRArmWeapon
+    colossus_chaingun.AmmoTypes += colossus_chaingun_ammo
+    colossus_chaingun.ProjectileTypes += colossus_chaingun_projectile
+    colossus_chaingun.FireModes += new FireModeDefinition
+    colossus_chaingun.FireModes.head.AmmoTypeIndices += 0
+    colossus_chaingun.FireModes.head.AmmoSlotIndex = 0
+    colossus_chaingun.FireModes.head.Magazine = 125
+
+    colossus_chaingun_left.Name = "colossus_chaingun_left"
+    colossus_chaingun_left.Size = EquipmentSize.BFRArmWeapon
+    colossus_chaingun_left.AmmoTypes += colossus_chaingun_ammo
+    colossus_chaingun_left.ProjectileTypes += colossus_chaingun_projectile
+    colossus_chaingun_left.FireModes += new FireModeDefinition
+    colossus_chaingun_left.FireModes.head.AmmoTypeIndices += 0
+    colossus_chaingun_left.FireModes.head.AmmoSlotIndex = 0
+    colossus_chaingun_left.FireModes.head.Magazine = 125
+
+    colossus_chaingun_right.Name = "colossus_chaingun_right"
+    colossus_chaingun_right.Size = EquipmentSize.BFRArmWeapon
+    colossus_chaingun_right.AmmoTypes += colossus_chaingun_ammo
+    colossus_chaingun_right.ProjectileTypes += colossus_chaingun_projectile
+    colossus_chaingun_right.FireModes += new FireModeDefinition
+    colossus_chaingun_right.FireModes.head.AmmoTypeIndices += 0
+    colossus_chaingun_right.FireModes.head.AmmoSlotIndex = 0
+    colossus_chaingun_right.FireModes.head.Magazine = 125
+
+    colossus_ntu_siphon.Name = "colossus_ntu_siphon"
+    colossus_ntu_siphon.Size = EquipmentSize.BFRArmWeapon
+    colossus_ntu_siphon.AmmoTypes += ntu_siphon_ammo
+    colossus_ntu_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_ntu_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    colossus_ntu_siphon.FireModes.head.AmmoTypeIndices += 0
+    colossus_ntu_siphon.FireModes.head.AmmoSlotIndex = 0
+    colossus_ntu_siphon.FireModes.head.Magazine = 150
+
+    colossus_ntu_siphon_left.Name = "colossus_ntu_siphon_left"
+    colossus_ntu_siphon_left.Size = EquipmentSize.BFRArmWeapon
+    colossus_ntu_siphon_left.AmmoTypes += ntu_siphon_ammo
+    colossus_ntu_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_ntu_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    colossus_ntu_siphon_left.FireModes.head.AmmoTypeIndices += 0
+    colossus_ntu_siphon_left.FireModes.head.AmmoSlotIndex = 0
+    colossus_ntu_siphon_left.FireModes.head.Magazine = 150
+
+    colossus_ntu_siphon_right.Name = "colossus_ntu_siphon_right"
+    colossus_ntu_siphon_right.Size = EquipmentSize.BFRArmWeapon
+    colossus_ntu_siphon_right.AmmoTypes += ntu_siphon_ammo
+    colossus_ntu_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_ntu_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    colossus_ntu_siphon_right.FireModes.head.AmmoTypeIndices += 0
+    colossus_ntu_siphon_right.FireModes.head.AmmoSlotIndex = 0
+    colossus_ntu_siphon_right.FireModes.head.Magazine = 150
+
+    colossus_tank_cannon.Name = "colossus_tank_cannon"
+    colossus_tank_cannon.Size = EquipmentSize.BFRArmWeapon
+    colossus_tank_cannon.AmmoTypes += colossus_tank_cannon_ammo
+    colossus_tank_cannon.ProjectileTypes += colossus_tank_cannon_projectile
+    colossus_tank_cannon.FireModes += new FireModeDefinition
+    colossus_tank_cannon.FireModes.head.AmmoTypeIndices += 0
+    colossus_tank_cannon.FireModes.head.AmmoSlotIndex = 0
+    colossus_tank_cannon.FireModes.head.Magazine = 25
+
+    colossus_tank_cannon_left.Name = "colossus_tank_cannon_left"
+    colossus_tank_cannon_left.Size = EquipmentSize.BFRArmWeapon
+    colossus_tank_cannon_left.AmmoTypes += colossus_tank_cannon_ammo
+    colossus_tank_cannon_left.ProjectileTypes += colossus_tank_cannon_projectile
+    colossus_tank_cannon_left.FireModes += new FireModeDefinition
+    colossus_tank_cannon_left.FireModes.head.AmmoTypeIndices += 0
+    colossus_tank_cannon_left.FireModes.head.AmmoSlotIndex = 0
+    colossus_tank_cannon_left.FireModes.head.Magazine = 25
+
+    colossus_tank_cannon_right.Name = "colossus_tank_cannon_right"
+    colossus_tank_cannon_right.Size = EquipmentSize.BFRArmWeapon
+    colossus_tank_cannon_right.AmmoTypes += colossus_tank_cannon_ammo
+    colossus_tank_cannon_right.ProjectileTypes += colossus_tank_cannon_projectile
+    colossus_tank_cannon_right.FireModes += new FireModeDefinition
+    colossus_tank_cannon_right.FireModes.head.AmmoTypeIndices += 0
+    colossus_tank_cannon_right.FireModes.head.AmmoSlotIndex = 0
+    colossus_tank_cannon_right.FireModes.head.Magazine = 25
+
+    colossus_dual_100mm_cannons.Name = "colossus_dual_100mm_cannons"
+    colossus_dual_100mm_cannons.Size = EquipmentSize.BFRGunnerWeapon
+    colossus_dual_100mm_cannons.AmmoTypes += colossus_100mm_cannon_ammo
+    colossus_dual_100mm_cannons.ProjectileTypes += colossus_100mm_projectile
+    colossus_dual_100mm_cannons.FireModes += new FireModeDefinition
+    colossus_dual_100mm_cannons.FireModes.head.AmmoTypeIndices += 0
+    colossus_dual_100mm_cannons.FireModes.head.AmmoSlotIndex = 0
+    colossus_dual_100mm_cannons.FireModes.head.Magazine = 22
+
+    colossus_cluster_bomb_pod.Name = "colossus_cluster_bomb_pod"
+    colossus_cluster_bomb_pod.Size = EquipmentSize.BFRGunnerWeapon
+    colossus_cluster_bomb_pod.AmmoTypes += colossus_cluster_bomb_ammo
+    colossus_cluster_bomb_pod.ProjectileTypes += colossus_cluster_bomb_projectile
+    colossus_cluster_bomb_pod.FireModes += new FireModeDefinition
+    colossus_cluster_bomb_pod.FireModes.head.AmmoTypeIndices += 0
+    colossus_cluster_bomb_pod.FireModes.head.AmmoSlotIndex = 0
+    colossus_cluster_bomb_pod.FireModes.head.Magazine = 125
+    colossus_cluster_bomb_pod.FireModes += new FireModeDefinition
+    colossus_cluster_bomb_pod.FireModes(1).AmmoTypeIndices += 0
+    colossus_cluster_bomb_pod.FireModes(1).AmmoSlotIndex = 0
+    colossus_cluster_bomb_pod.FireModes(1).Magazine = 125
+
+    peregrine_armor_siphon.Name = "peregrine_armor_siphon"
+    peregrine_armor_siphon.Size = EquipmentSize.BFRArmWeapon
+    peregrine_armor_siphon.AmmoTypes += armor_siphon_ammo
+    peregrine_armor_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_armor_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    peregrine_armor_siphon.FireModes.head.AmmoTypeIndices += 0
+    peregrine_armor_siphon.FireModes.head.AmmoSlotIndex = 0
+    peregrine_armor_siphon.FireModes.head.Magazine = 100
+
+    peregrine_armor_siphon_left.Name = "peregrine_armor_siphon_left"
+    peregrine_armor_siphon_left.Size = EquipmentSize.BFRArmWeapon
+    peregrine_armor_siphon_left.AmmoTypes += armor_siphon_ammo
+    peregrine_armor_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_armor_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    peregrine_armor_siphon_left.FireModes.head.AmmoTypeIndices += 0
+    peregrine_armor_siphon_left.FireModes.head.AmmoSlotIndex = 0
+    peregrine_armor_siphon_left.FireModes.head.Magazine = 100
+
+    peregrine_armor_siphon_right.Name = "peregrine_armor_siphon_right"
+    peregrine_armor_siphon_right.Size = EquipmentSize.BFRArmWeapon
+    peregrine_armor_siphon_right.AmmoTypes += armor_siphon_ammo
+    peregrine_armor_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_armor_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    peregrine_armor_siphon_right.FireModes.head.AmmoTypeIndices += 0
+    peregrine_armor_siphon_right.FireModes.head.AmmoSlotIndex = 0
+    peregrine_armor_siphon_right.FireModes.head.Magazine = 100
+
+    peregrine_dual_machine_gun.Name = "peregrine_dual_machine_gun"
+    peregrine_dual_machine_gun.Size = EquipmentSize.BFRArmWeapon
+    peregrine_dual_machine_gun.AmmoTypes += peregrine_dual_machine_gun_ammo
+    peregrine_dual_machine_gun.ProjectileTypes += peregrine_dual_machine_gun_projectile
+    peregrine_dual_machine_gun.FireModes += new FireModeDefinition
+    peregrine_dual_machine_gun.FireModes.head.AmmoTypeIndices += 0
+    peregrine_dual_machine_gun.FireModes.head.AmmoSlotIndex = 0
+    peregrine_dual_machine_gun.FireModes.head.Magazine = 150
+
+    peregrine_dual_machine_gun_left.Name = "peregrine_dual_machine_gun_left"
+    peregrine_dual_machine_gun_left.Size = EquipmentSize.BFRArmWeapon
+    peregrine_dual_machine_gun_left.AmmoTypes += peregrine_dual_machine_gun_ammo
+    peregrine_dual_machine_gun_left.ProjectileTypes += peregrine_dual_machine_gun_projectile
+    peregrine_dual_machine_gun_left.FireModes += new FireModeDefinition
+    peregrine_dual_machine_gun_left.FireModes.head.AmmoTypeIndices += 0
+    peregrine_dual_machine_gun_left.FireModes.head.AmmoSlotIndex = 0
+    peregrine_dual_machine_gun_left.FireModes.head.Magazine = 150
+
+    peregrine_dual_machine_gun_right.Name = "peregrine_dual_machine_gun_right"
+    peregrine_dual_machine_gun_right.Size = EquipmentSize.BFRArmWeapon
+    peregrine_dual_machine_gun_right.AmmoTypes += peregrine_dual_machine_gun_ammo
+    peregrine_dual_machine_gun_right.ProjectileTypes += peregrine_dual_machine_gun_projectile
+    peregrine_dual_machine_gun_right.FireModes += new FireModeDefinition
+    peregrine_dual_machine_gun_right.FireModes.head.AmmoTypeIndices += 0
+    peregrine_dual_machine_gun_right.FireModes.head.AmmoSlotIndex = 0
+    peregrine_dual_machine_gun_right.FireModes.head.Magazine = 150
+
+    peregrine_mechhammer.Name = "peregrine_mechhammer"
+    peregrine_mechhammer.Size = EquipmentSize.BFRArmWeapon
+    peregrine_mechhammer.AmmoTypes += peregrine_mechhammer_ammo
+    peregrine_mechhammer.ProjectileTypes += peregrine_mechhammer_projectile
+    peregrine_mechhammer.FireModes += new PelletFireModeDefinition
+    peregrine_mechhammer.FireModes.head.AmmoTypeIndices += 0
+    peregrine_mechhammer.FireModes.head.AmmoSlotIndex = 0
+    peregrine_mechhammer.FireModes.head.Magazine = 30
+    peregrine_mechhammer.FireModes.head.Chamber = 16 //16 shells * 8 pellets = 128
+    peregrine_mechhammer.FireModes += new PelletFireModeDefinition
+    peregrine_mechhammer.FireModes(1).AmmoTypeIndices += 0
+    peregrine_mechhammer.FireModes(1).AmmoSlotIndex = 0
+    peregrine_mechhammer.FireModes(1).Magazine = 30
+    peregrine_mechhammer.FireModes(1).Chamber = 12 //16 shells * 8 pellets = 128
+
+    peregrine_mechhammer_left.Name = "peregrine_mechhammer_left"
+    peregrine_mechhammer_left.Size = EquipmentSize.BFRArmWeapon
+    peregrine_mechhammer_left.AmmoTypes += peregrine_mechhammer_ammo
+    peregrine_mechhammer_left.ProjectileTypes += peregrine_mechhammer_projectile
+    peregrine_mechhammer_left.FireModes += new PelletFireModeDefinition
+    peregrine_mechhammer_left.FireModes.head.AmmoTypeIndices += 0
+    peregrine_mechhammer_left.FireModes.head.AmmoSlotIndex = 0
+    peregrine_mechhammer_left.FireModes.head.Magazine = 30
+    peregrine_mechhammer_left.FireModes.head.Chamber = 16 //16 shells * 8 pellets = 128
+    peregrine_mechhammer_left.FireModes += new PelletFireModeDefinition
+    peregrine_mechhammer_left.FireModes(1).AmmoTypeIndices += 0
+    peregrine_mechhammer_left.FireModes(1).AmmoSlotIndex = 0
+    peregrine_mechhammer_left.FireModes(1).Magazine = 30
+    peregrine_mechhammer_left.FireModes(1).Chamber = 12 //16 shells * 8 pellets = 128
+
+    peregrine_mechhammer_right.Name = "peregrine_mechhammer_right"
+    peregrine_mechhammer_right.Size = EquipmentSize.BFRArmWeapon
+    peregrine_mechhammer_right.AmmoTypes += peregrine_mechhammer_ammo
+    peregrine_mechhammer_right.ProjectileTypes += peregrine_mechhammer_projectile
+    peregrine_mechhammer_right.FireModes += new PelletFireModeDefinition
+    peregrine_mechhammer_right.FireModes.head.AmmoTypeIndices += 0
+    peregrine_mechhammer_right.FireModes.head.AmmoSlotIndex = 0
+    peregrine_mechhammer_right.FireModes.head.Magazine = 30
+    peregrine_mechhammer_right.FireModes.head.Chamber = 16 //16 shells * 8 pellets = 128
+    peregrine_mechhammer_right.FireModes += new PelletFireModeDefinition
+    peregrine_mechhammer_right.FireModes(1).AmmoTypeIndices += 0
+    peregrine_mechhammer_right.FireModes(1).AmmoSlotIndex = 0
+    peregrine_mechhammer_right.FireModes(1).Magazine = 30
+    peregrine_mechhammer_right.FireModes(1).Chamber = 12 //16 shells * 8 pellets = 128
+
+    peregrine_ntu_siphon.Name = "peregrine_ntu_siphon"
+    peregrine_ntu_siphon.Size = EquipmentSize.BFRArmWeapon
+    peregrine_ntu_siphon.AmmoTypes += ntu_siphon_ammo
+    peregrine_ntu_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_ntu_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    peregrine_ntu_siphon.FireModes.head.AmmoTypeIndices += 0
+    peregrine_ntu_siphon.FireModes.head.AmmoSlotIndex = 0
+    peregrine_ntu_siphon.FireModes.head.Magazine = 150
+
+    peregrine_ntu_siphon_left.Name = "peregrine_ntu_siphon_left"
+    peregrine_ntu_siphon_left.Size = EquipmentSize.BFRArmWeapon
+    peregrine_ntu_siphon_left.AmmoTypes += ntu_siphon_ammo
+    peregrine_ntu_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_ntu_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    peregrine_ntu_siphon_left.FireModes.head.AmmoTypeIndices += 0
+    peregrine_ntu_siphon_left.FireModes.head.AmmoSlotIndex = 0
+    peregrine_ntu_siphon_left.FireModes.head.Magazine = 150
+
+    peregrine_ntu_siphon_right.Name = "peregrine_ntu_siphon_right"
+    peregrine_ntu_siphon_right.Size = EquipmentSize.BFRArmWeapon
+    peregrine_ntu_siphon_right.AmmoTypes += ntu_siphon_ammo
+    peregrine_ntu_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_ntu_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
+    peregrine_ntu_siphon_right.FireModes.head.AmmoTypeIndices += 0
+    peregrine_ntu_siphon_right.FireModes.head.AmmoSlotIndex = 0
+    peregrine_ntu_siphon_right.FireModes.head.Magazine = 150
+
+    peregrine_sparrow.Name = "peregrine_sparrow"
+    peregrine_sparrow.Size = EquipmentSize.BFRArmWeapon
+    peregrine_sparrow.AmmoTypes += peregrine_sparrow_ammo
+    peregrine_sparrow.ProjectileTypes += peregrine_sparrow_projectile
+    peregrine_sparrow.FireModes += new FireModeDefinition
+    peregrine_sparrow.FireModes.head.AmmoTypeIndices += 0
+    peregrine_sparrow.FireModes.head.AmmoSlotIndex = 0
+    peregrine_sparrow.FireModes.head.Magazine = 12
+
+    peregrine_sparrow_left.Name = "peregrine_sparrow_left"
+    peregrine_sparrow_left.Size = EquipmentSize.BFRArmWeapon
+    peregrine_sparrow_left.AmmoTypes += peregrine_sparrow_ammo
+    peregrine_sparrow_left.ProjectileTypes += peregrine_sparrow_projectile
+    peregrine_sparrow_left.FireModes += new FireModeDefinition
+    peregrine_sparrow_left.FireModes.head.AmmoTypeIndices += 0
+    peregrine_sparrow_left.FireModes.head.AmmoSlotIndex = 0
+    peregrine_sparrow_left.FireModes.head.Magazine = 12
+
+    peregrine_sparrow_right.Name = "peregrine_sparrow_right"
+    peregrine_sparrow_right.Size = EquipmentSize.BFRArmWeapon
+    peregrine_sparrow_right.AmmoTypes += peregrine_sparrow_ammo
+    peregrine_sparrow_right.ProjectileTypes += peregrine_sparrow_projectile
+    peregrine_sparrow_right.FireModes += new FireModeDefinition
+    peregrine_sparrow_right.FireModes.head.AmmoTypeIndices += 0
+    peregrine_sparrow_right.FireModes.head.AmmoSlotIndex = 0
+    peregrine_sparrow_right.FireModes.head.Magazine = 12
+
+    peregrine_particle_cannon.Name = "peregrine_particle_cannon"
+    peregrine_particle_cannon.Size = EquipmentSize.BFRGunnerWeapon
+    peregrine_particle_cannon.AmmoTypes += peregrine_particle_cannon_ammo
+    peregrine_particle_cannon.ProjectileTypes += peregrine_particle_cannon_projectile
+    peregrine_particle_cannon.FireModes += new FireModeDefinition
+    peregrine_particle_cannon.FireModes.head.AmmoTypeIndices += 0
+    peregrine_particle_cannon.FireModes.head.AmmoSlotIndex = 0
+    peregrine_particle_cannon.FireModes.head.Magazine = 10
+
+    peregrine_dual_rocket_pods.Name = "peregrine_dual_rocket_pods"
+    peregrine_dual_rocket_pods.Size = EquipmentSize.BFRGunnerWeapon
+    peregrine_dual_rocket_pods.AmmoTypes += peregrine_rocket_pod_ammo
+    peregrine_dual_rocket_pods.ProjectileTypes += peregrine_rocket_pod_projectile
+    peregrine_dual_rocket_pods.FireModes += new FireModeDefinition
+    peregrine_dual_rocket_pods.FireModes.head.AmmoTypeIndices += 0
+    peregrine_dual_rocket_pods.FireModes.head.AmmoSlotIndex = 0
+    peregrine_dual_rocket_pods.FireModes.head.Magazine = 24
+    peregrine_dual_rocket_pods.FireModes += new FireModeDefinition
+    peregrine_dual_rocket_pods.FireModes(1).AmmoTypeIndices += 0
+    peregrine_dual_rocket_pods.FireModes(1).AmmoSlotIndex = 0
+    peregrine_dual_rocket_pods.FireModes(1).Magazine = 24
   }
 
   /**
@@ -5764,9 +6164,88 @@ object GlobalDefinitions {
     aphelion_gunner.MountPoints += 2 -> 1
     aphelion_gunner.TrunkSize = InventoryTile.Tile1518 //adb reports 15x11, but the graphic uses 15x18
     aphelion_gunner.TrunkOffset = 30
-    aphelion_gunner.AutoPilotSpeeds = (24, 10)
+    aphelion_gunner.AutoPilotSpeeds = (5, 1)
     aphelion_gunner.Packet = battleFrameConverter
     aphelion_gunner.DestroyedModel = None
+
+    colossus_gunner.Name = "colossus_gunner"
+    colossus_gunner.MaxHealth = 4500
+    colossus_gunner.MaxShields = 3000 + 1
+    colossus_gunner.Seats += 0 -> new SeatDefinition()
+    colossus_gunner.Seats(0).ControlledWeapon = Set(2, 3)
+    colossus_gunner.Seats += 1 -> new SeatDefinition()
+    colossus_gunner.Seats(1).ControlledWeapon = 4
+    colossus_gunner.Weapons(2 -> colossus_tank_cannon_left)
+    colossus_gunner.Weapons(3 -> colossus_tank_cannon_right)
+    colossus_gunner.Weapons(4 -> colossus_dual_100mm_cannons)
+    colossus_gunner.MountPoints += 1 -> 0
+    colossus_gunner.MountPoints += 2 -> 1
+    colossus_gunner.TrunkSize = InventoryTile.Tile1518 //adb reports 15x11, but the graphic uses 15x18
+    colossus_gunner.TrunkOffset = 30
+    colossus_gunner.AutoPilotSpeeds = (5, 1)
+    colossus_gunner.Packet = battleFrameConverter
+    colossus_gunner.DestroyedModel = None
+
+    peregrine_gunner.Name = "peregrine_gunner"
+    peregrine_gunner.MaxHealth = 4500
+    peregrine_gunner.MaxShields = 3000 + 1
+    peregrine_gunner.Seats += 0 -> new SeatDefinition()
+    peregrine_gunner.Seats(0).ControlledWeapon = Set(2, 3)
+    peregrine_gunner.Seats += 1 -> new SeatDefinition()
+    peregrine_gunner.Seats(1).ControlledWeapon = 4
+    peregrine_gunner.Weapons(2 -> peregrine_dual_machine_gun_left)
+    peregrine_gunner.Weapons(3 -> peregrine_dual_machine_gun_right)
+    peregrine_gunner.Weapons(4 -> peregrine_particle_cannon)
+    peregrine_gunner.MountPoints += 1 -> 0
+    peregrine_gunner.MountPoints += 2 -> 1
+    peregrine_gunner.TrunkSize = InventoryTile.Tile1518 //adb reports 15x11, but the graphic uses 15x18
+    peregrine_gunner.TrunkOffset = 30
+    peregrine_gunner.AutoPilotSpeeds = (5, 1)
+    peregrine_gunner.Packet = battleFrameConverter
+    peregrine_gunner.DestroyedModel = None
+
+    val battleFrameFlightConverter = new BattleFrameFlightConverter
+    aphelion_flight.Name = "aphelion_flight"
+    aphelion_flight.MaxHealth = 3500
+    aphelion_flight.MaxShields = 2500 + 1
+    aphelion_flight.Seats += 0 -> new SeatDefinition()
+    aphelion_flight.Seats(0).ControlledWeapon = Set(1, 2)
+    aphelion_flight.Weapons(1 -> aphelion_ppa_left)
+    aphelion_flight.Weapons(2 -> aphelion_ppa_right)
+    aphelion_flight.MountPoints += 1 -> 0
+    aphelion_flight.TrunkSize = InventoryTile.Tile1518 //adb reports 15x11, but the graphic uses 15x18
+    aphelion_flight.TrunkOffset = 30
+    aphelion_flight.AutoPilotSpeeds = (5, 1)
+    aphelion_flight.Packet = battleFrameFlightConverter
+    aphelion_flight.DestroyedModel = None
+
+    colossus_flight.Name = "colossus_flight"
+    colossus_flight.MaxHealth = 3500
+    colossus_flight.MaxShields = 2500 + 1
+    colossus_flight.Seats += 0 -> new SeatDefinition()
+    colossus_flight.Seats(0).ControlledWeapon = Set(1, 2)
+    colossus_flight.Weapons(1 -> colossus_tank_cannon_left)
+    colossus_flight.Weapons(2 -> colossus_tank_cannon_right)
+    colossus_flight.MountPoints += 1 -> 0
+    colossus_flight.TrunkSize = InventoryTile.Tile1518 //adb reports 15x11, but the graphic uses 15x18
+    colossus_flight.TrunkOffset = 30
+    colossus_flight.AutoPilotSpeeds = (5, 1)
+    colossus_flight.Packet = battleFrameFlightConverter
+    colossus_flight.DestroyedModel = None
+
+    peregrine_flight.Name = "peregrine_flight"
+    peregrine_flight.MaxHealth = 3500
+    peregrine_flight.MaxShields = 2500 + 1
+    peregrine_flight.Seats += 0 -> new SeatDefinition()
+    peregrine_flight.Seats(0).ControlledWeapon = Set(1, 2)
+    peregrine_flight.Weapons(1 -> peregrine_dual_machine_gun_left)
+    peregrine_flight.Weapons(2 -> peregrine_dual_machine_gun_right)
+    peregrine_flight.MountPoints += 1 -> 0
+    peregrine_flight.TrunkSize = InventoryTile.Tile1518 //adb reports 15x11, but the graphic uses 15x18
+    peregrine_flight.TrunkOffset = 30
+    peregrine_flight.AutoPilotSpeeds = (5, 1)
+    peregrine_flight.Packet = battleFrameFlightConverter
+    peregrine_flight.DestroyedModel = None
   }
 
   /**
