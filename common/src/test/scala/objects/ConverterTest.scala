@@ -65,7 +65,6 @@ class ConverterTest extends Specification {
     "convert to packet (1 fire mode slot)" in {
       val obj : Tool = Tool(GlobalDefinitions.flechette)
       obj.AmmoSlot.Box.GUID = PlanetSideGUID(90)
-
       obj.Definition.Packet.DetailedConstructorData(obj) match {
         case Success(pkt) =>
           pkt mustEqual DetailedWeaponData(
@@ -89,12 +88,10 @@ class ConverterTest extends Specification {
           ko
       }
     }
-
     "convert to packet (2 fire mode slots)" in {
       val obj : Tool = Tool(GlobalDefinitions.punisher)
       obj.AmmoSlots.head.Box.GUID = PlanetSideGUID(90)
       obj.AmmoSlots(1).Box.GUID = PlanetSideGUID(91)
-
       obj.Definition.Packet.DetailedConstructorData(obj) match {
         case Success(pkt) =>
           pkt mustEqual DetailedWeaponData(
@@ -131,6 +128,51 @@ class ConverterTest extends Specification {
         case _ =>
           ko
       }
+    }
+    "some special weapons have the same constructor data and detailed constructor data" in {
+      import net.psforever.packet.PacketCoding
+      import net.psforever.packet.game.{ObjectCreateDetailedMessage, ObjectCreateMessage}
+      val d = GlobalDefinitions.aphelion_ppa_left
+      val t = Tool(d)
+      t.AmmoSlot.Box.GUID = PlanetSideGUID(2)
+      val parent = ObjectCreateMessageParent(PlanetSideGUID(0), 250)
+
+      val ocm_cd = PacketCoding.EncodePacket(
+        ObjectCreateMessage(
+          d.ObjectId,
+          PlanetSideGUID(1),
+          parent,
+          d.Packet.ConstructorData(t).get
+        )
+      ).require.toByteVector
+      val ocm_dcd = PacketCoding.EncodePacket(
+        ObjectCreateMessage(
+          d.ObjectId,
+          PlanetSideGUID(1),
+          parent,
+          d.Packet.DetailedConstructorData(t).get
+        )
+      ).require.toByteVector
+
+      val ocdm_cd = PacketCoding.EncodePacket(
+        ObjectCreateDetailedMessage(
+          d.ObjectId,
+          PlanetSideGUID(1),
+          parent,
+          d.Packet.ConstructorData(t).get
+        )
+      ).require.toByteVector
+      val ocdm_dcd = PacketCoding.EncodePacket(
+        ObjectCreateDetailedMessage(
+          d.ObjectId,
+          PlanetSideGUID(1),
+          parent,
+          d.Packet.DetailedConstructorData(t).get
+        )
+      ).require.toByteVector
+      ocm_dcd.drop(1) mustEqual ocdm_dcd.drop(1) //drop 0x17 and 0x18, respectively
+      ocm_cd.drop(1) mustEqual ocdm_cd.drop(1) //etc.
+      ocm_cd.drop(1) mustEqual ocm_dcd.drop(1) //etc.
     }
   }
 
@@ -727,7 +769,7 @@ class ConverterTest extends Specification {
           fury_def.Seats(0).ControlledWeapon = 1
           fury_def.MountPoints += 0 -> 0
           fury_def.MountPoints += 2 -> 0
-          fury_def.Weapons += 1 -> fury_weapon_systema_def
+          fury_def.Weapons(1 -> fury_weapon_systema_def)
           fury_def.TrunkSize = InventoryTile(11, 11)
           fury_def.TrunkOffset = 30
 

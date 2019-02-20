@@ -4,7 +4,7 @@ package net.psforever.objects
 import akka.actor.ActorRef
 import net.psforever.objects.definition.VehicleDefinition
 import net.psforever.objects.equipment.{Equipment, EquipmentSlot}
-import net.psforever.objects.inventory.{Container, GridInventory, InventoryTile}
+import net.psforever.objects.inventory.{Container, GridInventory, InventoryItem, InventoryTile}
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.PlanetSideServerObject
 import net.psforever.objects.serverobject.affinity.FactionAffinity
@@ -16,6 +16,7 @@ import net.psforever.packet.game.PlanetSideGUID
 import net.psforever.types.PlanetSideEmpire
 
 import scala.annotation.tailrec
+import scala.util.{Success, Try}
 
 /**
   * The server-side support object that represents a vehicle.<br>
@@ -93,6 +94,11 @@ class Vehicle(private val vehicleDef : VehicleDefinition) extends PlanetSideServ
   private var seats : Map[Int, Seat] = Map.empty
   private var cargoHolds : Map[Int, Cargo] = Map.empty
   private var weapons : Map[Int, EquipmentSlot] = Map.empty
+  /**
+    * this mask is used to offset weapon slot number between interface index and internal index
+    * for example, an internal slot 2 referenced externally as slot 0
+    */
+  private var weaponSlotMask : Int = 0
   private var utilities : Map[Int, Utility] = Map()
   private val trunk : GridInventory = GridInventory()
 
@@ -343,6 +349,8 @@ class Vehicle(private val vehicleDef : VehicleDefinition) extends PlanetSideServ
 
   def Weapons : Map[Int, EquipmentSlot] = weapons
 
+  def WeaponSlotMask : Int = weaponSlotMask
+
   def ControlledWeapon(wepNumber : Seq[Int]) : Option[Seq[Equipment]] = {
     wepNumber
       .map { ControlledWeapon }
@@ -429,15 +437,7 @@ class Vehicle(private val vehicleDef : VehicleDefinition) extends PlanetSideServ
   def VisibleSlots : Set[Int] = Definition.WeaponSlots.toSet
 
   override def Slot(slotNum : Int) : EquipmentSlot = {
-    weapons.get(slotNum)
-//      .orElse(utilities.get(slotNum) match {
-//        case Some(_) =>
-//          //TODO what do now?
-//          None
-//        case None => ;
-//          None
-//      })
-      .orElse(Some(Inventory.Slot(slotNum))).get
+    weapons.get(slotNum).orElse(Some(Inventory.Slot(slotNum))).get
   }
 
   override def Find(guid : PlanetSideGUID) : Option[Int] = {
@@ -458,6 +458,20 @@ class Vehicle(private val vehicleDef : VehicleDefinition) extends PlanetSideServ
         Some(index)
       case None =>
         Inventory.Find(guid)
+    }
+  }
+
+  override def Collisions(dest : Int, width : Int, height : Int) : Try[List[InventoryItem]] = {
+    weapons.get(dest) match {
+      case Some(slot) =>
+        slot.Equipment match {
+          case Some(item) =>
+            Success(List(InventoryItem(item, dest)))
+          case None =>
+            Success(List())
+        }
+      case None =>
+        super.Collisions(dest, width, height)
     }
   }
 
@@ -640,6 +654,7 @@ object Vehicle {
           num -> slot
       }
       .toMap
+    vehicle.weaponSlotMask = vdef.WeaponSlotSizes.keys.min
     //create seats
     vehicle.seats = vdef.Seats.map({ case(num, definition) => num -> Seat(definition)}).toMap
     // create cargo holds

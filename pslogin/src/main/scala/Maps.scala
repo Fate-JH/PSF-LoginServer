@@ -1286,14 +1286,16 @@ object Maps {
       LocalObject(1757, Terminal.Constructor(air_rearm_terminal)) //air pad West
       LocalObject(1765, ProximityTerminal.Constructor(pad_landing_frame, Vector3(4027.5469f, 4268.414f, 275.92188f))) //air pad East
       LocalObject(1766, Terminal.Constructor(air_rearm_terminal)) //air pad East
+      LocalObject(2049, ProximityTerminal.Constructor(repair_silo, Vector3(3882.0078f, 4278.2266f, 266.4375f))) //repair terminal West
+      LocalObject(2050, Terminal.Constructor(ground_rearm_terminal)) //rearm terminal West
+      LocalObject(2051, Terminal.Constructor(bfr_rearm_terminal)) //bfr rearm terminal Wast
+      LocalObject(2061, ProximityTerminal.Constructor(repair_silo, Vector3(4053.3516f, 4281.1562f, 266.4375f))) //repair terminal East
+      LocalObject(2062, Terminal.Constructor(ground_rearm_terminal)) //rearm terminal East
+      LocalObject(2063, Terminal.Constructor(bfr_rearm_terminal)) //bfr rearm terminal East
+      LocalObject(2094, ResourceSilo.Constructor)
       LocalObject(2145, SpawnTube.Constructor(Vector3(3980.4062f, 4252.7656f, 257.5625f), Vector3.z(90)))
       LocalObject(2146, SpawnTube.Constructor(Vector3(3980.4062f, 4259.992f, 257.5625f), Vector3.z(90)))
       LocalObject(2147, SpawnTube.Constructor(Vector3(3980.4062f, 4267.3047f, 257.5625f), Vector3.z(90)))
-      LocalObject(2049, ProximityTerminal.Constructor(repair_silo, Vector3(3882.0078f, 4278.2266f, 266.4375f))) //repair terminal West
-      LocalObject(2050, Terminal.Constructor(ground_rearm_terminal)) //rearm terminal West
-      LocalObject(2061, ProximityTerminal.Constructor(repair_silo, Vector3(4053.3516f, 4281.1562f, 266.4375f))) //repair terminal East
-      LocalObject(2062, Terminal.Constructor(ground_rearm_terminal)) //rearm terminal East
-      LocalObject(2094, ResourceSilo.Constructor)
       LocalObject(2239, Terminal.Constructor(spawn_terminal))
       LocalObject(2244, Terminal.Constructor(spawn_terminal))
       LocalObject(2245, Terminal.Constructor(spawn_terminal))
@@ -1416,8 +1418,10 @@ object Maps {
       ObjectToBuilding(1766, 2)
       ObjectToBuilding(2049, 2)
       ObjectToBuilding(2050, 2)
+      ObjectToBuilding(2051, 2)
       ObjectToBuilding(2061, 2)
       ObjectToBuilding(2062, 2)
+      ObjectToBuilding(2063, 2)
       ObjectToBuilding(2094, 2)
       ObjectToBuilding(2145, 2)
       ObjectToBuilding(2146, 2)

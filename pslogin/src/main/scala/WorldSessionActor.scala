@@ -1356,16 +1356,17 @@ class WorldSessionActor extends Actor with MDCContextAware {
           tplayer.VehicleOwned = Some(obj_guid)
           obj.Owner = Some(tplayer.GUID)
         }
-        obj.WeaponControlledFromSeat(seat_num) foreach {
-          case weapon : Tool =>
-            //update mounted weapon belonging to seat
-            weapon.AmmoSlots.foreach(slot => {
-              //update the magazine(s) in the weapon, specifically
-              val magazine = slot.Box
-              sendResponse(InventoryStateMessage(magazine.GUID, weapon.GUID, magazine.Capacity))
-            })
-          case _ => ; //no weapons to update
-        }
+        UpdateAmmunitionForEachControlledWeapon(obj, seat_num) foreach { sendResponse }
+//        obj.WeaponControlledFromSeat(seat_num) foreach {
+//          case weapon : Tool =>
+//            //update mounted weapon belonging to seat
+//            weapon.AmmoSlots.foreach(slot => {
+//              //update the magazine(s) in the weapon, specifically
+//              val magazine = slot.Box
+//              sendResponse(InventoryStateMessage(magazine.GUID, weapon.GUID, magazine.Capacity))
+//            })
+//          case _ => ; //no weapons to update
+//        }
         AccessContents(obj)
         MountingAction(tplayer, obj, seat_num)
         if(GlobalDefinitions.isBattleFrameVehicle(obj.Definition)) {
@@ -1374,16 +1375,17 @@ class WorldSessionActor extends Actor with MDCContextAware {
         }
 
       case Mountable.CanMount(obj : PlanetSideGameObject with WeaponTurret, seat_num) =>
-        obj.WeaponControlledFromSeat(seat_num) foreach {
-          case weapon : Tool =>
-            //update mounted weapon belonging to seat
-            weapon.AmmoSlots.foreach(slot => {
-              //update the magazine(s) in the weapon, specifically
-              val magazine = slot.Box
-              sendResponse(InventoryStateMessage(magazine.GUID, weapon.GUID, magazine.Capacity.toLong))
-            })
-          case _ => ; //no weapons to update
-        }
+        UpdateAmmunitionForEachControlledWeapon(obj, seat_num) foreach { sendResponse }
+//        obj.WeaponControlledFromSeat(seat_num) foreach {
+//          case weapon : Tool =>
+//            //update mounted weapon belonging to seat
+//            weapon.AmmoSlots.foreach(slot => {
+//              //update the magazine(s) in the weapon, specifically
+//              val magazine = slot.Box
+//              sendResponse(InventoryStateMessage(magazine.GUID, weapon.GUID, magazine.Capacity.toLong))
+//            })
+//          case _ => ; //no weapons to update
+//        }
         sendResponse(PlanetsideAttributeMessage(obj.GUID, 0, obj.Health))
         MountingAction(tplayer, obj, seat_num)
 
@@ -1422,6 +1424,33 @@ class WorldSessionActor extends Actor with MDCContextAware {
 
       case Mountable.CanNotDismount(obj, seat_num) =>
         log.warn(s"DismountVehicleMsg: $tplayer attempted to dismount $obj's seat $seat_num, but was not allowed")
+    }
+  }
+
+  /**
+    * na
+    * @param obj na
+    * @param seat_num na
+    * @return na
+    */
+  def UpdateAmmunitionForEachControlledWeapon(obj : MountedWeapons, seat_num : Int) : Seq[PlanetSideGamePacket] = {
+    UpdateAmmunitionForEachWeapon(
+      obj.WeaponControlledFromSeat(seat_num).collect { case obj : Tool => obj }
+    )
+  }
+
+  /**
+    * na
+    * @param weapons na
+    * @return na
+    */
+  def UpdateAmmunitionForEachWeapon(weapons : Seq[Tool]) : Seq[PlanetSideGamePacket] = {
+    weapons.flatMap {
+      weapon => //update mounted weapon belonging to seat
+        weapon.AmmoSlots map { slot => //update the magazine(s) in the weapon, specifically
+          val magazine = slot.Box
+          InventoryStateMessage(magazine.GUID, weapon.GUID, magazine.Capacity)
+        }
     }
   }
 
@@ -2001,11 +2030,23 @@ class WorldSessionActor extends Actor with MDCContextAware {
           sendResponse(PlanetsideAttributeMessage(vehicle_guid, seat_group, permission))
         }
 
-      case VehicleResponse.StowEquipment(vehicle_guid, slot, item_type, item_guid, item_data) =>
+      case VehicleResponse.StowEquipment(vehicle_guid, slot, item : Tool) =>
         if(tplayer_guid != guid) {
+          sendResponse(CreateObject(item, ObjectCreateMessageParent(vehicle_guid, slot)))
+          UpdateAmmunitionForEachWeapon(Seq(item)) foreach { sendResponse } //overkill if Tool is only in trunk
+        }
+
+      case VehicleResponse.StowEquipment(vehicle_guid, slot, item) =>
+        if(tplayer_guid != guid) {
+          val definition = item.Definition
           //TODO prefer ObjectAttachMessage, but how to force ammo pools to update properly?
           sendResponse(
-            ObjectCreateDetailedMessage(item_type, item_guid, ObjectCreateMessageParent(vehicle_guid, slot), item_data)
+            ObjectCreateDetailedMessage(
+              definition.ObjectId,
+              item.GUID,
+              ObjectCreateMessageParent(vehicle_guid, slot),
+              definition.Packet.DetailedConstructorData(item).get
+            )
           )
         }
 
@@ -2566,6 +2607,9 @@ class WorldSessionActor extends Actor with MDCContextAware {
       player.Slot(36).Equipment = AmmoBox(GlobalDefinitions.StandardPistolAmmo(player.Faction))
       player.Slot(39).Equipment = SimpleItem(remote_electronics_kit)
       player.Locker.Inventory += 0 -> SimpleItem(remote_electronics_kit)
+      player.Holsters
+        .collect { case x if x.Equipment.nonEmpty => x.Equipment.get }
+        .foreach { _.Faction = faction }
       player.Inventory.Items.foreach { _.obj.Faction = faction }
       //TODO end temp player character auto-loading
       self ! ListAccountCharacters
@@ -3543,9 +3587,15 @@ class WorldSessionActor extends Actor with MDCContextAware {
         case (Some(source : Container), Some(destination : Container), Some(item : Equipment)) =>
           source.Find(item_guid) match {
             case Some(index) =>
+              val destIndex = dest + (destination match {
+                case v : Vehicle if v.Inventory.Offset > dest =>
+                  v.WeaponSlotMask
+                case _ =>
+                  0
+              })
               val indexSlot = source.Slot(index)
               val tile = item.Definition.Tile
-              val destinationCollisionTest = destination.Collisions(dest, tile.Width, tile.Height)
+              val destinationCollisionTest = destination.Collisions(destIndex, tile.Width, tile.Height)
               val destItemEntry = destinationCollisionTest match {
                 case Success(entry :: Nil) =>
                   Some(entry)
@@ -3560,8 +3610,8 @@ class WorldSessionActor extends Actor with MDCContextAware {
                     false //abort when too many items at destination or other failure case
                 }
               } && indexSlot.Equipment.contains(item)) {
-                if(PermitEquipmentStow(item, destination)) {
-                  PerformMoveItem(item, source, index, destination, dest, destItemEntry)
+                if(PermitEquipmentStow(item, destination, dest)) {
+                  PerformMoveItem(item, source, index, destination, destIndex, destItemEntry)
                 }
                 else {
                   log.error(s"MoveItem: $item disallowed storage in $destination")
@@ -3610,8 +3660,14 @@ class WorldSessionActor extends Actor with MDCContextAware {
               )
             }, target.Fit(item)) match {
             case (Some((source, Some(index))), Some(dest)) =>
-              if(PermitEquipmentStow(item, target)) {
-                PerformMoveItem(item, source, index, target, dest, None)
+              if(PermitEquipmentStow(item, target, dest)) {
+                val destIndex = dest + (target match {
+                  case v : Vehicle if v.Inventory.Offset > dest =>
+                    v.WeaponSlotMask
+                  case _ =>
+                    0
+                })
+                PerformMoveItem(item, source, index, target, destIndex, None)
               }
               else {
                 log.error(s"LootItem: $item disallowed storage in $target")
@@ -4566,14 +4622,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
 
         override def onSuccess() : Unit = {
           val definition = localObject.Definition
-          localAnnounce ! ResponseToSelf(
-            ObjectCreateDetailedMessage(
-              definition.ObjectId,
-              localObject.GUID,
-              ObjectCreateMessageParent(localTarget.GUID, localIndex),
-              definition.Packet.DetailedConstructorData(localObject).get
-            )
-          )
+          localAnnounce ! ResponseToSelf(CreateObject(localObject, ObjectCreateMessageParent(localTarget.GUID, localIndex)))
           if(localTarget.VisibleSlots.contains(localIndex)) {
             localService ! AvatarServiceMessage(continent.Id, AvatarAction.EquipmentInHand(localTarget.GUID, localTarget.GUID, localIndex, localObject))
           }
@@ -5467,6 +5516,8 @@ class WorldSessionActor extends Actor with MDCContextAware {
     val destination_guid = destination.GUID
     val player_guid = player.GUID
     val indexSlot = source.Slot(index)
+    val sourceVisible = source.VisibleSlots.contains(index)
+    val destinationVisible = destination.VisibleSlots.contains(dest)
     val sourceIsNotDestination : Boolean = source != destination //if source is destination, explicit OCDM is not required
     if(sourceIsNotDestination) {
       log.info(s"MoveItem: $item moved from $source @ $index to $destination @ $dest")
@@ -5476,11 +5527,17 @@ class WorldSessionActor extends Actor with MDCContextAware {
     }
     //remove item from source
     indexSlot.Equipment = None
-    source match {
+    source match { //only need to send messages to others at this point
       case obj : Vehicle =>
-        vehicleService ! VehicleServiceMessage(s"${obj.Actor}", VehicleAction.UnstowEquipment(player_guid, item_guid))
+        val channel : String = if(sourceVisible) {
+          continent.Id //exposed to game world
+        }
+        else {
+          s"${obj.Actor}" //exposed only for players with vehicle access
+        }
+        vehicleService ! VehicleServiceMessage(channel, VehicleAction.UnstowEquipment(player_guid, item_guid))
       case obj : Player =>
-        if(obj.isBackpack || source.VisibleSlots.contains(index)) { //corpse being looted, or item was in hands
+        if(obj.isBackpack || sourceVisible) { //corpse being looted, or item was in hands
           avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.ObjectDelete(player_guid, item_guid))
         }
       case _ => ;
@@ -5500,9 +5557,15 @@ class WorldSessionActor extends Actor with MDCContextAware {
             sendResponse(ObjectDetachMessage(destination_guid, item2_guid, Vector3.Zero, 0f))
             destination match {
               case obj : Vehicle =>
-                vehicleService ! VehicleServiceMessage(s"${obj.Actor}", VehicleAction.UnstowEquipment(player_guid, item2_guid))
+                val channel : String = if(destinationVisible) {
+                  continent.Id //exposed to game world
+                }
+                else {
+                  s"${obj.Actor}" //exposed only for players with vehicle access
+                }
+                vehicleService ! VehicleServiceMessage(channel, VehicleAction.UnstowEquipment(player_guid, item2_guid))
               case obj : Player =>
-                if(obj.isBackpack || destination.VisibleSlots.contains(dest)) { //corpse being looted, or item was accessible
+                if(obj.isBackpack || destinationVisible) { //corpse being looted, or item was accessible
                   avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.ObjectDelete(player_guid, item2_guid))
                   //put hand down locally
                   if(dest == player.DrawnSlot) {
@@ -5512,27 +5575,31 @@ class WorldSessionActor extends Actor with MDCContextAware {
               case _ => ;
             }
             //display item2 in source
-            if(sourceIsNotDestination && player == source) {
-              val objDef = item2.Definition
-              sendResponse(
-                ObjectCreateDetailedMessage(
-                  objDef.ObjectId,
-                  item2_guid,
-                  ObjectCreateMessageParent(source_guid, index),
-                  objDef.Packet.DetailedConstructorData(item2).get
-                )
-              )
+            if(sourceIsNotDestination && (sourceVisible || player == source)) {
+              sendResponse(CreateObject(item2, ObjectCreateMessageParent(source_guid, index)))
             }
             else {
               sendResponse(ObjectAttachMessage(source_guid, item2_guid, index))
             }
             source match {
               case obj : Vehicle =>
-                item2.Faction = PlanetSideEmpire.NEUTRAL
-                vehicleService ! VehicleServiceMessage(s"${obj.Actor}", VehicleAction.StowEquipment(player_guid, source_guid, index, item2))
+                val channel : String = if(sourceVisible) {
+                  item2.Faction = obj.Faction
+                  item2 match { //good chance item2 is being placed into mounted slot
+                    case tool : Tool =>
+                      UpdateAmmunitionForEachWeapon(Seq(tool)) foreach { sendResponse }
+                    case _ => ;
+                  }
+                  continent.Id //exposed to game world
+                }
+                else {
+                  item2.Faction = PlanetSideEmpire.NEUTRAL
+                  s"${obj.Actor}" //exposed only for players with vehicle access
+                }
+                vehicleService ! VehicleServiceMessage(channel, VehicleAction.StowEquipment(player_guid, source_guid, index, item2))
               case obj : Player =>
                 item2.Faction = obj.Faction
-                if(source.VisibleSlots.contains(index)) { //item is put in hands
+                if(sourceVisible) { //item is put in hands
                   avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.EquipmentInHand(player_guid, source_guid, index, item2))
                 }
                 else if(obj.isBackpack) { //corpse being given item
@@ -5549,7 +5616,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
             val orient : Vector3 = Vector3(0f, 0f, sourceOrientZ)
             continent.Ground ! Zone.Ground.DropItem(item2, pos, orient)
             sendResponse(ObjectDetachMessage(destination_guid, item2_guid, pos, sourceOrientZ)) //ground
-          val objDef = item2.Definition
+            val objDef = item2.Definition
             destination match {
               case obj : Vehicle =>
                 vehicleService ! VehicleServiceMessage(s"${obj.Actor}", VehicleAction.UnstowEquipment(player_guid, item2_guid))
@@ -5563,16 +5630,8 @@ class WorldSessionActor extends Actor with MDCContextAware {
     }
     //move item into destination slot
     destination.Slot(dest).Equipment = item
-    if(sourceIsNotDestination && player == destination) {
-      val objDef = item.Definition
-      sendResponse(
-        ObjectCreateDetailedMessage(
-          objDef.ObjectId,
-          item_guid,
-          ObjectCreateMessageParent(destination_guid, dest),
-          objDef.Packet.DetailedConstructorData(item).get
-        )
-      )
+    if(sourceIsNotDestination && (destinationVisible || player == destination)) {
+      sendResponse(CreateObject(item, ObjectCreateMessageParent(destination_guid, dest)))
     }
     else {
       sendResponse(ObjectAttachMessage(destination_guid, item_guid, dest))
@@ -5580,10 +5639,21 @@ class WorldSessionActor extends Actor with MDCContextAware {
     destination match {
       case obj : Vehicle =>
         item.Faction = PlanetSideEmpire.NEUTRAL
-        vehicleService ! VehicleServiceMessage(s"${obj.Actor}", VehicleAction.StowEquipment(player_guid, destination_guid, dest, item))
+        val channel : String = if(destinationVisible) {
+          item match { //good chance item2 is being placed into mounted slot
+            case tool : Tool =>
+              UpdateAmmunitionForEachWeapon(Seq(tool)) foreach { sendResponse }
+            case _ => ;
+          }
+          continent.Id //exposed to game world
+        }
+        else {
+          s"${obj.Actor}" //exposed only for players with vehicle access
+        }
+        vehicleService ! VehicleServiceMessage(channel, VehicleAction.StowEquipment(player_guid, destination_guid, dest, item))
       case obj : Player =>
-        if(destination.VisibleSlots.contains(dest)) { //item is put in hands
-          item.Faction = obj.Faction
+        item.Faction = obj.Faction
+        if(destinationVisible) { //item is put in hands
           avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.EquipmentInHand(player_guid, destination_guid, dest, item))
         }
         else if(obj.isBackpack) { //corpse being given item
@@ -5596,15 +5666,62 @@ class WorldSessionActor extends Actor with MDCContextAware {
   }
 
   /**
+    * Compose an item into the equivalent of an `ObjectCreateDetailedMessage` game packet with parent data.
+    * This signifies that object is being held by the player,
+    * or somewhere within accessible reach of the player,
+    * and is presented with all of its important details known.
+    * An exception is granted to vehicle mounted weapons which do not possess `ObjectCreateDetailedMessage` formats
+    * but can still be shifted between mounting slots within the perspective of the player nonetheless.
+    * The curent exception is limited to battle frame robotics weaponry.
+    * @param item the object being transformed into packet data
+    * @param parent the container in which the `item` exists
+    * @return packet data that corresponds to `ObjectCreateDetailedMessage`;
+    *         in specific cases, the return will actually be a standard `ObjectCreateMessage` packet
+    */
+  def CreateObject(item : Equipment, parent : ObjectCreateMessageParent) : PlanetSideGamePacket = {
+    val objDef = item.Definition
+    if(isBattleFrameWeapon(objDef)) {
+      ObjectCreateMessage(
+        objDef.ObjectId,
+        item.GUID,
+        parent,
+        objDef.Packet.ConstructorData(item).get
+      )
+    }
+    else {
+      ObjectCreateDetailedMessage(
+        objDef.ObjectId,
+        item.GUID,
+        parent,
+        objDef.Packet.DetailedConstructorData(item).get
+      )
+    }
+  }
+
+  /**
     * na
     * @param equipment na
     * @param obj na
     * @return `true`, if the object is allowed to contain the type of equipment object
     */
-  def PermitEquipmentStow(equipment : Equipment, obj : PlanetSideGameObject with Container) : Boolean = {
+  def PermitEquipmentStow(equipment : Equipment, obj : PlanetSideGameObject with Container, slot : Int) : Boolean = {
     equipment match {
       case _ : BoomerTrigger =>
         obj.isInstanceOf[Player] //a BoomerTrigger can only be stowed in a player's holsters or inventory
+      case tool : Tool =>
+        if(GlobalDefinitions.isBattleFrameWeapon(tool.Definition)) {
+          obj match {
+            case v : Vehicle =>
+              GlobalDefinitions.isBattleFrameVehicle(v.Definition) //only installed/stowed in a battle frame vehicle
+            case _ : Player =>
+              slot == Player.FreeHandSlot //a player may only carry around the bfr weapon in their free hand
+            case _ =>
+              false
+          }
+        }
+        else {
+          true
+        }
       case _ =>
         true
     }
@@ -5650,7 +5767,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
             sendResponse(ObjectDetachMessage(tool.GUID, previousBox.GUID, Vector3.Zero, 0f))
             sendResponse(ObjectDetachMessage(player.GUID, box.GUID, Vector3.Zero, 0f))
             obj.Inventory -= x.start //remove replacement ammo from inventory
-          val ammoSlotIndex = tool.FireMode.AmmoSlotIndex
+            val ammoSlotIndex = tool.FireMode.AmmoSlotIndex
             tool.AmmoSlots(ammoSlotIndex).Box = box //put replacement ammo in tool
             sendResponse(ObjectAttachMessage(tool.GUID, box.GUID, ammoSlotIndex))
 
@@ -6275,7 +6392,10 @@ class WorldSessionActor extends Actor with MDCContextAware {
     obj.Slot(33).Equipment = AmmoBox(bullet_9mm_AP)
     obj.Slot(36).Equipment = AmmoBox(StandardPistolAmmo(faction))
     obj.Slot(39).Equipment = SimpleItem(remote_electronics_kit)
-    obj.Inventory.Items.foreach { _.obj.Faction = faction }
+    player.Holsters
+      .collect { case x if x.Equipment.nonEmpty => x.Equipment.get }
+      .foreach { _.Faction = faction }
+    player.Inventory.Items.foreach { _.obj.Faction = faction }
     obj
   }
 

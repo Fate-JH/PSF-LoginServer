@@ -9,7 +9,8 @@ object LoadoutType extends Enumeration {
 
   val
   Infantry,
-  Vehicle
+  Vehicle,
+  BattleFrame
   = Value
 
   implicit val codec = PacketHelpers.createEnumerationCodec(this, uint2L)

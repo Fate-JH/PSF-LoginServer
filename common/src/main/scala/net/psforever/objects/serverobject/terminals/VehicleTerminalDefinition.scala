@@ -65,17 +65,18 @@ object VehicleTerminalDefinition {
   )
 
   /**
-    * A `Map` of operations for producing a ground-based `Vehicle` specific to the bfr terminal.
+    * A `Map` of operations for producing a battle frame robotics vehicle `Vehicle` specific to the bfr terminal.
     * key - an identification string sent by the client
     * value - a curried function that builds the object
     */
   val bfrVehicles : Map[String, ()=>Vehicle] = Map(
-    //    "colossus_gunner" -> (()=>Unit),
-    //    "colossus_flight" -> (()=>Unit),
-    //    "peregrine_gunner" -> (()=>Unit),
-    //    "peregrine_flight" -> (()=>Unit),
-        "aphelion_gunner" -> MakeVehicle(aphelion_gunner)//,
-    //    "aphelion_flight" -> (()=>Unit)
+    "aphelion_gunner" -> MakeVehicle(aphelion_gunner),
+    "aphelion_flight" -> MakeVehicle(aphelion_gunner),
+    "colossus_gunner" -> MakeVehicle(colossus_gunner),
+    "colossus_flight" -> MakeVehicle(colossus_flight),
+    "peregrine_gunner" -> MakeVehicle(peregrine_gunner),
+    "peregrine_flight" -> MakeVehicle(peregrine_flight)
+
   )
 
   import net.psforever.objects.loadouts.{Loadout => _Loadout} //distinguish from Terminal.Loadout message
@@ -96,6 +97,8 @@ object VehicleTerminalDefinition {
     val ammo_flux = ShorthandAmmoBox(flux_cannon_thresher_battery, flux_cannon_thresher_battery.Capacity)
     val ammo_bomb = ShorthandAmmoBox(liberator_bomb, liberator_bomb.Capacity)
     val ammo_ppa = ShorthandAmmoBox(aphelion_ppa_ammo, aphelion_ppa_ammo.Capacity)
+    val ammo_tcannon = ShorthandAmmoBox(colossus_tank_cannon_ammo, colossus_tank_cannon_ammo.Capacity)
+    val ammo_mgun = ShorthandAmmoBox(peregrine_dual_machine_gun_ammo, peregrine_dual_machine_gun_ammo.Capacity)
     Map(
       //"quadstealth" -> VehicleLoadout("default_quadstealth", List(), List(), quadstealth),
       "quadassault" -> VehicleLoadout("default_quadassault", List(),
@@ -456,7 +459,7 @@ object VehicleTerminalDefinition {
         ),
         dropship
       ),
-      "galaxy_gunship" -> VehicleLoadout("galaxy_gunship", List(),
+      "galaxy_gunship" -> VehicleLoadout("default_galaxy_gunship", List(),
         List(
           SimplifiedEntry(ammo_35mm, 30),
           SimplifiedEntry(ammo_35mm, 34),
@@ -477,7 +480,7 @@ object VehicleTerminalDefinition {
       //"lodestar" -> VehicleLoadout("default_lodestar", List(), List(), lodestar),
       {
         val ammo = ShorthandAmmoBox(aphelion_plasma_rocket_ammo, aphelion_plasma_rocket_ammo.Capacity)
-        "aphelion_gunner" -> VehicleLoadout("aphelion_gunner", List(),
+        "aphelion_gunner" -> VehicleLoadout("default_aphelion_gunner", List(),
           List(
             SimplifiedEntry(ammo_ppa, 30),
             SimplifiedEntry(ammo_ppa, 34),
@@ -494,7 +497,80 @@ object VehicleTerminalDefinition {
           ),
           aphelion_gunner
         )
-      }
+      },
+      "aphelion_flight" -> VehicleLoadout("default_aphelion_flight", List(),
+        List(
+          SimplifiedEntry(ammo_ppa, 30),
+          SimplifiedEntry(ammo_ppa, 34),
+          SimplifiedEntry(ammo_ppa, 38),
+          SimplifiedEntry(ammo_ppa, 90),
+          SimplifiedEntry(ammo_ppa, 94),
+          SimplifiedEntry(ammo_ppa, 98)
+        ),
+        aphelion_flight
+      ),
+      {
+        val ammo = ShorthandAmmoBox(colossus_100mm_cannon_ammo, colossus_100mm_cannon_ammo.Capacity)
+        "colossus_gunner" -> VehicleLoadout("default_colossus_gunner", List(),
+          List(
+            SimplifiedEntry(ammo_tcannon, 30),
+            SimplifiedEntry(ammo_tcannon, 34),
+            SimplifiedEntry(ammo_tcannon, 38),
+            SimplifiedEntry(ammo_tcannon, 90),
+            SimplifiedEntry(ammo_tcannon, 94),
+            SimplifiedEntry(ammo_tcannon, 98),
+            SimplifiedEntry(ammo, 150),
+            SimplifiedEntry(ammo, 155),
+            SimplifiedEntry(ammo, 160),
+            SimplifiedEntry(ammo, 225),
+            SimplifiedEntry(ammo, 230),
+            SimplifiedEntry(ammo, 235)
+          ),
+          colossus_gunner
+        )
+      },
+      "colossus_flight" -> VehicleLoadout("default_colossus_flight", List(),
+        List(
+          SimplifiedEntry(ammo_tcannon, 30),
+          SimplifiedEntry(ammo_tcannon, 34),
+          SimplifiedEntry(ammo_tcannon, 38),
+          SimplifiedEntry(ammo_tcannon, 90),
+          SimplifiedEntry(ammo_tcannon, 94),
+          SimplifiedEntry(ammo_tcannon, 98)
+        ),
+        colossus_flight
+      ),
+      {
+        val ammo = ShorthandAmmoBox(peregrine_particle_cannon_ammo, peregrine_particle_cannon_ammo.Capacity)
+        "peregrine_gunner" -> VehicleLoadout("default_peregrine_gunner", List(),
+          List(
+            SimplifiedEntry(ammo_mgun, 30),
+            SimplifiedEntry(ammo_mgun, 34),
+            SimplifiedEntry(ammo_mgun, 38),
+            SimplifiedEntry(ammo_mgun, 90),
+            SimplifiedEntry(ammo_mgun, 94),
+            SimplifiedEntry(ammo_mgun, 98),
+            SimplifiedEntry(ammo, 150),
+            SimplifiedEntry(ammo, 155),
+            SimplifiedEntry(ammo, 160),
+            SimplifiedEntry(ammo, 225),
+            SimplifiedEntry(ammo, 230),
+            SimplifiedEntry(ammo, 235)
+          ),
+          peregrine_gunner
+        )
+      },
+      "peregrine_flight" -> VehicleLoadout("default_peregrine_flight", List(),
+        List(
+          SimplifiedEntry(ammo_mgun, 30),
+          SimplifiedEntry(ammo_mgun, 34),
+          SimplifiedEntry(ammo_mgun, 38),
+          SimplifiedEntry(ammo_mgun, 90),
+          SimplifiedEntry(ammo_mgun, 94),
+          SimplifiedEntry(ammo_mgun, 98)
+        ),
+        peregrine_flight
+      )
     )
   }
 

@@ -113,9 +113,8 @@ class VehicleService extends Actor {
             VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.SeatPermissions(vehicle_guid, seat_group, permission))
           )
         case VehicleAction.StowEquipment(player_guid, vehicle_guid, slot, item) =>
-          val definition = item.Definition
           VehicleEvents.publish(
-            VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.StowEquipment(vehicle_guid, slot, definition.ObjectId, item.GUID, definition.Packet.DetailedConstructorData(item).get))
+            VehicleServiceResponse(s"/$forChannel/Vehicle", player_guid, VehicleResponse.StowEquipment(vehicle_guid, slot, item))
           )
         case VehicleAction.UnloadVehicle(player_guid, continent, vehicle, vehicle_guid) =>
           vehicleDecon ! RemoverActor.ClearSpecific(List(vehicle), continent) //precaution
