@@ -4,7 +4,7 @@ package objects
 import akka.actor.Props
 import base.ActorTest
 import net.psforever.objects._
-import net.psforever.objects.ballistics.{PlayerSource, Projectile, ProjectileResolution, ResolvedProjectile}
+import net.psforever.objects.ballistics.{PlayerSource, Projectile, ProjectileResolution, BallisticsInteraction}
 import net.psforever.objects.definition.{SeatDefinition, VehicleDefinition}
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.vehicles._
@@ -694,7 +694,7 @@ class VehicleControlShieldsNotChargingDamagedTest extends ActorTest {
   val p_source = PlayerSource( Player(Avatar("TestTarget", PlanetSideEmpire.NC, CharacterGender.Female, 1, CharacterVoice.Mute)) )
   val projectile = Projectile(beamer_wep.Projectile, GlobalDefinitions.beamer, beamer_wep.FireMode, p_source, GlobalDefinitions.beamer.ObjectId, Vector3.Zero, Vector3.Zero)
   val fury_dm = Vehicle(GlobalDefinitions.fury).DamageModel
-  val obj = ResolvedProjectile(ProjectileResolution.Hit, projectile, p_source, fury_dm, Vector3(1.2f, 3.4f, 5.6f), System.nanoTime)
+  val obj = BallisticsInteraction(ProjectileResolution.Hit, projectile, p_source, fury_dm, Vector3(1.2f, 3.4f, 5.6f), System.nanoTime)
 
   "charge vehicle shields" in {
     assert(vehicle.Shields == 0)

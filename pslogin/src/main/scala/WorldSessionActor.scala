@@ -60,6 +60,7 @@ import scala.concurrent.duration._
 import scala.util.Success
 import akka.pattern.ask
 import net.psforever.objects.vehicles.Utility.InternalTelepad
+import net.psforever.objects.vital.resolution.{DamageResistCalculations, ResolutionCalculations}
 import services.local.support.{HackCaptureActor, RouterTelepadActivation}
 import services.support.SupportActor
 
@@ -2546,7 +2547,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
       //TODO begin temp player character auto-loading; remove later
       import net.psforever.objects.GlobalDefinitions._
       import net.psforever.types.CertificationType._
-      val faction = PlanetSideEmpire.VS
+      val faction = if(sessionId <= 1) PlanetSideEmpire.VS else PlanetSideEmpire.TR
       val avatar = Avatar(s"TestCharacter$sessionId", faction, CharacterGender.Female, 41, CharacterVoice.Voice1)
       avatar.Certifications += StandardAssault
       avatar.Certifications += MediumAssault
@@ -3876,18 +3877,40 @@ class WorldSessionActor extends Actor with MDCContextAware {
           }
 
         case Some(obj : Vehicle) =>
-          val equipment = player.Slot(player.DrawnSlot).Equipment
-          if(player.Faction == obj.Faction) {
-            if(equipment match {
-              case Some(tool : Tool) =>
-                tool.Definition match {
-                  case GlobalDefinitions.nano_dispenser => false
-                  case _ => true
-                }
-              case _ => true
-            }) {
-              //access to trunk
-              if(obj.AccessingTrunk.isEmpty &&
+          val equipment = FindContainedEquipment match {
+            case (opt @ Some(_), b) if b.exists(_.GUID == item_used_guid) =>
+              (opt, b.filter(_.GUID == item_used_guid).headOption)
+            case _ =>
+              (None, None)
+          }
+          equipment match {
+            case (Some(vehicle : Vehicle), Some(siphon : Tool)) if GlobalDefinitions.isBattleFrameArmorSiphon(siphon.Definition) && player.Faction != obj.Faction =>
+              //TODO properly synchronize damage
+              log.info(s"UseItem: armor siphon ${item_used_guid.guid} on $player's BFR used against vehicle $obj")
+              val resProjectile = BallisticsInteraction(
+                ProjectileResolution.Hit,
+                Projectile(siphon.Projectile, siphon.Definition, siphon.FireMode, player, vehicle.Position, vehicle.Orientation),
+                SourceEntry(obj),
+                SiphonModel,
+                obj.Position
+              )
+              resProjectile.projectile.Resolve()
+              HandleDealingDamage(obj, resProjectile) //to target
+
+              //sample results and apply as repair points
+              resProjectile.Results match {
+                case Some(dam : Int) if dam > 0 =>
+                  log.info(s"UseItem: siphoning has repaired the BFR by $dam points")
+                  vehicle.Health += dam
+                  vehicle.History(RepairFromTool(VehicleSource(vehicle), dam, siphon.Definition))
+                  sendResponse(PlanetsideAttributeMessage(vehicle.GUID, 0, vehicle.Health))
+                  vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.PlanetsideAttribute(player.GUID, vehicle.GUID, 0, vehicle.Health))
+                case _ => ;
+              }
+            case _ =>
+              //access to trunk?
+              if(player.VehicleSeated.isEmpty && player.Faction == obj.Faction &&
+                obj.AccessingTrunk.isEmpty &&
                 (!obj.PermissionGroup(AccessPermissionGroup.Trunk.id).contains(VehicleLockState.Locked) || obj.Owner.contains(player.GUID))) {
                 obj.AccessingTrunk = player.GUID
                 accessedContainer = Some(obj)
@@ -3897,24 +3920,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
               else {
                 log.info(s"UseItem: $obj's trunk is not currently accessible for $player")
               }
-            }
-            else if(equipment.isDefined) {
-              equipment.get.Definition match {
-                case GlobalDefinitions.nano_dispenser =>
-                  //TODO repairing behavior
-
-                case _ => ;
-              }
-            }
-          }
-          //enemy player interactions
-          else if(equipment.isDefined) {
-            equipment.get.Definition match {
-              case GlobalDefinitions.remote_electronics_kit =>
-                //TODO hacking behavior
-
-              case _ => ;
-            }
           }
 
         case Some(terminal : Terminal) =>
@@ -6781,7 +6786,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
     * @param resolution the resolution status to promote the projectile
     * @return the projectile
     */
-  def ResolveProjectileEntry(projectile_guid : PlanetSideGUID, resolution : ProjectileResolution.Value, target : PlanetSideGameObject with FactionAffinity with Vitality, pos : Vector3) : Option[ResolvedProjectile] = {
+  def ResolveProjectileEntry(projectile_guid : PlanetSideGUID, resolution : ProjectileResolution.Value, target : PlanetSideGameObject with FactionAffinity with Vitality, pos : Vector3) : Option[BallisticsInteraction] = {
     FindProjectileEntry(projectile_guid) match {
       case Some(projectile) =>
         val index =  projectile_guid.guid - Projectile.BaseUID
@@ -6802,7 +6807,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
     * @param resolution the resolution status to promote the projectile
     * @return a copy of the projectile
     */
-  def ResolveProjectileEntry(projectile : Projectile, index : Int, resolution : ProjectileResolution.Value, target : PlanetSideGameObject with FactionAffinity with Vitality, pos : Vector3) : Option[ResolvedProjectile] = {
+  def ResolveProjectileEntry(projectile : Projectile, index : Int, resolution : ProjectileResolution.Value, target : PlanetSideGameObject with FactionAffinity with Vitality, pos : Vector3) : Option[BallisticsInteraction] = {
     if(!projectiles(index).contains(projectile)) {
       log.error(s"expected projectile could not be found at $index; can not resolve")
       None
@@ -6813,7 +6818,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
     }
     else {
       projectile.Resolve()
-      Some(ResolvedProjectile(resolution, projectile, SourceEntry(target), target.DamageModel, pos))
+      Some(BallisticsInteraction(resolution, projectile, SourceEntry(target), target.DamageModel, pos))
     }
   }
 
@@ -6849,13 +6854,13 @@ class WorldSessionActor extends Actor with MDCContextAware {
     * Calculate the amount of damage to be dealt to an active `target`
     * using the information reconstructed from a `Resolvedprojectile`
     * and affect the `target` in a synchronized manner.
-    * The active `target` and the target of the `ResolvedProjectile` do not have be the same.
+    * The active `target` and the target of the `BallisticsInteraction` do not have be the same.
     * @see `DamageResistanceModel`<br>
     *       `Vitality`
     * @param target a valid game object that is known to the server
     * @param data a projectile that will affect the target
     */
-  def HandleDealingDamage(target : PlanetSideGameObject with Vitality, data : ResolvedProjectile) : Unit = {
+  def HandleDealingDamage(target : PlanetSideGameObject with Vitality, data : BallisticsInteraction) : Unit = {
     val func = data.damage_model.Calculate(data)
     target match {
       case obj : Player =>

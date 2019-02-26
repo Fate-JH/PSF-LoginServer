@@ -1,7 +1,7 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.vital.damage
 
-import net.psforever.objects.ballistics.{ProjectileResolution, ResolvedProjectile}
+import net.psforever.objects.ballistics.{ProjectileResolution, BallisticsInteraction}
 import net.psforever.objects.vital.NoDamage
 import net.psforever.objects.vital.projectile.ProjectileCalculations
 
@@ -16,7 +16,7 @@ trait DamageSelection {
   def Splash : ProjectileCalculations.Form
   def Lash : ProjectileCalculations.Form
 
-  def apply(data : ResolvedProjectile) : ProjectileCalculations.Form = data.resolution match {
+  def apply(data : BallisticsInteraction) : ProjectileCalculations.Form = data.resolution match {
     case ProjectileResolution.Hit => Direct
     case ProjectileResolution.Splash => Splash
     case ProjectileResolution.Lash => Lash

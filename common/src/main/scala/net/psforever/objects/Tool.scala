@@ -166,7 +166,7 @@ object Tool {
       */
     private var ammoTypeIndex : Int = 0
     /** a reference to the actual `AmmoBox` of this slot */
-    private var box : AmmoBox = AmmoBox(AmmoDefinition, fdef.Magazine)
+    private var box : AmmoBox = AmmoBox(AmmoDefinition, fdef.CustomMagazine.getOrElse(tdef.AmmoTypes.head.AmmoType, fdef.Magazine))
     private var chamber = fdef.Chamber
 
     def AmmoTypeIndex : Int = ammoTypeIndex

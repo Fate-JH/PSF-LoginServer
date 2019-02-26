@@ -2,8 +2,8 @@
 package net.psforever.objects.vital
 
 import net.psforever.objects.PlanetSideGameObject
-import net.psforever.objects.ballistics.{PlayerSource, ResolvedProjectile, SourceEntry, VehicleSource}
-import net.psforever.objects.definition.KitDefinition
+import net.psforever.objects.ballistics.{BallisticsInteraction, PlayerSource, SourceEntry, VehicleSource}
+import net.psforever.objects.definition.{KitDefinition, ToolDefinition}
 import net.psforever.objects.serverobject.terminals.TerminalDefinition
 import net.psforever.types.{ExoSuitType, ImplantType}
 
@@ -26,11 +26,13 @@ final case class HealFromImplant(target : PlayerSource, amount : Int, implant : 
 
 final case class HealFromExoSuitChange(target : PlayerSource, exosuit : ExoSuitType.Value) extends HealingActivity(target)
 
+final case class RepairFromTool(target : VehicleSource, amount : Int, tool_def : ToolDefinition) extends HealingActivity(target)
+
 final case class RepairFromTerm(target : VehicleSource, amount : Int, term_def : TerminalDefinition) extends HealingActivity(target)
 
 final case class VehicleShieldCharge(target : VehicleSource, amount : Int) extends HealingActivity(target) //TODO facility
 
-final case class DamageFromProjectile(data : ResolvedProjectile) extends DamagingActivity(data.target)
+final case class DamageFromProjectile(data : BallisticsInteraction) extends DamagingActivity(data.target)
 
 final case class PlayerSuicide(target : PlayerSource) extends DamagingActivity(target)
 
@@ -65,7 +67,7 @@ trait Vitality {
     * @param projectile the fully-informed entry of discharge of a weapon
     * @return the list of previous changes to this object's vital statistics
     */
-  def History(projectile : ResolvedProjectile) : List[VitalsActivity] = {
+  def History(projectile : BallisticsInteraction) : List[VitalsActivity] = {
     vitalHistory = DamageFromProjectile(projectile) +: vitalHistory
     vitalHistory
   }
@@ -74,7 +76,7 @@ trait Vitality {
     * Find, specifically, the last instance of a weapon discharge vital statistics change.
     * @return information about the discharge
     */
-  def LastShot : Option[ResolvedProjectile] = {
+  def LastShot : Option[BallisticsInteraction] = {
     vitalHistory.find({p => p.isInstanceOf[DamageFromProjectile]}) match {
       case Some(entry : DamageFromProjectile) =>
         Some(entry.data)
@@ -88,6 +90,10 @@ trait Vitality {
     vitalHistory = List.empty[VitalsActivity]
     out
   }
+
+  def Health : Int
+
+  def Health_=(value : Int) : Int
 
   def DamageModel : DamageResistanceModel
 }

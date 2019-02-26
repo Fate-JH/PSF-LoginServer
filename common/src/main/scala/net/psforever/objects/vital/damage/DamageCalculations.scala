@@ -2,7 +2,7 @@
 package net.psforever.objects.vital.damage
 
 import net.psforever.types.Vector3
-import net.psforever.objects.ballistics.{Projectile, ResolvedProjectile}
+import net.psforever.objects.ballistics.{Projectile, BallisticsInteraction}
 import net.psforever.objects.vital.projectile.ProjectileCalculations
 import DamageCalculations._
 
@@ -21,11 +21,11 @@ abstract class DamageCalculations(damages : DamagesType,
                                   extractor : DamageWithModifiersType,
                                   distanceFunc : DistanceType) extends ProjectileCalculations {
   /**
-    * Combine the damage and distance data extracted from the `ResolvedProjectile` entry.
-    * @param data the historical `ResolvedProjectile` information
+    * Combine the damage and distance data extracted from the `BallisticsInteraction` entry.
+    * @param data the historical `BallisticsInteraction` information
     * @return the damage value
     */
-  def Calculate(data : ResolvedProjectile) : Int = {
+  def Calculate(data : BallisticsInteraction) : Int = {
     val projectile = data.projectile
     val profile = projectile.profile
     val modifiers = if(profile.UseDamage1Subtract) {
@@ -46,7 +46,7 @@ object DamageCalculations {
   //types
   type DamagesType = (Projectile, Int, Float)=>Int
   type DamageWithModifiersType = (DamageProfile, List[DamageProfile])=>Int
-  type DistanceType = (ResolvedProjectile)=>Float
+  type DistanceType = BallisticsInteraction=>Float
 
   //raw damage selectors
   def NoDamageAgainst(profile : DamageProfile) : Int = 0
@@ -62,6 +62,8 @@ object DamageCalculations {
   def DamageAgainstUnknown(profile : DamageProfile) : Int = profile.Damage4
 
   //raw damage selection functions
+  def UnmodifiedDamage(extractor : DamageProfile=>Int)(base : DamageProfile, modifiers : List[DamageProfile]) : Int = extractor(base)
+
   /**
     * Get damage information from a series of profiles related to the weapon discharge.
     * @param extractor the function that recovers the damage value
@@ -70,7 +72,7 @@ object DamageCalculations {
     * @return the accumulated damage value
     */
   //TODO modifiers come from various sources; expand this part of the calculation model in the future
-  def DamageWithModifiers(extractor : (DamageProfile)=>Int)(base : DamageProfile, modifiers : List[DamageProfile]) : Int = {
+  def DamageWithModifiers(extractor : DamageProfile=>Int)(base : DamageProfile, modifiers : List[DamageProfile]) : Int = {
     extractor(base) + modifiers.foldLeft(0)(_ + extractor(_))
   }
 
@@ -151,15 +153,15 @@ object DamageCalculations {
   }
 
   //distance functions
-  def NoDistance(data : ResolvedProjectile) : Float = 0
+  def NoDistance(data : BallisticsInteraction) : Float = 0
 
-  def TooFar(data : ResolvedProjectile) : Float = Float.MaxValue
+  def TooFar(data : BallisticsInteraction) : Float = Float.MaxValue
 
-  def DistanceBetweenTargetandSource(data : ResolvedProjectile) : Float = {
+  def DistanceBetweenTargetandSource(data : BallisticsInteraction) : Float = {
     Vector3.Distance(data.target.Position, data.projectile.owner.Position)
   }
 
-  def DistanceFromExplosionToTarget(data : ResolvedProjectile) : Float = {
+  def DistanceFromExplosionToTarget(data : BallisticsInteraction) : Float = {
     Vector3.Distance(data.target.Position, data.hit_pos)
   }
 }

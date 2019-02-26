@@ -4,18 +4,11 @@ package net.psforever.objects.vital
 import net.psforever.objects.vital.damage._
 import net.psforever.objects.vital.damage.DamageCalculations._
 
-/**
-  * A protected super class for calculating "no damage."
-  * Used for `NoDamage` but also for the base of `*LashDamage` calculation objects
-  * to maintain the polymorphic identity of `DamageCalculations`.
-  */
-protected class NoDamageBase extends DamageCalculations(
+object NoDamage extends DamageCalculations(
   DamageCalculations.NoDamage,
   DamageWithModifiers(NoDamageAgainst),
   TooFar
 )
-
-object NoDamage extends NoDamageBase
 
 object InfantryHitDamage extends DamageCalculations(
   DirectHitDamageWithDegrade,

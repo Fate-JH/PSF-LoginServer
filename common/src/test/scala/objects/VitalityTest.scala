@@ -19,9 +19,9 @@ class VitalityTest extends Specification {
       val player = Player(Avatar("TestCharacter", PlanetSideEmpire.TR, CharacterGender.Male, 0, CharacterVoice.Mute))
       val pSource = PlayerSource(player)
       val projectile = Projectile(proj, wep, wep_fmode, player, Vector3(2, 2, 0), Vector3.Zero)
-      val resprojectile = ResolvedProjectile(ProjectileResolution.Splash, projectile, SourceEntry(player), player.DamageModel, Vector3(50, 50, 0))
+      val resprojectile = BallisticsInteraction(ProjectileResolution.Splash, projectile, SourceEntry(player), player.DamageModel, Vector3(50, 50, 0))
 
-      player.History(resprojectile) //ResolvedProjectile, straight-up
+      player.History(resprojectile) //BallisticsInteraction, straight-up
       player.History(DamageFromProjectile(resprojectile))
       player.History(HealFromKit(pSource, 10, GlobalDefinitions.medkit))
       player.History(HealFromTerm(pSource, 10, 0, GlobalDefinitions.order_terminal))
@@ -61,7 +61,7 @@ class VitalityTest extends Specification {
       val player = Player(Avatar("TestCharacter", PlanetSideEmpire.TR, CharacterGender.Male, 0, CharacterVoice.Mute))
       val pSource = PlayerSource(player)
       val projectile = Projectile(proj, wep, wep_fmode, player, Vector3(2, 2, 0), Vector3.Zero)
-      val resprojectile = ResolvedProjectile(ProjectileResolution.Splash, projectile, SourceEntry(player), player.DamageModel, Vector3(50, 50, 0))
+      val resprojectile = BallisticsInteraction(ProjectileResolution.Splash, projectile, SourceEntry(player), player.DamageModel, Vector3(50, 50, 0))
 
       player.History(DamageFromProjectile(resprojectile))
       player.History(HealFromKit(pSource, 10, GlobalDefinitions.medkit))

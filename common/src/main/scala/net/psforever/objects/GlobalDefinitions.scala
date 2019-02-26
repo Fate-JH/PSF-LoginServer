@@ -348,6 +348,10 @@ object GlobalDefinitions {
   val wasp_rocket_projectile = ProjectileDefinition(Projectiles.wasp_rocket_projectile)
 
   val winchester_projectile = ProjectileDefinition(Projectiles.winchester_projectile)
+
+  val armor_siphon_projectile = ProjectileDefinition(Projectiles.trek_projectile) //fake projectile for storing damage information
+
+  val ntu_siphon_projectile = ProjectileDefinition(Projectiles.trek_projectile) //fake projectile
   init_projectile()
 
   /*
@@ -1427,10 +1431,65 @@ object GlobalDefinitions {
     }
   }
 
+  /**
+    * Given the the definition of a piece of equipment,
+    * determine whether it is a weapon to be installed on battle frame robotics units.
+    * @param tdef the `EquipmentDefinition` of the alleged weapon
+    * @return `true`, if the definition represents a battle frame robotics weapon;
+    *         `false`, otherwise
+    */
   def isBattleFrameWeapon(tdef : EquipmentDefinition) : Boolean = {
     isBattleFrameWeaponForVS(tdef) || isBattleFrameWeaponForTR(tdef) || isBattleFrameWeaponForNC(tdef)
   }
 
+  /**
+    * Given the the definition of a battle frame robotics weapon, determine whether it is used by the specific faction.
+    * @param tdef the `EquipmentDefinition` of the alleged weapon
+    * @faction the suggested alignment of the weapon
+    * @return `true`, if a battle frame robotics weapon and associated with the given faction;
+    *         `false`, otherwise
+    */
+  def isBattleFrameWeapon(tdef : EquipmentDefinition, faction : PlanetSideEmpire.Value) : Boolean = {
+    faction match {
+      case PlanetSideEmpire.VS =>
+        isBattleFrameWeaponForVS(tdef)
+      case PlanetSideEmpire.TR =>
+        isBattleFrameWeaponForTR(tdef)
+      case PlanetSideEmpire.NC =>
+        isBattleFrameWeaponForNC(tdef)
+      case _ =>
+        false
+    }
+  }
+
+  def isBattleFrameArmorSiphon(edef : EquipmentDefinition) : Boolean = {
+    edef match {
+      case `aphelion_armor_siphon` | `aphelion_armor_siphon_left` | `aphelion_armor_siphon_right` |
+           `colossus_armor_siphon` | `colossus_armor_siphon_left` | `colossus_armor_siphon_right` |
+           `peregrine_armor_siphon` | `peregrine_armor_siphon_left` | `peregrine_armor_siphon_right` =>
+        true
+      case _ =>
+        false
+    }
+  }
+
+  def isBattleFrameNTUSiphon(edef : EquipmentDefinition) : Boolean = {
+    edef match {
+      case `aphelion_ntu_siphon` | `aphelion_ntu_siphon_left` | `aphelion_ntu_siphon_right` |
+           `colossus_ntu_siphon` | `colossus_ntu_siphon_left` | `colossus_ntu_siphon_right` |
+           `peregrine_ntu_siphon` | `peregrine_ntu_siphon_left` | `peregrine_ntu_siphon_right` =>
+        true
+      case _ =>
+        false
+    }
+  }
+
+  /**
+    * Given the the definition of a battle frame robotics weapon, determine whether it is used by the Vanu Sovereignty.
+    * @param tdef the `EquipmentDefinition` of the alleged weapon
+    * @return `true`, if a battle frame robotics weapon and associated with the given faction;
+    *         `false`, otherwise
+    */
   def isBattleFrameWeaponForVS(tdef : EquipmentDefinition) : Boolean = {
     tdef match {
       case `aphelion_armor_siphon` | `aphelion_armor_siphon_left` | `aphelion_armor_siphon_right` |
@@ -1445,6 +1504,12 @@ object GlobalDefinitions {
     }
   }
 
+  /**
+    * Given the the definition of a battle frame robotics weapon, determine whether it is used by the Terran Republic.
+    * @param tdef the `EquipmentDefinition` of the alleged weapon
+    * @return `true`, if a battle frame robotics weapon and associated with the given faction;
+    *         `false`, otherwise
+    */
   def isBattleFrameWeaponForTR(tdef : EquipmentDefinition) : Boolean = {
     tdef match {
       case `colossus_armor_siphon` | `colossus_armor_siphon_left` | `colossus_armor_siphon_right` |
@@ -1459,6 +1524,12 @@ object GlobalDefinitions {
     }
   }
 
+  /**
+    * Given the the definition of a battle frame robotics weapon, determine whether it is used by the New Conglomerate.
+    * @param tdef the `EquipmentDefinition` of the alleged weapon
+    * @return `true`, if a battle frame robotics weapon and associated with the given faction;
+    *         `false`, otherwise
+    */
   def isBattleFrameWeaponForNC(tdef : EquipmentDefinition) : Boolean = {
     tdef match {
       case `peregrine_armor_siphon` | `peregrine_armor_siphon_left` | `peregrine_armor_siphon_right` |
@@ -1470,6 +1541,87 @@ object GlobalDefinitions {
         true
       case _ =>
         false
+    }
+  }
+
+  /**
+    * Given the handiness of the definition of a battle frame robotics arm weapon, determine the basic weapon definition.
+    * @param tdef the `EquipmentDefinition` of the alleged weapon
+    * @return if battle frame robotics arm weapon with handiness, the basic weapon definition;
+    *         if not an arm weapon, the same definition as was submitted
+    */
+  def BattleFrameWeaponDefault(tdef : EquipmentDefinition) : EquipmentDefinition = {
+    tdef match {
+      case `aphelion_armor_siphon_right` | `aphelion_armor_siphon_left` => `aphelion_armor_siphon`
+      case `aphelion_laser_right` | `aphelion_laser_left` => `aphelion_laser`
+      case `aphelion_ntu_siphon_right` | `aphelion_ntu_siphon_left` => `aphelion_ntu_siphon`
+      case `aphelion_ppa_right` | `aphelion_ppa_left` => `aphelion_ppa`
+      case `aphelion_starfire_right` | `aphelion_starfire_left` => `aphelion_starfire`
+      case `colossus_armor_siphon_right` | `colossus_armor_siphon_left` => `colossus_armor_siphon`
+      case `colossus_burster_right` | `colossus_burster_left` => `colossus_burster`
+      case `colossus_chaingun_right` | `colossus_chaingun_left` => `colossus_chaingun`
+      case `colossus_ntu_siphon_right` | `colossus_ntu_siphon_left` => `colossus_ntu_siphon`
+      case `colossus_tank_cannon_right` | `colossus_tank_cannon_left` => `colossus_tank_cannon`
+      case `peregrine_armor_siphon_right` | `peregrine_armor_siphon_left` => `peregrine_armor_siphon`
+      case `peregrine_dual_machine_gun_right` | `peregrine_dual_machine_gun_left` => `peregrine_dual_machine_gun`
+      case `peregrine_mechhammer_right` | `peregrine_mechhammer_left` => `peregrine_mechhammer`
+      case `peregrine_ntu_siphon_right` | `peregrine_ntu_siphon_left` => `peregrine_ntu_siphon`
+      case `peregrine_sparrow_right` | `peregrine_sparrow_left` => `peregrine_sparrow`
+      case _ => tdef
+    }
+  }
+
+  /**
+    * Given the the definition of a battle frame robotics arm weapon, determine the left-side weapon definition.
+    * @param tdef the `EquipmentDefinition` of the alleged weapon
+    * @return if battle frame robotics arm weapon with handiness, the left-side weapon definition;
+    *         if not an arm weapon, the same definition as was submitted
+    */
+  def BattleFrameWeaponLeft(tdef : EquipmentDefinition) : EquipmentDefinition = {
+    tdef match {
+      case `aphelion_armor_siphon` | `aphelion_armor_siphon_right` => `aphelion_armor_siphon_left`
+      case `aphelion_laser` | `aphelion_laser_right` => `aphelion_laser_left`
+      case `aphelion_ntu_siphon` | `aphelion_ntu_siphon_right` => `aphelion_ntu_siphon_left`
+      case `aphelion_ppa` | `aphelion_ppa_right` => `aphelion_ppa_left`
+      case `aphelion_starfire` | `aphelion_starfire_right` => `aphelion_starfire_left`
+      case `colossus_armor_siphon` | `colossus_armor_siphon_right` => `colossus_armor_siphon_left`
+      case `colossus_burster` | `colossus_burster_right` => `colossus_burster_left`
+      case `colossus_chaingun` | `colossus_chaingun_right` => `colossus_chaingun_left`
+      case `colossus_ntu_siphon` | `colossus_ntu_siphon_right` => `colossus_ntu_siphon_left`
+      case `colossus_tank_cannon` | `colossus_tank_cannon_right` => `colossus_tank_cannon_left`
+      case `peregrine_armor_siphon` | `peregrine_armor_siphon_right` => `peregrine_armor_siphon_left`
+      case `peregrine_dual_machine_gun` | `peregrine_dual_machine_gun_right` => `peregrine_dual_machine_gun_left`
+      case `peregrine_mechhammer` | `peregrine_mechhammer_right` => `peregrine_mechhammer_left`
+      case `peregrine_ntu_siphon` | `peregrine_ntu_siphon_right` => `peregrine_ntu_siphon_left`
+      case `peregrine_sparrow` | `peregrine_sparrow_right` => `peregrine_sparrow_left`
+      case _ => tdef
+    }
+  }
+
+  /**
+    * Given the the definition of a battle frame robotics arm weapon, determine the right-side weapon definition.
+    * @param tdef the `EquipmentDefinition` of the alleged weapon
+    * @return if battle frame robotics arm weapon with handiness, the right-side weapon definition;
+    *         if not an arm weapon, the same definition as was submitted
+    */
+  def BattleFrameWeaponRight(tdef : EquipmentDefinition) : EquipmentDefinition = {
+    tdef match {
+      case `aphelion_armor_siphon` | `aphelion_armor_siphon_left` => `aphelion_armor_siphon_right`
+      case `aphelion_laser` | `aphelion_laser_left` => `aphelion_laser_right`
+      case `aphelion_ntu_siphon` | `aphelion_ntu_siphon_left` => `aphelion_ntu_siphon_right`
+      case `aphelion_ppa` | `aphelion_ppa_left` => `aphelion_ppa_right`
+      case `aphelion_starfire` | `aphelion_starfire_left` => `aphelion_starfire_right`
+      case `colossus_armor_siphon` | `colossus_armor_siphon_left` => `colossus_armor_siphon_right`
+      case `colossus_burster` | `colossus_burster_left` => `colossus_burster_right`
+      case `colossus_chaingun` | `colossus_chaingun_left` => `colossus_chaingun_right`
+      case `colossus_ntu_siphon` | `colossus_ntu_siphon_left` => `colossus_ntu_siphon_right`
+      case `colossus_tank_cannon` | `colossus_tank_cannon_left` => `colossus_tank_cannon_right`
+      case `peregrine_armor_siphon` | `peregrine_armor_siphon_left` => `peregrine_armor_siphon_right`
+      case `peregrine_dual_machine_gun` | `peregrine_dual_machine_gun_left` => `peregrine_dual_machine_gun_right`
+      case `peregrine_mechhammer` | `peregrine_mechhammer_left` => `peregrine_mechhammer_right`
+      case `peregrine_ntu_siphon` | `peregrine_ntu_siphon_left` => `peregrine_ntu_siphon_right`
+      case `peregrine_sparrow` | `peregrine_sparrow_left` => `peregrine_sparrow_right`
+      case _ => tdef
     }
   }
 
@@ -1903,9 +2055,11 @@ object GlobalDefinitions {
     energy_gun_ammo.Size = EquipmentSize.Blocked
 
     armor_siphon_ammo.Name = "armor_siphon_ammo"
+    armor_siphon_ammo.Capacity = 0
     armor_siphon_ammo.Size = EquipmentSize.Blocked
 
     ntu_siphon_ammo.Name = "ntu_siphon_ammo"
+    ntu_siphon_ammo.Capacity = 0
     ntu_siphon_ammo.Size = EquipmentSize.Blocked
   }
 
@@ -3544,6 +3698,14 @@ object GlobalDefinitions {
     winchester_projectile.InitialVelocity = 500
     winchester_projectile.Lifespan = 0.6f
     ProjectileDefinition.CalculateDerivedFields(winchester_projectile)
+
+    armor_siphon_projectile.Name = "armor_siphon_projectile"
+    armor_siphon_projectile.Damage1 = 20 //ground vehicles, siphon drain
+    armor_siphon_projectile.Damage2 = 20 //aircraft, siphon drain
+    armor_siphon_projectile.DamageRadius = 35f
+    armor_siphon_projectile.ProjectileDamageType = DamageType.Direct
+
+    ntu_siphon_projectile.Name = "ntu_siphon_projectile"
   }
 
   /**
@@ -4955,7 +5117,7 @@ object GlobalDefinitions {
     aphelion_armor_siphon.Name = "aphelion_armor_siphon"
     aphelion_armor_siphon.Size = EquipmentSize.BFRArmWeapon
     aphelion_armor_siphon.AmmoTypes += armor_siphon_ammo
-    aphelion_armor_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct?
+    aphelion_armor_siphon.ProjectileTypes += armor_siphon_projectile
     aphelion_armor_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_armor_siphon.FireModes.head.AmmoTypeIndices += 0
     aphelion_armor_siphon.FireModes.head.AmmoSlotIndex = 0
@@ -4966,7 +5128,7 @@ object GlobalDefinitions {
     aphelion_armor_siphon_left.Name = "aphelion_armor_siphon_left"
     aphelion_armor_siphon_left.Size = EquipmentSize.BFRArmWeapon
     aphelion_armor_siphon_left.AmmoTypes += armor_siphon_ammo
-    aphelion_armor_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct?
+    aphelion_armor_siphon_left.ProjectileTypes += armor_siphon_projectile
     aphelion_armor_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_armor_siphon_left.FireModes.head.AmmoTypeIndices += 0
     aphelion_armor_siphon_left.FireModes.head.AmmoSlotIndex = 0
@@ -4974,10 +5136,10 @@ object GlobalDefinitions {
     aphelion_armor_siphon_left.Packet = battleFrameToolConverter
     aphelion_armor_siphon_left.Tile = InventoryTile.Tile48
 
-    aphelion_armor_siphon_right.Name = "aphelion_ntu_siphon_right"
+    aphelion_armor_siphon_right.Name = "aphelion_armor_siphon_right"
     aphelion_armor_siphon_right.Size = EquipmentSize.BFRArmWeapon
     aphelion_armor_siphon_right.AmmoTypes += armor_siphon_ammo
-    aphelion_armor_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct?
+    aphelion_armor_siphon_right.ProjectileTypes += armor_siphon_projectile
     aphelion_armor_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_armor_siphon_right.FireModes.head.AmmoTypeIndices += 0
     aphelion_armor_siphon_right.FireModes.head.AmmoSlotIndex = 0
@@ -5021,7 +5183,7 @@ object GlobalDefinitions {
     aphelion_ntu_siphon.Name = "aphelion_ntu_siphon"
     aphelion_ntu_siphon.Size = EquipmentSize.BFRArmWeapon
     aphelion_ntu_siphon.AmmoTypes += ntu_siphon_ammo
-    aphelion_ntu_siphon.ProjectileTypes += aphelion_laser_projectile
+    aphelion_ntu_siphon.ProjectileTypes += ntu_siphon_projectile
     aphelion_ntu_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_ntu_siphon.FireModes.head.AmmoTypeIndices += 0
     aphelion_ntu_siphon.FireModes.head.AmmoSlotIndex = 0
@@ -5032,7 +5194,7 @@ object GlobalDefinitions {
     aphelion_ntu_siphon_left.Name = "aphelion_ntu_siphon_left"
     aphelion_ntu_siphon_left.Size = EquipmentSize.BFRArmWeapon
     aphelion_ntu_siphon_left.AmmoTypes += ntu_siphon_ammo
-    aphelion_ntu_siphon_left.ProjectileTypes += aphelion_laser_projectile
+    aphelion_ntu_siphon_left.ProjectileTypes += ntu_siphon_projectile
     aphelion_ntu_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_ntu_siphon_left.FireModes.head.AmmoTypeIndices += 0
     aphelion_ntu_siphon_left.FireModes.head.AmmoSlotIndex = 0
@@ -5043,7 +5205,7 @@ object GlobalDefinitions {
     aphelion_ntu_siphon_right.Name = "aphelion_ntu_siphon_right"
     aphelion_ntu_siphon_right.Size = EquipmentSize.BFRArmWeapon
     aphelion_ntu_siphon_right.AmmoTypes += ntu_siphon_ammo
-    aphelion_ntu_siphon_right.ProjectileTypes += aphelion_laser_projectile
+    aphelion_ntu_siphon_right.ProjectileTypes += ntu_siphon_projectile
     aphelion_ntu_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     aphelion_ntu_siphon_right.FireModes.head.AmmoTypeIndices += 0
     aphelion_ntu_siphon_right.FireModes.head.AmmoSlotIndex = 0
@@ -5142,7 +5304,7 @@ object GlobalDefinitions {
     colossus_armor_siphon.Name = "colossus_armor_siphon"
     colossus_armor_siphon.Size = EquipmentSize.BFRArmWeapon
     colossus_armor_siphon.AmmoTypes += armor_siphon_ammo
-    colossus_armor_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_armor_siphon.ProjectileTypes += armor_siphon_projectile
     colossus_armor_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     colossus_armor_siphon.FireModes.head.AmmoTypeIndices += 0
     colossus_armor_siphon.FireModes.head.AmmoSlotIndex = 0
@@ -5153,7 +5315,7 @@ object GlobalDefinitions {
     colossus_armor_siphon_left.Name = "colossus_armor_siphon_left"
     colossus_armor_siphon_left.Size = EquipmentSize.BFRArmWeapon
     colossus_armor_siphon_left.AmmoTypes += armor_siphon_ammo
-    colossus_armor_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_armor_siphon_left.ProjectileTypes += armor_siphon_projectile
     colossus_armor_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     colossus_armor_siphon_left.FireModes.head.AmmoTypeIndices += 0
     colossus_armor_siphon_left.FireModes.head.AmmoSlotIndex = 0
@@ -5164,7 +5326,7 @@ object GlobalDefinitions {
     colossus_armor_siphon_right.Name = "colossus_armor_siphon_right"
     colossus_armor_siphon_right.Size = EquipmentSize.BFRArmWeapon
     colossus_armor_siphon_right.AmmoTypes += armor_siphon_ammo
-    colossus_armor_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_armor_siphon_right.ProjectileTypes += armor_siphon_projectile
     colossus_armor_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     colossus_armor_siphon_right.FireModes.head.AmmoTypeIndices += 0
     colossus_armor_siphon_right.FireModes.head.AmmoSlotIndex = 0
@@ -5241,7 +5403,7 @@ object GlobalDefinitions {
     colossus_ntu_siphon.Name = "colossus_ntu_siphon"
     colossus_ntu_siphon.Size = EquipmentSize.BFRArmWeapon
     colossus_ntu_siphon.AmmoTypes += ntu_siphon_ammo
-    colossus_ntu_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_ntu_siphon.ProjectileTypes += ntu_siphon_projectile
     colossus_ntu_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     colossus_ntu_siphon.FireModes.head.AmmoTypeIndices += 0
     colossus_ntu_siphon.FireModes.head.AmmoSlotIndex = 0
@@ -5252,7 +5414,7 @@ object GlobalDefinitions {
     colossus_ntu_siphon_left.Name = "colossus_ntu_siphon_left"
     colossus_ntu_siphon_left.Size = EquipmentSize.BFRArmWeapon
     colossus_ntu_siphon_left.AmmoTypes += ntu_siphon_ammo
-    colossus_ntu_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_ntu_siphon_left.ProjectileTypes += ntu_siphon_projectile
     colossus_ntu_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     colossus_ntu_siphon_left.FireModes.head.AmmoTypeIndices += 0
     colossus_ntu_siphon_left.FireModes.head.AmmoSlotIndex = 0
@@ -5263,7 +5425,7 @@ object GlobalDefinitions {
     colossus_ntu_siphon_right.Name = "colossus_ntu_siphon_right"
     colossus_ntu_siphon_right.Size = EquipmentSize.BFRArmWeapon
     colossus_ntu_siphon_right.AmmoTypes += ntu_siphon_ammo
-    colossus_ntu_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    colossus_ntu_siphon_right.ProjectileTypes += ntu_siphon_projectile
     colossus_ntu_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     colossus_ntu_siphon_right.FireModes.head.AmmoTypeIndices += 0
     colossus_ntu_siphon_right.FireModes.head.AmmoSlotIndex = 0
@@ -5333,7 +5495,7 @@ object GlobalDefinitions {
     peregrine_armor_siphon.Name = "peregrine_armor_siphon"
     peregrine_armor_siphon.Size = EquipmentSize.BFRArmWeapon
     peregrine_armor_siphon.AmmoTypes += armor_siphon_ammo
-    peregrine_armor_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_armor_siphon.ProjectileTypes += armor_siphon_projectile
     peregrine_armor_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     peregrine_armor_siphon.FireModes.head.AmmoTypeIndices += 0
     peregrine_armor_siphon.FireModes.head.AmmoSlotIndex = 0
@@ -5344,7 +5506,7 @@ object GlobalDefinitions {
     peregrine_armor_siphon_left.Name = "peregrine_armor_siphon_left"
     peregrine_armor_siphon_left.Size = EquipmentSize.BFRArmWeapon
     peregrine_armor_siphon_left.AmmoTypes += armor_siphon_ammo
-    peregrine_armor_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_armor_siphon_left.ProjectileTypes += armor_siphon_projectile
     peregrine_armor_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     peregrine_armor_siphon_left.FireModes.head.AmmoTypeIndices += 0
     peregrine_armor_siphon_left.FireModes.head.AmmoSlotIndex = 0
@@ -5355,7 +5517,7 @@ object GlobalDefinitions {
     peregrine_armor_siphon_right.Name = "peregrine_armor_siphon_right"
     peregrine_armor_siphon_right.Size = EquipmentSize.BFRArmWeapon
     peregrine_armor_siphon_right.AmmoTypes += armor_siphon_ammo
-    peregrine_armor_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_armor_siphon_right.ProjectileTypes += armor_siphon_projectile
     peregrine_armor_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     peregrine_armor_siphon_right.FireModes.head.AmmoTypeIndices += 0
     peregrine_armor_siphon_right.FireModes.head.AmmoSlotIndex = 0
@@ -5450,7 +5612,7 @@ object GlobalDefinitions {
     peregrine_ntu_siphon.Name = "peregrine_ntu_siphon"
     peregrine_ntu_siphon.Size = EquipmentSize.BFRArmWeapon
     peregrine_ntu_siphon.AmmoTypes += ntu_siphon_ammo
-    peregrine_ntu_siphon.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_ntu_siphon.ProjectileTypes += ntu_siphon_projectile
     peregrine_ntu_siphon.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     peregrine_ntu_siphon.FireModes.head.AmmoTypeIndices += 0
     peregrine_ntu_siphon.FireModes.head.AmmoSlotIndex = 0
@@ -5461,7 +5623,7 @@ object GlobalDefinitions {
     peregrine_ntu_siphon_left.Name = "peregrine_ntu_siphon_left"
     peregrine_ntu_siphon_left.Size = EquipmentSize.BFRArmWeapon
     peregrine_ntu_siphon_left.AmmoTypes += ntu_siphon_ammo
-    peregrine_ntu_siphon_left.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_ntu_siphon_left.ProjectileTypes += ntu_siphon_projectile
     peregrine_ntu_siphon_left.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     peregrine_ntu_siphon_left.FireModes.head.AmmoTypeIndices += 0
     peregrine_ntu_siphon_left.FireModes.head.AmmoSlotIndex = 0
@@ -5472,7 +5634,7 @@ object GlobalDefinitions {
     peregrine_ntu_siphon_right.Name = "peregrine_ntu_siphon_right"
     peregrine_ntu_siphon_right.Size = EquipmentSize.BFRArmWeapon
     peregrine_ntu_siphon_right.AmmoTypes += ntu_siphon_ammo
-    peregrine_ntu_siphon_right.ProjectileTypes += aphelion_laser_projectile //TODO not correct
+    peregrine_ntu_siphon_right.ProjectileTypes += ntu_siphon_projectile
     peregrine_ntu_siphon_right.FireModes += new FireModeDefinition //TODO will need a custom fire mode
     peregrine_ntu_siphon_right.FireModes.head.AmmoTypeIndices += 0
     peregrine_ntu_siphon_right.FireModes.head.AmmoSlotIndex = 0

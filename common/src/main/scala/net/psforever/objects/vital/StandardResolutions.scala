@@ -25,7 +25,7 @@ object VehicleResolutions extends DamageResistCalculations(
 
 object SimpleResolutions extends DamageResistCalculations(
   ResolutionCalculations.VehicleDamageAfterResist,
-  ResolutionCalculations.SimpleApplication
+  ResolutionCalculations.SimpleDeployableApplication
 )
 
 object ComplexDeployableResolutions extends DamageResistCalculations(

@@ -222,7 +222,7 @@ class StowEquipmentTest extends ActorTest {
       val service = system.actorOf(Props[VehicleService], "v-service")
       service ! Service.Join("test")
       service ! VehicleServiceMessage("test", VehicleAction.StowEquipment(PlanetSideGUID(10), PlanetSideGUID(11), 0, tool))
-      expectMsg(VehicleServiceResponse("/test/Vehicle", PlanetSideGUID(10), VehicleResponse.StowEquipment(PlanetSideGUID(11), 0, toolDef.ObjectId, tool.GUID, cdata)))
+      expectMsg(VehicleServiceResponse("/test/Vehicle", PlanetSideGUID(10), VehicleResponse.StowEquipment(PlanetSideGUID(11), 0, tool)))
     }
   }
 }

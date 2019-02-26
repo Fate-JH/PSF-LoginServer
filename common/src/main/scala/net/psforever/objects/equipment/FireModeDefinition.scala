@@ -19,7 +19,8 @@ class FireModeDefinition {
   /** how many rounds are replenished each reload cycle */
   private var magazine : Int = 1
   /** how many rounds are replenished each reload cycle, per type of ammunition loaded
-    * key - ammo type index, value - magazine capacity*/
+    * overrides `magazine` specifications
+    * key - ammo type index, value - custom magazine capacity*/
   private val customAmmoMagazine : mutable.HashMap[Ammo.Value, Int] = mutable.HashMap[Ammo.Value, Int]()
   /** how much is subtracted from the magazine each fire cycle;
     * most weapons will only fire 1 round per fire cycle; the flamethrower in fire mode 1 fires 50 */
@@ -106,7 +107,7 @@ class PelletFireModeDefinition extends FireModeDefinition {
     val chamber : Int = ammoSlot.Chamber = ammoSlot.Chamber - 1
     if(chamber <= 0) {
       ammoSlot.Chamber = Chamber
-      magazine - Rounds
+      math.max(magazine - Rounds, 0)
     }
     else {
       magazine

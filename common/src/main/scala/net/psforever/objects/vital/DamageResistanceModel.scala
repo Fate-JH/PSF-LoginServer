@@ -1,7 +1,7 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.vital
 
-import net.psforever.objects.ballistics.{ProjectileResolution, ResolvedProjectile}
+import net.psforever.objects.ballistics.{ProjectileResolution, BallisticsInteraction}
 import net.psforever.objects.vital.damage.DamageSelection
 import net.psforever.objects.vital.projectile.ProjectileCalculations
 import net.psforever.objects.vital.resistance.ResistanceSelection
@@ -57,10 +57,10 @@ trait DamageResistanceModel {
 
   /**
     * Magic stuff.
-    * @param data the historical `ResolvedProjectile` information
+    * @param data the historical `BallisticsInteraction` information
     * @return a function literal that encapsulates delayed modification instructions for certain objects
     */
-  def Calculate(data : ResolvedProjectile) : ResolutionCalculations.Output = {
+  def Calculate(data : BallisticsInteraction) : ResolutionCalculations.Output = {
     val dam : ProjectileCalculations.Form = Damage(data)
     val res : ProjectileCalculations.Form = Resistance(data)
     Model(dam, res, data)
@@ -68,11 +68,11 @@ trait DamageResistanceModel {
 
   /**
     * Magic stuff.
-    * @param data the historical `ResolvedProjectile` information
-    * @param resolution an explicit damage resolution overriding the one in the `ResolvedProjectile` object
+    * @param data the historical `BallisticsInteraction` information
+    * @param resolution an explicit damage resolution overriding the one in the `BallisticsInteraction` object
     * @return a function literal that encapsulates delayed modification instructions for certain objects
     */
-  def Calculate(data : ResolvedProjectile, resolution : ProjectileResolution.Value) : ResolutionCalculations.Output = {
+  def Calculate(data : BallisticsInteraction, resolution : ProjectileResolution.Value) : ResolutionCalculations.Output = {
     val dam : ProjectileCalculations.Form = Damage(resolution)
     val res : ProjectileCalculations.Form = Resistance(resolution)
     Model(dam, res, data)

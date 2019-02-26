@@ -295,7 +295,7 @@ class ProjectileTest extends Specification {
     }
   }
 
-  "ResolvedProjectile" should {
+  "BallisticsInteraction" should {
     val beamer_wep = Tool(GlobalDefinitions.beamer)
     val p_source = PlayerSource(player)
     val player2 = Player(Avatar("TestTarget", PlanetSideEmpire.NC, CharacterGender.Female, 1, CharacterVoice.Mute))
@@ -304,7 +304,7 @@ class ProjectileTest extends Specification {
     val fury_dm = fury.DamageModel
 
     "construct" in {
-      val obj = ResolvedProjectile(ProjectileResolution.Hit, projectile, PlayerSource(player2), fury_dm, Vector3(1.2f, 3.4f, 5.6f), 123456L)
+      val obj = BallisticsInteraction(ProjectileResolution.Hit, projectile, PlayerSource(player2), fury_dm, Vector3(1.2f, 3.4f, 5.6f), 123456L)
       obj.resolution mustEqual ProjectileResolution.Hit
       obj.projectile mustEqual projectile
       obj.target mustEqual p2_source

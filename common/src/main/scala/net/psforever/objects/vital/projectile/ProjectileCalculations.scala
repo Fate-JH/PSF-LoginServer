@@ -1,7 +1,7 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.vital.projectile
 
-import net.psforever.objects.ballistics.ResolvedProjectile
+import net.psforever.objects.ballistics.BallisticsInteraction
 
 /**
   * The base for all projectile-induced damage calculation function literals.
@@ -9,12 +9,12 @@ import net.psforever.objects.ballistics.ResolvedProjectile
 trait ProjectileCalculations {
   /**
     * The exposed entry for the calculation function literal defined by this base.
-    * @param data the historical `ResolvedProjectile` information
+    * @param data the historical `BallisticsInteraction` information
     * @return the calculated value
     */
-  def Calculate(data : ResolvedProjectile) : Int
+  def Calculate(data : BallisticsInteraction) : Int
 }
 
 object ProjectileCalculations {
-  type Form = (ResolvedProjectile)=>Int
+  type Form = BallisticsInteraction=>Int
 }

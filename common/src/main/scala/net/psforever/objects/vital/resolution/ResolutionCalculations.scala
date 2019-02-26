@@ -2,9 +2,10 @@
 package net.psforever.objects.vital.resolution
 
 import net.psforever.objects.{Player, TurretDeployable, Vehicle}
-import net.psforever.objects.ballistics.{PlayerSource, ResolvedProjectile}
+import net.psforever.objects.ballistics.{BallisticsInteraction, PlayerSource}
 import net.psforever.objects.ce.{ComplexDeployable, SimpleDeployable}
 import net.psforever.objects.serverobject.turret.FacilityTurret
+import net.psforever.objects.vital.Vitality
 import net.psforever.objects.vital.projectile.ProjectileCalculations
 
 /**
@@ -15,19 +16,19 @@ trait ResolutionCalculations {
     * The exposed entry for the calculation function literal defined by this base.
     * @param damages the function literal that accumulates and calculates damages
     * @param resistances the function literal that collects resistance values
-    * @param data the historical `ResolvedProjectile` information
+    * @param data the historical `BallisticsInteraction` information
     * @return a function literal that encapsulates delayed modification instructions for certain objects
     */
-  def Calculate(damages : ProjectileCalculations.Form, resistances : ProjectileCalculations.Form, data : ResolvedProjectile) : ResolutionCalculations.Output
+  def Calculate(damages : ProjectileCalculations.Form, resistances : ProjectileCalculations.Form, data : BallisticsInteraction) : ResolutionCalculations.Output
 }
 
 object ResolutionCalculations {
-  type Output = (Any)=>Unit
-  type Form = (ProjectileCalculations.Form, ProjectileCalculations.Form, ResolvedProjectile)=>Output
+  type Output = Any=>Unit
+  type Form = (ProjectileCalculations.Form, ProjectileCalculations.Form, BallisticsInteraction)=>Output
 
-  def NoDamage(data : ResolvedProjectile)(a : Int, b : Int) : Int = 0
+  def NoDamage(data : BallisticsInteraction)(a : Int, b : Int) : Int = 0
 
-  def InfantryDamageAfterResist(data : ResolvedProjectile) : (Int, Int)=>(Int, Int) = {
+  def InfantryDamageAfterResist(data : BallisticsInteraction) : (Int, Int)=>(Int, Int) = {
     data.target match {
       case target : PlayerSource =>
         InfantryDamageAfterResist(target.health, target.armor)
@@ -60,7 +61,7 @@ object ResolutionCalculations {
     }
   }
 
-  def MaxDamageAfterResist(data : ResolvedProjectile) : (Int, Int)=>(Int, Int) = {
+  def MaxDamageAfterResist(data : BallisticsInteraction) : (Int, Int)=>(Int, Int) = {
     data.target match {
       case target : PlayerSource =>
         MaxDamageAfterResist(target.health, target.armor)
@@ -91,10 +92,10 @@ object ResolutionCalculations {
     * Unlike with `Infantry*` and with `Max*`'s,
     * `VehicleDamageAfterResist` does not necessarily need to validate its target object.
     * The required input is sufficient.
-    * @param data the historical `ResolvedProjectile` information
+    * @param data the historical `BallisticsInteraction` information
     * @return a function literal for dealing with damage values and resistance values together
     */
-  def VehicleDamageAfterResist(data : ResolvedProjectile) : (Int, Int)=>Int = {
+  def VehicleDamageAfterResist(data : BallisticsInteraction) : (Int, Int)=>Int = {
     VehicleDamageAfterResist
   }
 
@@ -107,16 +108,16 @@ object ResolutionCalculations {
     }
   }
 
-  def NoApplication(damageValue : Int, data : ResolvedProjectile)(target : Any) : Unit = { }
+  def NoApplication(damageValue : Int, data : BallisticsInteraction)(target : Any) : Unit = { }
 
   /**
     * The expanded `(Any)=>Unit` function for infantry.
     * Apply the damage values to the health field and personal armor field for an infantry target.
     * @param damageValues a tuple containing damage values for: health, personal armor
-    * @param data the historical `ResolvedProjectile` information
+    * @param data the historical `BallisticsInteraction` information
     * @param target the `Player` object to be affected by these damage values (at some point)
     */
-  def InfantryApplication(damageValues : (Int, Int), data : ResolvedProjectile)(target : Any) : Unit = target match {
+  def InfantryApplication(damageValues : (Int, Int), data : BallisticsInteraction)(target : Any) : Unit = target match {
     case player : Player =>
       val (a, b) = damageValues
       //TODO Personal Shield implant test should go here and modify the values a and b
@@ -138,10 +139,10 @@ object ResolutionCalculations {
     * The expanded `(Any)=>Unit` function for vehicles.
     * Apply the damage value to the shield field and then the health field (that order) for a vehicle target.
     * @param damage the raw damage
-    * @param data the historical `ResolvedProjectile` information
+    * @param data the historical `BallisticsInteraction` information
     * @param target the `Vehicle` object to be affected by these damage values (at some point)
     */
-  def VehicleApplication(damage : Int, data : ResolvedProjectile)(target : Any) : Unit = target match {
+  def VehicleApplication(damage : Int, data : BallisticsInteraction)(target : Any) : Unit = target match {
     case vehicle : Vehicle =>
       if(vehicle.Health > 0) {
         vehicle.History(data)
@@ -160,7 +161,17 @@ object ResolutionCalculations {
     case _ => ;
   }
 
-  def SimpleApplication(damage : Int, data : ResolvedProjectile)(target : Any) : Unit = target match {
+  def SimpleApplication(damage : Int, data : BallisticsInteraction)(target : Any) : Unit = target match {
+    case target : Vitality =>
+      val vhealth = target.Health
+      if(vhealth > 0) {
+        target.Health = vhealth - damage
+        target.History(data)
+      }
+    case _ => ;
+  }
+
+  def SimpleDeployableApplication(damage : Int, data : BallisticsInteraction)(target : Any) : Unit = target match {
     case ce : SimpleDeployable =>
       if(ce.Health > 0) {
         ce.Health -= damage
@@ -174,7 +185,7 @@ object ResolutionCalculations {
     case _ =>
   }
 
-  def ComplexDeployableApplication(damage : Int, data : ResolvedProjectile)(target : Any) : Unit = target match {
+  def ComplexDeployableApplication(damage : Int, data : BallisticsInteraction)(target : Any) : Unit = target match {
     case ce : ComplexDeployable =>
       if(ce.Shields > 0) {
         if(damage > ce.Shields) {
