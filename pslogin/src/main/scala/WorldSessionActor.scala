@@ -873,7 +873,24 @@ class WorldSessionActor extends Actor with MDCContextAware {
       log.warn(s"Vital target ${target.Definition.Name} damage resolution not supported using this method")
 
     case Vehicle.UpdateShieldsCharge(vehicle) =>
-      vehicleService ! VehicleServiceMessage(s"${vehicle.Actor}", VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), vehicle.GUID, 68, vehicle.Shields))
+      val vehicleGUID = vehicle.GUID
+      if(GlobalDefinitions.isBattleFrameVehicle(vehicle.Definition)) {
+        //bfr shields visually activate if inactive prior
+        if(vehicle.History
+          .filter { _.isInstanceOf[VehicleShieldCharge] }
+          .headOption match {
+          case Some(event) =>
+            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, vehicleGUID, 79, vehicle.Shields))
+            event.Target.asInstanceOf[VehicleSource].Shields <= 0 && vehicle.Shields > 0
+          case None => false
+        }) {
+          sendResponse(GenericObjectActionMessage(vehicleGUID, 176))
+          vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(player.GUID, vehicleGUID, 176))
+        }
+      }
+      else {
+        vehicleService ! VehicleServiceMessage(s"${vehicle.Actor}", VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), vehicleGUID, 68, vehicle.Shields))
+      }
 
     case ResponseToSelf(pkt) =>
       log.info(s"Received a direct message: $pkt")
@@ -1329,16 +1346,30 @@ class WorldSessionActor extends Actor with MDCContextAware {
   def HandleMountMessages(tplayer : Player, reply : Mountable.Exchange) : Unit = {
     reply match {
       case Mountable.CanMount(obj : ImplantTerminalMech, seat_num) =>
+        PlayerActionsToCancel()
         MountingAction(tplayer, obj, seat_num)
         sendResponse(PlanetsideAttributeMessage(obj.GUID, 0, 1000L)) //health of mech
 
       case Mountable.CanMount(obj : Vehicle, seat_num) =>
         val obj_guid : PlanetSideGUID = obj.GUID
         val player_guid : PlanetSideGUID = tplayer.GUID
+        val shield = obj.Shields
         log.info(s"MountVehicleMsg: $player_guid mounts $obj_guid @ $seat_num")
         PlayerActionsToCancel()
+        UpdateAmmunitionForEachControlledWeapon(obj, seat_num) foreach { sendResponse }
+        AccessContents(obj)
+        MountingAction(tplayer, obj, seat_num)
         sendResponse(PlanetsideAttributeMessage(obj_guid, 0, obj.Health))
-        sendResponse(PlanetsideAttributeMessage(obj_guid, 68, 0)) //shield health
+        if(GlobalDefinitions.isBattleFrameVehicle(obj.Definition)) {
+          sendResponse(PlanetsideAttributeMessage(obj_guid, 79, shield)) //bfr shield
+          if(shield > 0) {
+            sendResponse(GenericObjectActionMessage(obj_guid, 176))
+            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(tplayer.GUID, obj_guid, 176))
+          }
+        }
+        else {
+          sendResponse(PlanetsideAttributeMessage(obj_guid, 68, shield)) //vehile shield
+        }
         sendResponse(PlanetsideAttributeMessage(obj_guid, 113, 0)) //capacitor
         if(seat_num == 0) {
           vehicleService ! VehicleServiceMessage.Decon(RemoverActor.ClearSpecific(List(obj), continent)) //clear timer
@@ -1357,38 +1388,12 @@ class WorldSessionActor extends Actor with MDCContextAware {
           tplayer.VehicleOwned = Some(obj_guid)
           obj.Owner = Some(tplayer.GUID)
         }
-        UpdateAmmunitionForEachControlledWeapon(obj, seat_num) foreach { sendResponse }
-//        obj.WeaponControlledFromSeat(seat_num) foreach {
-//          case weapon : Tool =>
-//            //update mounted weapon belonging to seat
-//            weapon.AmmoSlots.foreach(slot => {
-//              //update the magazine(s) in the weapon, specifically
-//              val magazine = slot.Box
-//              sendResponse(InventoryStateMessage(magazine.GUID, weapon.GUID, magazine.Capacity))
-//            })
-//          case _ => ; //no weapons to update
-//        }
-        AccessContents(obj)
-        MountingAction(tplayer, obj, seat_num)
-        if(GlobalDefinitions.isBattleFrameVehicle(obj.Definition)) {
-          sendResponse(GenericObjectActionMessage(obj.GUID, 176))
-          vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(tplayer.GUID, obj.GUID, 176))
-        }
 
       case Mountable.CanMount(obj : PlanetSideGameObject with WeaponTurret, seat_num) =>
+        PlayerActionsToCancel()
         UpdateAmmunitionForEachControlledWeapon(obj, seat_num) foreach { sendResponse }
-//        obj.WeaponControlledFromSeat(seat_num) foreach {
-//          case weapon : Tool =>
-//            //update mounted weapon belonging to seat
-//            weapon.AmmoSlots.foreach(slot => {
-//              //update the magazine(s) in the weapon, specifically
-//              val magazine = slot.Box
-//              sendResponse(InventoryStateMessage(magazine.GUID, weapon.GUID, magazine.Capacity.toLong))
-//            })
-//          case _ => ; //no weapons to update
-//        }
-        sendResponse(PlanetsideAttributeMessage(obj.GUID, 0, obj.Health))
         MountingAction(tplayer, obj, seat_num)
+        sendResponse(PlanetsideAttributeMessage(obj.GUID, 0, obj.Health))
 
       case Mountable.CanMount(obj : Mountable, _) =>
         log.warn(s"MountVehicleMsg: $obj is some generic mountable object and nothing will happen")
@@ -1406,6 +1411,10 @@ class WorldSessionActor extends Actor with MDCContextAware {
         }
         else {
           vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.KickPassenger(player_guid, seat_num, true, obj.GUID))
+        }
+        if(GlobalDefinitions.isBattleFrameVehicle(obj.Definition) && obj.Shields > 0) {
+          sendResponse(GenericObjectActionMessage(obj.GUID, 179))
+          vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(tplayer.GUID, obj.GUID, 179))
         }
 
       case Mountable.CanDismount(obj : PlanetSideGameObject with WeaponTurret, seat_num) =>
@@ -2189,6 +2198,17 @@ class WorldSessionActor extends Actor with MDCContextAware {
       seat.isOccupied && seat.Occupant.get.isAlive
     })
     if(target.Health > 0) {
+      //bfr shields deactivate
+      if(GlobalDefinitions.isBattleFrameVehicle(target.Definition) && (target.LastShot match {
+        case Some(interaction) =>
+          vehicleService ! VehicleServiceMessage(continentId, VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, targetGUID, 79, target.Shields))
+          interaction.target.asInstanceOf[VehicleSource].Shields > 0 && target.Shields <= 0
+        case _ =>
+          false
+      })) {
+        sendResponse(GenericObjectActionMessage(targetGUID, 179))
+        vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(playerGUID, targetGUID, 179))
+      }
       //alert occupants to damage source
       players.foreach(seat => {
         val tplayer = seat.Occupant.get
@@ -2234,7 +2254,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
       vehicleService ! VehicleServiceMessage.Decon(RemoverActor.AddTask(target, continent, Some(1 minute)))
     }
     vehicleService ! VehicleServiceMessage(continentId, VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, targetGUID, 0, target.Health))
-    vehicleService ! VehicleServiceMessage(s"${target.Actor}", VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, targetGUID, 68, target.Shields))
+    vehicleService ! VehicleServiceMessage(continentId, VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, targetGUID, 68, target.Shields))
   }
 
   /**

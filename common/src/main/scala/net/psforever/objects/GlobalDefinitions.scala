@@ -6464,6 +6464,7 @@ object GlobalDefinitions {
     aphelion_gunner.Name = "aphelion_gunner"
     aphelion_gunner.MaxHealth = 4500
     aphelion_gunner.MaxShields = 3000 + 1
+    aphelion_gunner.DefaultShields = aphelion_gunner.MaxShields
     aphelion_gunner.Seats += 0 -> new SeatDefinition()
     aphelion_gunner.Seats(0).ControlledWeapon = Set(2, 3)
     aphelion_gunner.Seats += 1 -> new SeatDefinition()
@@ -6482,6 +6483,7 @@ object GlobalDefinitions {
     colossus_gunner.Name = "colossus_gunner"
     colossus_gunner.MaxHealth = 4500
     colossus_gunner.MaxShields = 3000 + 1
+    colossus_gunner.DefaultShields = colossus_gunner.MaxShields
     colossus_gunner.Seats += 0 -> new SeatDefinition()
     colossus_gunner.Seats(0).ControlledWeapon = Set(2, 3)
     colossus_gunner.Seats += 1 -> new SeatDefinition()
@@ -6500,6 +6502,7 @@ object GlobalDefinitions {
     peregrine_gunner.Name = "peregrine_gunner"
     peregrine_gunner.MaxHealth = 4500
     peregrine_gunner.MaxShields = 3000 + 1
+    peregrine_gunner.DefaultShields = peregrine_gunner.MaxShields
     peregrine_gunner.Seats += 0 -> new SeatDefinition()
     peregrine_gunner.Seats(0).ControlledWeapon = Set(2, 3)
     peregrine_gunner.Seats += 1 -> new SeatDefinition()
@@ -6519,6 +6522,7 @@ object GlobalDefinitions {
     aphelion_flight.Name = "aphelion_flight"
     aphelion_flight.MaxHealth = 3500
     aphelion_flight.MaxShields = 2500 + 1
+    aphelion_flight.DefaultShields = aphelion_flight.MaxShields
     aphelion_flight.Seats += 0 -> new SeatDefinition()
     aphelion_flight.Seats(0).ControlledWeapon = Set(1, 2)
     aphelion_flight.Weapons(1 -> aphelion_ppa_left)
@@ -6533,6 +6537,7 @@ object GlobalDefinitions {
     colossus_flight.Name = "colossus_flight"
     colossus_flight.MaxHealth = 3500
     colossus_flight.MaxShields = 2500 + 1
+    colossus_flight.DefaultShields = colossus_flight.MaxShields
     colossus_flight.Seats += 0 -> new SeatDefinition()
     colossus_flight.Seats(0).ControlledWeapon = Set(1, 2)
     colossus_flight.Weapons(1 -> colossus_tank_cannon_left)
@@ -6547,6 +6552,7 @@ object GlobalDefinitions {
     peregrine_flight.Name = "peregrine_flight"
     peregrine_flight.MaxHealth = 3500
     peregrine_flight.MaxShields = 2500 + 1
+    peregrine_flight.DefaultShields = peregrine_flight.MaxShields
     peregrine_flight.Seats += 0 -> new SeatDefinition()
     peregrine_flight.Seats(0).ControlledWeapon = Set(1, 2)
     peregrine_flight.Weapons(1 -> peregrine_dual_machine_gun_left)

@@ -642,7 +642,8 @@ object Vehicle {
   def LoadDefinition(vehicle : Vehicle) : Vehicle = {
     val vdef : VehicleDefinition = vehicle.Definition
     //general stuff
-    vehicle.Health = vdef.MaxHealth
+    vehicle.health = vdef.DefaultHealth.getOrElse(vdef.MaxHealth)
+    vehicle.shields = vdef.DefaultShields.getOrElse(0)
     //create seats
     vehicle.seats = vdef.Seats.map({ case(num, definition) => num -> Seat(definition)}).toMap
     //create weapons

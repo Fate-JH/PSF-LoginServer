@@ -19,7 +19,12 @@ import scala.concurrent.duration._
 class VehicleDefinition(objectId : Int) extends ObjectDefinition(objectId)
   with ResistanceProfileMutators
   with DamageResistanceModel {
+  /** how many points of health the vehicle starts with (should default to maximum if unset) */
+  private var defaultHealth : Option[Int] = None
+  /** to how many points a damaged vehicle can be repaired */
   private var maxHealth : Int = 100
+  /** how many points of shield the vehicle starts with (should default to maximum if unset) */
+  private var defaultShields : Option[Int] = None
   /** vehicle shields offered through amp station facility benefits (generally: 20% of health + 1) */
   private var maxShields : Int = 0
   /* key - seat index, value - seat object */
@@ -52,11 +57,29 @@ class VehicleDefinition(objectId : Int) extends ObjectDefinition(objectId)
   Resistance = StandardVehicleResistance
   Model = StandardResolutions.Vehicle
 
+  def DefaultHealth : Option[Int] = defaultHealth
+
+  def DefaultHealth_=(health : Int) : Option[Int] = DefaultHealth_=(Some(health))
+
+  def DefaultHealth_=(health : Option[Int]) : Option[Int] = {
+    defaultHealth = health
+    DefaultHealth
+  }
+
   def MaxHealth : Int = maxHealth
 
   def MaxHealth_=(health : Int) : Int = {
     maxHealth = health
     MaxHealth
+  }
+
+  def DefaultShields : Option[Int] = defaultShields
+
+  def DefaultShields_=(shield : Int) : Option[Int] = DefaultShields_=(Some(shield))
+
+  def DefaultShields_=(shield : Option[Int]) : Option[Int] = {
+    defaultShields = shield
+    DefaultShields
   }
 
   def MaxShields : Int = maxShields
