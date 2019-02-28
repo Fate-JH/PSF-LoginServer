@@ -203,18 +203,18 @@ object EquipmentTerminalDefinition {
   val bfrArmWeapons : Map[String, () => Equipment] = Map(
     "aphelion_armor_siphon" -> MakeTool(aphelion_armor_siphon),
     "aphelion_laser" -> MakeTool(aphelion_laser),
-    "aphelion_ntu_siphon" -> MakeTool(aphelion_ntu_siphon),
+    //"aphelion_ntu_siphon" -> MakeTool(aphelion_ntu_siphon),
     "aphelion_ppa" -> MakeTool(aphelion_ppa),
     "aphelion_starfire" -> MakeTool(aphelion_starfire),
     "colossus_armor_siphon" -> MakeTool(colossus_armor_siphon),
     "colossus_burster" -> MakeTool(colossus_burster),
     "colossus_chaingun" -> MakeTool(colossus_chaingun),
-    "colossus_ntu_siphon" -> MakeTool(colossus_ntu_siphon),
+    //"colossus_ntu_siphon" -> MakeTool(colossus_ntu_siphon),
     "colossus_tank_cannon" -> MakeTool(colossus_tank_cannon),
     "peregrine_armor_siphon" -> MakeTool(peregrine_armor_siphon),
     "peregrine_dual_machine_gun" -> MakeTool(peregrine_dual_machine_gun),
     "peregrine_mechhammer" -> MakeTool(peregrine_mechhammer),
-    "peregrine_ntu_siphon" -> MakeTool(peregrine_ntu_siphon),
+    //"peregrine_ntu_siphon" -> MakeTool(peregrine_ntu_siphon),
     "peregrine_sparrow" -> MakeTool(peregrine_sparrow)
   )
 

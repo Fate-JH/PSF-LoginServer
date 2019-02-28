@@ -643,6 +643,8 @@ object Vehicle {
     val vdef : VehicleDefinition = vehicle.Definition
     //general stuff
     vehicle.Health = vdef.MaxHealth
+    //create seats
+    vehicle.seats = vdef.Seats.map({ case(num, definition) => num -> Seat(definition)}).toMap
     //create weapons
     vehicle.weapons = vdef.WeaponSlotSizes
       .map { case (num, size) => (num, EquipmentSlot(size), vdef.Weapons.get(num)) }
@@ -654,9 +656,12 @@ object Vehicle {
           num -> slot
       }
       .toMap
-    vehicle.weaponSlotMask = vdef.WeaponSlotSizes.keys.min
-    //create seats
-    vehicle.seats = vdef.Seats.map({ case(num, definition) => num -> Seat(definition)}).toMap
+    vehicle.weaponSlotMask = vdef.WeaponSlotSizes.keys match {
+      case keys if keys.nonEmpty =>
+        keys.min
+      case _ =>
+        -1
+    }
     // create cargo holds
     vehicle.cargoHolds = vdef.Cargo.map({ case(num, definition) => num -> Cargo(definition)}).toMap
 

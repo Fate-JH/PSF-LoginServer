@@ -2126,39 +2126,33 @@ class WorldSessionActor extends Actor with MDCContextAware {
   /**
     * na
     * @param vehicle_guid       na
-    * @param cargo_vehicle_guid na
+    * @param carrier_vehicle_guid na
     * @param cargo_mountpoint   na
     * @param iteration          na
     */
-  def HandleCheckCargoMounting(vehicle_guid : PlanetSideGUID, cargo_vehicle_guid : PlanetSideGUID, cargo_mountpoint : Int, iteration : Int) : Unit = {
-    val vehicle = continent.GUID(vehicle_guid.guid).get.asInstanceOf[Vehicle]
-    val cargo_vehicle = continent.GUID(cargo_vehicle_guid.guid).get.asInstanceOf[Vehicle]
-    val distance = Vector3.Distance(vehicle.Position, cargo_vehicle.Position)
+  def HandleCheckCargoMounting(vehicle_guid : PlanetSideGUID, carrier_vehicle_guid : PlanetSideGUID, cargo_mountpoint : Int, iteration : Int) : Unit = {
+    val vehicle = continent.GUID(vehicle_guid).get.asInstanceOf[Vehicle]
+    val carrierVehicle = continent.GUID(carrier_vehicle_guid).get.asInstanceOf[Vehicle]
+    val distance = Vector3.Distance(vehicle.Position, carrierVehicle.Position)
     log.warn(s"Mount distance ${distance}")
     if(distance <= 8) {
       // Vehicle is close enough that it should be within the cargo bay. Mount it.
       log.info("Mounting vehicle cargo")
       cargoMountTimer.cancel()
       cargoDismountTimer.cancel()
-      val vehicle = continent.GUID(vehicle_guid).get.asInstanceOf[Vehicle]
       StartBundlingPackets()
-      vehicleService ! VehicleServiceMessage(s"${vehicle.Actor}", VehicleAction.SendResponse(PlanetSideGUID(0), PlanetsideAttributeMessage(cargo_vehicle_guid, 0, cargo_vehicle.Health)))
-      vehicleService ! VehicleServiceMessage(s"${vehicle.Actor}", VehicleAction.SendResponse(PlanetSideGUID(0), PlanetsideAttributeMessage(cargo_vehicle_guid, 68, cargo_vehicle.Shields)))
-      val attachMessage = ObjectAttachMessage(cargo_vehicle_guid, vehicle_guid, cargo_mountpoint)
+      vehicleService ! VehicleServiceMessage(s"${vehicle.Actor}", VehicleAction.SendResponse(PlanetSideGUID(0), PlanetsideAttributeMessage(carrier_vehicle_guid, 0, carrierVehicle.Health)))
+      vehicleService ! VehicleServiceMessage(s"${vehicle.Actor}", VehicleAction.SendResponse(PlanetSideGUID(0), PlanetsideAttributeMessage(carrier_vehicle_guid, 68, carrierVehicle.Shields)))
+      val attachMessage = ObjectAttachMessage(carrier_vehicle_guid, vehicle_guid, cargo_mountpoint)
       log.warn(attachMessage.toString)
       sendResponse(attachMessage)
       // This is required for when DismountVehicleCargoMsg is sent as the cargo_vehicle_guid isn't sent as a parameter
-      vehicle.MountedIn = cargo_vehicle_guid
-      cargo_vehicle.CargoHold(cargo_mountpoint).get.Occupant = vehicle
-      val orientation = if(vehicle.Definition == GlobalDefinitions.router) {
-        // mount router "sideways" in a lodestar
-        //todo: BFRs will likely also need this set
-        1
-      }
-      else {
-        0
-      }
-      val cargoStatusMessage = CargoMountPointStatusMessage(cargo_vehicle_guid, vehicle_guid, vehicle_guid, PlanetSideGUID(0), cargo_mountpoint, CargoStatus.Occupied, orientation)
+      vehicle.MountedIn = carrier_vehicle_guid
+      carrierVehicle.CargoHold(cargo_mountpoint).get.Occupant = vehicle
+      val (orientation, cargoOrientation) = CargoVehicleRotation(vehicle.Definition, carrierVehicle.Orientation)
+      vehicle.Orientation = cargoOrientation
+      vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.VehicleState(player.GUID, vehicle_guid, 0, carrierVehicle.Position, cargoOrientation, None, None, 0, 0, 15, false, false))
+      val cargoStatusMessage = CargoMountPointStatusMessage(carrier_vehicle_guid, vehicle_guid, vehicle_guid, PlanetSideGUID(0), cargo_mountpoint, CargoStatus.Occupied, orientation)
       log.warn(cargoStatusMessage.toString)
       sendResponse(cargoStatusMessage)
       StopBundlingPackets()
@@ -2168,7 +2162,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
     else if(distance > 25 || iteration >= 15) {
       // Vehicle is too far away. Abort mounting.
       log.info("Vehicle is too far away or didn't mount within allocated time. Aborting cargo mount.")
-      val cargoStatusMessage = CargoMountPointStatusMessage(cargo_vehicle_guid, PlanetSideGUID(0), PlanetSideGUID(0), vehicle_guid, cargo_mountpoint, CargoStatus.Empty, 0)
+      val cargoStatusMessage = CargoMountPointStatusMessage(carrier_vehicle_guid, PlanetSideGUID(0), PlanetSideGUID(0), vehicle_guid, cargo_mountpoint, CargoStatus.Empty, 0)
       log.warn(cargoStatusMessage.toString)
       // Do NOT send this packet back to the client directly. If you do and then send it again to all clients in the zone (including the client again)
       // The client will get stuck in a state where the player cannot dismount as it thinks it is always trying to remount the cargo hold
@@ -2179,7 +2173,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
     else {
       // Not close enough, far away enough or timeout not exceeded. Reschedule check
       import scala.concurrent.ExecutionContext.Implicits.global
-      cargoMountTimer = context.system.scheduler.scheduleOnce(1 second, self, CheckCargoMounting(vehicle_guid, cargo_vehicle_guid, cargo_mountpoint, iteration = iteration + 1))
+      cargoMountTimer = context.system.scheduler.scheduleOnce(1 second, self, CheckCargoMounting(vehicle_guid, carrier_vehicle_guid, cargo_mountpoint, iteration + 1))
     }
   }
 
@@ -2547,7 +2541,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
       //TODO begin temp player character auto-loading; remove later
       import net.psforever.objects.GlobalDefinitions._
       import net.psforever.types.CertificationType._
-      val faction = if(sessionId <= 1) PlanetSideEmpire.VS else PlanetSideEmpire.TR
+      val faction = if(sessionId <= 1) PlanetSideEmpire.VS else PlanetSideEmpire.VS
       val avatar = Avatar(s"TestCharacter$sessionId", faction, CharacterGender.Female, 41, CharacterVoice.Voice1)
       avatar.Certifications += StandardAssault
       avatar.Certifications += MediumAssault
@@ -2984,17 +2978,26 @@ class WorldSessionActor extends Actor with MDCContextAware {
       //log.info(s"VehicleState: $msg")
       continent.GUID(vehicle_guid) match {
         case Some(obj : Vehicle) =>
-          val seat = obj.Seat(0).get
-          if(seat.Occupant.contains(player)) {
-            //we're driving the vehicle
-            player.Position = pos //convenient
-            if(seat.ControlledWeapon.nonEmpty) {
-              player.Orientation = Vector3.z(ang.z) //convenient
+          if(obj.MountedIn.isEmpty) { //this vehicle is not being ferried
+            val seat = obj.Seat(0).get
+            if(seat.Occupant.contains(player)) {
+              //we're driving the vehicle
+              player.Position = pos //convenient
+              if(seat.ControlledWeapon.nonEmpty) {
+                player.Orientation = Vector3.z(ang.z) //convenient
+              }
+              obj.Position = pos
+              obj.Orientation = ang
+              obj.Velocity = vel
+              vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.VehicleState(player.GUID, vehicle_guid, unk1, pos, ang, vel, unk5, unk6, unk7, wheels, unk9, unkA))
+              // update ferried cargo
+              obj.CargoHolds
+                .values
+                .collect { case hold if hold.isOccupied => hold.Occupant.get }
+                .foreach { case cargo =>
+                  HandleCargoVehicleStateMessage(cargo, pos, ang)
+                }
             }
-            obj.Position = pos
-            obj.Orientation = ang
-            obj.Velocity = vel
-            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.VehicleState(player.GUID, vehicle_guid, unk1, pos, ang, vel, unk5, unk6, unk7, wheels, unk9, unkA))
           }
         //TODO placing a "not driving" warning here may trigger as we are disembarking the vehicle
         case _ =>
@@ -3008,17 +3011,19 @@ class WorldSessionActor extends Actor with MDCContextAware {
       //log.info(s"FrameVehicleState: $msg")
       continent.GUID(vehicle_guid) match {
         case Some(obj : Vehicle) =>
-          val seat = obj.Seat(0).get
-          if(seat.Occupant.contains(player)) {
-            //we're driving the vehicle
-            player.Position = pos //convenient
-            if(seat.ControlledWeapon.nonEmpty) {
-              player.Orientation = Vector3.z(ang.z) //convenient
+          if(obj.MountedIn.isEmpty) { //this vehicle is not being ferried
+            val seat = obj.Seat(0).get
+            if(seat.Occupant.contains(player)) {
+              //we're driving the vehicle
+              player.Position = pos //convenient
+              if(seat.ControlledWeapon.nonEmpty) {
+                player.Orientation = Vector3.z(ang.z) //convenient
+              }
+              obj.Position = pos
+              obj.Orientation = ang
+              obj.Velocity = vel
+              vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.FrameVehicleState(player.GUID, vehicle_guid, u1, pos, ang, vel, u2, u3, u4, is_crouched, u6, u7, u8, u9, uA))
             }
-            obj.Position = pos
-            obj.Orientation = ang
-            obj.Velocity = vel
-            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.FrameVehicleState(player.GUID, vehicle_guid, u1, pos, ang, vel, u2, u3, u4, is_crouched, u6, u7, u8, u9, uA))
           }
         //TODO placing a "not driving" warning here may trigger as we are disembarking the vehicle
         case _ =>
@@ -7824,6 +7829,32 @@ class WorldSessionActor extends Actor with MDCContextAware {
 
   /**
     * na
+    * @param vehicle na
+    * @param position na
+    * @param orientation na
+    */
+  def HandleCargoVehicleStateMessage(vehicle : Vehicle, position : Vector3, orientation : Vector3) : Unit = {
+    val vdef = vehicle.Definition
+    val (_, mountRotation) = CargoVehicleRotation(vdef, orientation)
+    vehicle.Position = position
+    vehicle.Orientation = mountRotation
+    if(GlobalDefinitions.isBattleFrameVehicle(vdef)) {
+      val pilotGUID = vehicle.Seat(0) match {
+        case Some(seat) if seat.isOccupied =>
+          seat.Occupant.get.GUID
+        case _ =>
+          PlanetSideGUID(0)
+      }
+      vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.FrameVehicleState(pilotGUID, vehicle.GUID, 0, position, mountRotation, None, false, 0, 0, true, false, false, 10, 0, 0))
+    }
+    else {
+      //TODO only activate this if there is a mount shaking issue
+      //vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.VehicleState(PlanetSideGUID(0), vehicle.GUID, 0, position, mountRotation, None, None, 0, 0, 15, false, false))
+    }
+  }
+
+  /**
+    * na
     * @param player_guid the player that ...
     * @param cargoGUID the globally unique number for the vehicle being ferried
     * @param cargo the vehicle being ferried
@@ -7851,14 +7882,8 @@ class WorldSessionActor extends Actor with MDCContextAware {
           cargo.Position + Vector3.z(2)
         }
         //TODO: BFRs will likely also need this set
-        val sideways = cargo.Definition == GlobalDefinitions.router
-        val rotation = if(sideways) {
-          (cargo.Orientation.z - 90) % 360 //dismount router "sideways" in a lodestar
-        }
-        else {
-          cargo.Orientation.z
-        }
-        val detachMessage = ObjectDetachMessage(carrierGUID, cargoGUID, dismount_position, carrier.Orientation.x, carrier.Orientation.y, rotation)
+        val (mountType, mountRotation) = CargoVehicleRotation(cargo.Definition, carrier.Orientation)
+        val detachMessage = ObjectDetachMessage(carrierGUID, cargoGUID, dismount_position, mountRotation)
         log.debug(detachMessage.toString)
         sendResponse(detachMessage)
         vehicleService ! VehicleServiceMessage(s"${cargo.Actor}", VehicleAction.SendResponse(PlanetSideGUID(0), PlanetsideAttributeMessage(cargoGUID, 0, cargo.Health)))
@@ -7867,7 +7892,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
         hold.Occupant = None
         if(!bailed) {
           // Automatically drive the vehicle backwards out of the cargo bay
-          if(!sideways) {
+          if(mountType == 0) {
             ServerVehicleLockReverse()
           }
           else {
@@ -7886,6 +7911,21 @@ class WorldSessionActor extends Actor with MDCContextAware {
         avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.SendResponse(player.GUID, cargoStatusMessage))
         avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.SendResponse(player.GUID, detachMessage))
       case None => ;
+    }
+  }
+
+  /**
+    * na
+    * @param vdef na
+    * @param orientation na
+    * @return na
+    */
+  def CargoVehicleRotation(vdef : VehicleDefinition, orientation : Vector3) : (Int, Vector3) = {
+    if(vdef == GlobalDefinitions.router || GlobalDefinitions.isBattleFrameVehicle(vdef)) {
+      (1, Vector3(orientation.x, orientation.y, (orientation.z - 90) % 360))
+    }
+    else {
+      (0, orientation)
     }
   }
 

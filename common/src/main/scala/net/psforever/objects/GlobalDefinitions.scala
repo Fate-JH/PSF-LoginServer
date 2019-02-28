@@ -1445,7 +1445,7 @@ object GlobalDefinitions {
   /**
     * Given the the definition of a battle frame robotics weapon, determine whether it is used by the specific faction.
     * @param tdef the `EquipmentDefinition` of the alleged weapon
-    * @faction the suggested alignment of the weapon
+    * @param faction the suggested alignment of the weapon
     * @return `true`, if a battle frame robotics weapon and associated with the given faction;
     *         `false`, otherwise
     */
