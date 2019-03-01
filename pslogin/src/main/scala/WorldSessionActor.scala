@@ -1362,13 +1362,13 @@ class WorldSessionActor extends Actor with MDCContextAware {
         sendResponse(PlanetsideAttributeMessage(obj_guid, 0, obj.Health))
         if(GlobalDefinitions.isBattleFrameVehicle(obj.Definition)) {
           sendResponse(PlanetsideAttributeMessage(obj_guid, 79, shield)) //bfr shield
-          if(shield > 0) {
+          if(shield > 0 && obj.Seats.values.count(_.isOccupied) == 1) {
             sendResponse(GenericObjectActionMessage(obj_guid, 176))
             vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(tplayer.GUID, obj_guid, 176))
           }
         }
         else {
-          sendResponse(PlanetsideAttributeMessage(obj_guid, 68, shield)) //vehile shield
+          sendResponse(PlanetsideAttributeMessage(obj_guid, 68, shield)) //vehicle shield
         }
         sendResponse(PlanetsideAttributeMessage(obj_guid, 113, 0)) //capacitor
         if(seat_num == 0) {
@@ -1408,13 +1408,18 @@ class WorldSessionActor extends Actor with MDCContextAware {
           TotalDriverVehicleControl(obj)
           UnAccessContents(obj)
           DismountAction(tplayer, obj, seat_num)
+          if(GlobalDefinitions.isBattleFrameVehicle(obj.Definition) &&
+            obj.Shields > 0 &&
+            !(obj.Seats.values.exists { _.isOccupied })) {
+            context.system.scheduler.scheduleOnce(
+              delay = 1000 milliseconds,
+              vehicleService,
+              VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(Service.defaultPlayerGUID, obj.GUID, 180))
+            )
+          }
         }
         else {
           vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.KickPassenger(player_guid, seat_num, true, obj.GUID))
-        }
-        if(GlobalDefinitions.isBattleFrameVehicle(obj.Definition) && obj.Shields > 0) {
-          sendResponse(GenericObjectActionMessage(obj.GUID, 179))
-          vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(tplayer.GUID, obj.GUID, 179))
         }
 
       case Mountable.CanDismount(obj : PlanetSideGameObject with WeaponTurret, seat_num) =>
@@ -2206,8 +2211,8 @@ class WorldSessionActor extends Actor with MDCContextAware {
         case _ =>
           false
       })) {
-        sendResponse(GenericObjectActionMessage(targetGUID, 179))
-        vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(playerGUID, targetGUID, 179))
+        sendResponse(GenericObjectActionMessage(targetGUID, 180))
+        vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.GenericObjectAction(playerGUID, targetGUID, 180))
       }
       //alert occupants to damage source
       players.foreach(seat => {

@@ -13,17 +13,17 @@ import shapeless.{::, HNil}
   * <br>
   * __Action Codes__:<br>
   *  From server:<br>
-  *  - 90? - for observed driven BFR's, model pitches up slightly and stops idle animation
-  *  - 100 - for observed driven BFR's, model resets animation following GOAM90+
+  *  - 90? - for observed driven BFR's, model pitches up slightly and stops idle animation<br>
   *  - 96, 97, 98, 99 - the vehicle bounces slightly; have seen this in packet captures after taking a vehicle through a warpgate<br>
+  *  - 100 - for observed driven BFR's, model resets animation following GOAM90?<br>
   *  - 136, 137, 138, 139 - "Time item can be used" messages (with default times)<br>
-  *  - 176 - for BFR's, animates the energy shield<br>
-  *  - 179 - for BFR's, energy shield dissipates<br>
+  *  - 176, 179 - for BFR's, animates the energy shield<br>
+  *  - 180 - for BFR's, energy shield dissipates<br>
   *  - 190?, 191?, 192?, 193?, 194? - Control Interface unstable messages<br>
   *  - 195, 196, 197 - Control Interface malfunction messages<br>
   *  - 184 - for BFR's, four explosions 5s apart on the machine's abdomen<br>
   *  - 200, 201, 202, 203 - for aircraft, "The bailing mechanism failed! To fix the mechanism, land and repair the vehicle!" message<br>
-  *  - 220 - unknown (client responds with GOAM29)<br>
+  *  - 220 - ??? (client responds with GOAM29)<br>
   *  - 224 - sets vehicle or player to be black ops<br>
   *  - 228 - reverts player from black ops<br>
   *  From client:<br>
