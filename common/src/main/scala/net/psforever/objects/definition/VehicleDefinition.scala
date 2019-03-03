@@ -27,6 +27,12 @@ class VehicleDefinition(objectId : Int) extends ObjectDefinition(objectId)
   private var defaultShields : Option[Int] = None
   /** vehicle shields offered through amp station facility benefits (generally: 20% of health + 1) */
   private var maxShields : Int = 0
+  /** the minimum amount of time that must elapse in between distinct shield charge activities (ms) */
+  private var shieldChargeDamageCooldown : Long = 0L
+  /** the minimum amount of time that must elapse in between damage and shield charge activities (ms) */
+  private var shieldChargePeriodicCooldown : Long = 0L
+  /** if the shield recharges on its own, this vsalue will be non-`None` and indicate by how much */
+  private var autoShieldRecharge : Option[Int] = None
   /* key - seat index, value - seat object */
   private val seats : mutable.HashMap[Int, SeatDefinition] = mutable.HashMap[Int, SeatDefinition]()
   private val cargo : mutable.HashMap[Int, CargoDefinition] = mutable.HashMap[Int, CargoDefinition]()
@@ -87,6 +93,29 @@ class VehicleDefinition(objectId : Int) extends ObjectDefinition(objectId)
   def MaxShields_=(shields : Int) : Int = {
     maxShields = shields
     MaxShields
+  }
+
+  def ShieldPeriodicDelay : Long = shieldChargePeriodicCooldown
+
+  def ShieldPeriodicDelay_=(cooldown : Long) : Long = {
+    shieldChargePeriodicCooldown = cooldown
+    ShieldPeriodicDelay
+  }
+
+  def ShieldDamageDelay : Long = shieldChargeDamageCooldown
+
+  def ShieldDamageDelay_=(cooldown : Long) : Long = {
+    shieldChargeDamageCooldown = cooldown
+    ShieldDamageDelay
+  }
+
+  def ShieldAutoRecharge : Option[Int] = autoShieldRecharge
+
+  def ShieldAutoRecharge_=(charge : Int) : Option[Int] = ShieldAutoRecharge_=(Some(charge))
+
+  def ShieldAutoRecharge_=(charge : Option[Int]) : Option[Int] = {
+    autoShieldRecharge = charge
+    ShieldAutoRecharge
   }
 
   def Seats : mutable.HashMap[Int, SeatDefinition] = seats

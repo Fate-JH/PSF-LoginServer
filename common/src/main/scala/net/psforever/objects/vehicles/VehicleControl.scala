@@ -1,9 +1,10 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.vehicles
 
-import akka.actor.Actor
-import net.psforever.objects.Vehicle
+import akka.actor.{Actor, ActorRef, Cancellable}
+import net.psforever.objects.{DefaultCancellable, Vehicle}
 import net.psforever.objects.ballistics.VehicleSource
+import net.psforever.objects.definition.VehicleDefinition
 import net.psforever.objects.serverobject.mount.{Mountable, MountableBehavior}
 import net.psforever.objects.serverobject.affinity.{FactionAffinity, FactionAffinityBehavior}
 import net.psforever.objects.serverobject.deploy.DeploymentBehavior
@@ -24,6 +25,8 @@ class VehicleControl(vehicle : Vehicle) extends Actor
   with MountableBehavior.Dismount {
   //make control actors belonging to utilities when making control actor belonging to vehicle
   vehicle.Utilities.foreach({case (_, util) => util.Setup })
+
+  private var autoShieldCharge : Cancellable = DefaultCancellable.obj
 
   def MountableObject = vehicle
 
@@ -62,6 +65,8 @@ class VehicleControl(vehicle : Vehicle) extends Actor
         }
 
       case Vitality.Damage(damage_func) =>
+        import scala.concurrent.duration._
+        import scala.concurrent.ExecutionContext.Implicits.global
         if(vehicle.Health > 0) {
           val originalHealth = vehicle.Health
           val originalShields = vehicle.Shields
@@ -73,14 +78,36 @@ class VehicleControl(vehicle : Vehicle) extends Actor
           val name = vehicle.Actor.toString
           val slashPoint = name.lastIndexOf("/")
           org.log4s.getLogger("DamageResolution").info(s"${name.substring(slashPoint+1, name.length-1)}: BEFORE=$originalHealth/$originalShields, AFTER=$health/$shields, CHANGE=$damageToHealth/$damageToShields")
+          vehicle.Definition.ShieldAutoRecharge match {
+            case Some(amount) if amount > 0 =>
+              autoShieldCharge.cancel()
+              autoShieldCharge = context.system.scheduler.scheduleOnce(vehicle.Definition.ShieldDamageDelay milliseconds, self, VehicleControl.SelfChargeShields(sender, amount))
+            case None =>
+          }
           sender ! Vitality.DamageResolution(vehicle)
+        }
+
+      case VehicleControl.SelfChargeShields(announce, amount) =>
+        val vdef = vehicle.Definition
+        val now : Long = System.nanoTime
+        autoShieldCharge.cancel()
+        if(vehicle.Health > 0 && vehicle.Shields < vehicle.MaxShields) {
+          //make certain vehicle doesn't charge shields too quickly
+          if(!vehicle.History.exists(VehicleControl.LastShieldChargeOrDamage(now, vdef))) {
+            vehicle.History(VehicleShieldCharge(VehicleSource(vehicle), amount))
+            vehicle.Shields = vehicle.Shields + amount
+            announce ! Vehicle.UpdateShieldsCharge(vehicle)
+          }
+          import scala.concurrent.duration._
+          import scala.concurrent.ExecutionContext.Implicits.global
+          autoShieldCharge = context.system.scheduler.scheduleOnce(vdef.ShieldPeriodicDelay milliseconds, self, VehicleControl.SelfChargeShields(announce, amount))
         }
 
       case Vehicle.ChargeShields(amount) =>
         val now : Long = System.nanoTime
         //make certain vehicle doesn't charge shields too quickly
         if(vehicle.Health > 0 && vehicle.Shields < vehicle.MaxShields &&
-          !vehicle.History.exists(VehicleControl.LastShieldChargeOrDamage(now))) {
+          !vehicle.History.exists(VehicleControl.LastShieldChargeOrDamage(now, vehicle.Definition))) {
           vehicle.History(VehicleShieldCharge(VehicleSource(vehicle), amount))
           vehicle.Shields = vehicle.Shields + amount
           sender ! Vehicle.UpdateShieldsCharge(vehicle)
@@ -94,6 +121,7 @@ class VehicleControl(vehicle : Vehicle) extends Actor
         sender ! FactionAffinity.AssertFactionAffinity(vehicle, faction)
 
       case Vehicle.PrepareForDeletion =>
+        autoShieldCharge.cancel()
         context.become(Disabled)
 
       case _ => ;
@@ -121,11 +149,14 @@ object VehicleControl {
     *        charged shields in the last second;
     *        `false`, otherwise
     */
-  def LastShieldChargeOrDamage(now : Long)(act : VitalsActivity) : Boolean = {
+  def LastShieldChargeOrDamage(now : Long, vdef : VehicleDefinition)(act : VitalsActivity) : Boolean = {
     act match {
-      case DamageFromProjectile(data) => now - data.hit_time < (5 seconds).toNanos //damage delays next charge by 5s
-      case vsc : VehicleShieldCharge => now - vsc.time < (1 seconds).toNanos //previous charge delays next by 1s
+      case DamageFromProjectile(data) => now - data.hit_time < (vdef.ShieldDamageDelay milliseconds).toNanos //damage delays next charge by 5s
+      case vsc : VehicleShieldCharge => now - vsc.time < (vdef.ShieldPeriodicDelay milliseconds).toNanos //previous charge delays next by 1s
       case _ => false
     }
   }
+
+  final case class SelfChargeShields(announce : ActorRef, amount : Int)
 }
+
