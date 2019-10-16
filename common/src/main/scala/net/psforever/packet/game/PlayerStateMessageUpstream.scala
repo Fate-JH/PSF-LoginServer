@@ -20,7 +20,8 @@ import scodec.codecs._
   * @param facingYawUpper a "yaw" angle that represents the angle of the avatar's upper body with respect to its forward-facing direction;
   *                       this number is normally 0 for forward facing;
   *                       the range is limited between approximately 61 degrees of center turned to left or right
-  * @param seq_time na
+  * @param seq_time the "time frame" according to the server;
+  *                 starts at 0; max value is 1023 before resetting
   * @param unk1 na
   * @param is_crouching avatar is crouching
   * @param is_jumping avatar is jumping;
