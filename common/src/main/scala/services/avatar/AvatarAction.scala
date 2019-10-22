@@ -3,13 +3,13 @@ package services.avatar
 
 import net.psforever.objects.ballistics.SourceEntry
 import net.psforever.objects.ce.Deployable
-import net.psforever.objects.{PlanetSideGameObject, Player}
 import net.psforever.objects.equipment.Equipment
 import net.psforever.objects.inventory.Container
 import net.psforever.objects.zones.Zone
+import net.psforever.objects.{PlanetSideGameObject, Player}
 import net.psforever.packet.PlanetSideGamePacket
-import net.psforever.packet.game.{PlanetSideGUID, PlayerStateMessageUpstream}
 import net.psforever.packet.game.objectcreate.{ConstructorData, ObjectCreateMessageParent}
+import net.psforever.packet.game.PlanetSideGUID
 import net.psforever.types.{ExoSuitType, PlanetSideEmpire, Vector3}
 
 import scala.concurrent.duration.FiniteDuration
