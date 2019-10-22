@@ -145,6 +145,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
   var lfsm : Boolean = false
   var squadChannel : Option[String] = None
   var squadSetup : () => Unit = FirstTimeSquadSetup
+
   var squadUpdateCounter : Int = 0
   val queuedSquadActions : Seq[() => Unit] = Seq(SquadUpdates, NoSquadUpdates, NoSquadUpdates, NoSquadUpdates)
 
@@ -154,6 +155,20 @@ class WorldSessionActor extends Actor with MDCContextAware {
   var seqTime = 0
   lazy val unsignedIntMaxValue : Long = math.pow(2, 32).toLong - 1L
   var baseTime : Long = 0
+
+  lazy val unsignedIntMaxValue : Long = math.pow(2, 32).toLong - 1
+  val sysTime : ()=>Long = {
+    //if the first nanoTime call is negative,
+    //subsequent calls will be only "slightly less negative"
+    //even with math.abs, each call to nanoTime would result in time counting down
+    if(System.nanoTime > 0) {
+      System.nanoTime
+    }
+    else {
+      System.currentTimeMillis
+    }
+  }
+
   var serverTime : Long = 0
 
   var amsSpawnPoints : List[SpawnPoint] = Nil
@@ -1124,7 +1139,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
       //new zone
       log.info(s"Player ${tplayer.Name} has been loaded")
       player = tplayer
-      stablePosition = tplayer.Position
       //LoadMapMessage causes the client to send BeginZoningMessage, eventually leading to SetCurrentAvatar
       sendResponse(LoadMapMessage(continent.Map.Name, continent.Id, 40100, 25, true, continent.Map.Checksum))
       AvatarCreate() //important! the LoadMapMessage must be processed by the client before the avatar is created
@@ -1133,7 +1147,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
       //same zone
       log.info(s"Player ${tplayer.Name} will respawn")
       player = tplayer
-      stablePosition = tplayer.Position
       AvatarCreate()
       self ! SetCurrentAvatar(tplayer)
 
@@ -1409,12 +1422,13 @@ class WorldSessionActor extends Actor with MDCContextAware {
           sendResponse(PlanetsideAttributeMessage(guid, attribute_type, attribute_value))
         }
 
+
       case AvatarResponse.PlanetsideAttributeSelf(attribute_type, attribute_value) =>
         if (tplayer_guid == guid) {
           sendResponse(PlanetsideAttributeMessage(guid, attribute_type, attribute_value))
         }
 
-      case AvatarResponse.PlayerState(msg, spectating, weaponInHand) =>
+      case AvatarResponse.PlayerState(pos, vel, yaw, pitch, yaw_upper, seq_time, is_crouching, is_jumping, jump_thrust, is_cloaking, spectating, weaponInHand) =>
         if(tplayer_guid != guid) {
           val now = System.currentTimeMillis()
           val (location, time, distanceSq) : (Vector3, Long, Float) = if(spectating) {
@@ -1422,30 +1436,30 @@ class WorldSessionActor extends Actor with MDCContextAware {
           }
           else {
             val before = player.lastSeenStreamMessage(guid.guid)
-            val dist = Vector3.DistanceSquared(player.Position, msg.pos)
-            (msg.pos, now - before, dist)
+            val dist = Vector3.DistanceSquared(player.Position, pos)
+            (pos, now - before, dist)
           }
           if(spectating ||
             ((distanceSq < 900 || weaponInHand) && time > 200) ||
             (distanceSq < 10000 && time > 500) ||
             (distanceSq < 160000 && (
-              (msg.is_jumping || time < 200)) ||
-              ((msg.vel.isEmpty || Vector3.MagnitudeSquared(msg.vel.get).toInt == 0) && time > 2000) ||
+              (is_jumping || time < 200)) ||
+              ((vel.isEmpty || Vector3.MagnitudeSquared(vel.get).toInt == 0) && time > 2000) ||
               (time > 1000)) ||
             (distanceSq > 160000 && time > 5000)) {
             sendResponse(
               PlayerStateMessage(
                 guid,
                 location,
-                msg.vel,
-                msg.facingYaw,
-                msg.facingPitch,
-                msg.facingYawUpper,
+                vel,
+                yaw,
+                pitch,
+                yaw_upper,
                 timestamp = 0,
-                msg.is_crouching,
-                msg.is_jumping,
-                msg.jump_thrust,
-                msg.is_cloaked
+                is_crouching,
+                is_jumping,
+                jump_thrust,
+                is_cloaking
               )
             )
             player.lastSeenStreamMessage(guid.guid) = now
@@ -3395,7 +3409,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
   def handleControlPkt(pkt : PlanetSideControlPacket) = {
     pkt match {
       case sync @ ControlSync(diff, _, _, _, _, _, fa, fb) =>
-        log.trace(s"SYNC: $sync")
         val nextDiff = if(diff == 65535) { 0 } else { diff + 1 }
         val serverTick = ServerTick
         sendResponse(ControlSyncResp(nextDiff, serverTick, fa, fb, fb, fa))
@@ -3416,16 +3429,9 @@ class WorldSessionActor extends Actor with MDCContextAware {
     * @see `System.nanoTime`
     * @return a number that indicates server tick time
     */
-  def ServerTick : Int = {
-    val base : Long = ((Math.abs(System.nanoTime()).toFloat / unsignedIntMaxValue) * 1000).toLong
-    serverTime = (serverTime + (base - baseTime)) % unsignedIntMaxValue
-    baseTime = base
-    serverTime toInt
-  }
-
-  def DeltaTick : Int = {
-    val oldServerTime = serverTime.toInt
-    ServerTick - oldServerTime
+  def ServerTick : Long = {
+    serverTime = sysTime() & unsignedIntMaxValue
+    serverTime
   }
 
   def handleGamePkt(pkt : PlanetSideGamePacket) = pkt match {
@@ -3834,7 +3840,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
 
       self ! SetCurrentAvatar(player)
 
-    case msg @ PlayerStateMessageUpstream(avatar_guid, pos, vel, yaw, pitch, yaw_upper, seq_time, unk3, is_crouching, is_jumping, unk4, is_cloaking, unk5, unk6) =>
+    case msg @ PlayerStateMessageUpstream(avatar_guid, pos, vel, yaw, pitch, yaw_upper, seq_time, unk3, is_crouching, is_jumping, jump_thrust, is_cloaking, unk5, unk6) =>
       if(deadState == DeadState.Alive) {
         if (timeDL != 0) {
           if (System.currentTimeMillis() - timeDL > 500) {
@@ -3898,6 +3904,10 @@ class WorldSessionActor extends Actor with MDCContextAware {
           sendResponse(PlayerStateShiftMessage(ShiftState(1, stablePosition, player.Orientation.z)))
           log.warn(s"move distance too far for time frame! - $moveDistance > $moveVelocity for $deltaSeq")
         }
+
+        player.Position = pos
+        player.Velocity = vel
+
         player.Orientation = Vector3(player.Orientation.x, pitch, yaw)
         player.FacingYawUpper = yaw_upper
         player.Crouching = is_crouching
@@ -3937,7 +3947,7 @@ class WorldSessionActor extends Actor with MDCContextAware {
           case Some(item) => item.Definition == GlobalDefinitions.bolt_driver
           case None => false
         }
-        avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.PlayerState(avatar_guid, msg, spectator, wepInHand))
+        avatarService ! AvatarServiceMessage(continent.Id, AvatarAction.PlayerState(avatar_guid, player.Position, player.Velocity, yaw, pitch, yaw_upper, seq_time, is_crouching, is_jumping, jump_thrust, is_cloaking, spectator, wepInHand))
         updateSquad()
       }
       else {
@@ -3971,46 +3981,25 @@ class WorldSessionActor extends Actor with MDCContextAware {
           case (Some(obj), Some(0)) =>
             //we're driving the vehicle
             val seat = obj.Seats(0)
-//            val velocityVector = vel.getOrElse(Vector3.Zero)
-//            val velocity = Vector3.Magnitude(velocityVector)
-//            if(velocity > 0) {
-//              log.info(s"${obj.Position} + $velocityVector = $pos (${obj.Position + velocityVector})")
-//            }
-//            val moveDistance = Vector3.Distance(stablePosition, pos)
-//            val deltaSeq = if(seq_time > seqTime) { seq_time - seqTime } else { 1023 + seq_time - seqTime }
-//            val moveVelocity = velocity * (deltaSeq + 1 * 31.25f)
-//            if(moveDistance < 1.6f || moveDistance <= moveVelocity) {
-//              obj.Position = pos
-//              obj.Velocity = vel
-//              player.Position = pos //convenient
-//              stablePosition = pos
-//            }
-//            else {
-//              obj.Velocity = None
-//              obj.Position = stablePosition
-//              player.Position = stablePosition
-//              sendResponse(PlayerStateShiftMessage(ShiftState(1, stablePosition, player.Orientation.z)))
-//              log.warn(s"move distance too far for time frame! - $moveDistance > $moveVelocity for $deltaSeq")
-//            }
+            //we're driving the vehicle
             player.Position = pos //convenient
             if(seat.ControlledWeapon.isEmpty) {
               player.Orientation = Vector3.z(ang.z) //convenient
             }
             obj.Position = pos
             obj.Orientation = ang
-            obj.Cloaked = is_cloaked
             if(obj.MountedIn.isEmpty) {
               obj.Velocity = vel
               if(obj.Definition.CanFly) {
                 obj.Flying = flying.nonEmpty //usually Some(7)
               }
               obj.Cloaked = obj.Definition.CanCloak && is_cloaked
-              vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.VehicleState(player.GUID, vehicle_guid, unk1, pos, ang, vel, flying, unk6, unk7, wheels, unk9, is_cloaked))
             }
             else {
               obj.Velocity = None
               obj.Flying = false
             }
+            vehicleService ! VehicleServiceMessage(continent.Id, VehicleAction.VehicleState(player.GUID, vehicle_guid, unk1, obj.Position, ang, obj.Velocity, if(obj.Flying) { flying } else { None }, unk6, unk7, wheels, unk9, obj.Cloaked))
             updateSquad()
           case (None, _) =>
             //log.error(s"VehicleState: no vehicle $vehicle_guid found in zone")
@@ -5493,9 +5482,11 @@ class WorldSessionActor extends Actor with MDCContextAware {
                 (obj.Orientation, obj.Definition.ObjectId, 300f)
             }
             val distanceToOwner = Vector3.DistanceSquared(shot_origin, player.Position)
-            projectiles(projectileIndex) =
-              Some(Projectile(tool.Projectile, tool.Definition, tool.FireMode, player, attribution, shot_origin, angle))
             if(distanceToOwner <= acceptableDistanceToOwner) {
+              projectiles(projectileIndex) =
+                Some(Projectile(tool.Projectile, tool.Definition, tool.FireMode, player, attribution, shot_origin, angle))
+            }
+            else {
               log.warn(s"WeaponFireMessage: $player's ${tool.Definition.Name} projectile is too far from owner position at time of discharge ($distanceToOwner > $acceptableDistanceToOwner); suspect")
             }
           }
@@ -5518,8 +5509,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
         case None => ;
           None
       }) match {
-        case Some((target, _, hitPos)) if Vector3.DistanceSquared(target.Position, hitPos) > 400f =>
-          log.warn(s"HitMessage: $target's reported position ${target.Position} is too far from the projectile's reported position $hitPos; suspect")
         case Some((target, shotOrigin, hitPos)) =>
           ResolveProjectileEntry(projectile_guid, ProjectileResolution.Hit, target, hitPos) match {
             case Some(projectile) =>
@@ -5534,9 +5523,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
       continent.GUID(direct_victim_uid) match {
         case Some(target : PlanetSideGameObject with FactionAffinity with Vitality) =>
           ResolveProjectileEntry(projectile_guid, ProjectileResolution.Splash, target, target.Position) match {
-            case Some(projectile)
-              if Vector3.DistanceSquared(target.Position, explosion_pos) > math.pow(projectile.projectile.profile.DamageRadius, 2) =>
-              log.warn(s"SplashHitMessage: $target's reported position ${target.Position} is too far from the projectile's reported position $explosion_pos; suspect")
             case Some(projectile) =>
               HandleDealingDamage(target, projectile)
             case None => ;
@@ -5547,9 +5533,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
         continent.GUID(elem.uid) match {
           case Some(target : PlanetSideGameObject with FactionAffinity with Vitality) =>
             ResolveProjectileEntry(projectile_guid, ProjectileResolution.Splash, target, explosion_pos) match {
-              case Some(projectile)
-                if Vector3.DistanceSquared(target.Position, explosion_pos) > math.pow(projectile.projectile.profile.DamageRadius, 2) =>
-                log.warn(s"SplashHitMessage: $target's reported position ${target.Position} is too far from the projectile's reported position $explosion_pos; suspect")
               case Some(projectile) =>
                 HandleDealingDamage(target, projectile)
               case None => ;
@@ -5561,8 +5544,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
     case msg @ LashMessage(seq_time, killer_guid, victim_guid, projectile_guid, pos, unk1) =>
       log.info(s"Lash: $msg")
       continent.GUID(victim_guid) match {
-        case Some(target : PlanetSideGameObject) if Vector3.DistanceSquared(target.Position, pos) > 400f =>
-          log.warn(s"LashMessage: $target's reported position ${target.Position} is too far from the projectile's reported position $pos; suspect")
         case Some(target : PlanetSideGameObject with FactionAffinity with Vitality) =>
           ResolveProjectileEntry(projectile_guid, ProjectileResolution.Lash, target, pos) match {
             case Some(projectile) =>

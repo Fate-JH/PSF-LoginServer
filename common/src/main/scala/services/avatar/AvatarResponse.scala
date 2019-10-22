@@ -31,7 +31,7 @@ object AvatarResponse {
   final case class ObjectHeld(slot : Int) extends Response
   final case class PlanetsideAttribute(attribute_type : Int, attribute_value : Long) extends Response
   final case class PlanetsideAttributeSelf(attribute_type : Int, attribute_value : Long) extends Response
-  final case class PlayerState(msg : PlayerStateMessageUpstream, spectator : Boolean, weaponInHand : Boolean) extends Response
+  final case class PlayerState(pos : Vector3, vel : Option[Vector3], facingYaw : Float, facingPitch : Float, facingYawUpper : Float, timestamp : Int, is_crouching : Boolean, is_jumping : Boolean, jump_thrust : Boolean, is_cloaked : Boolean, spectator : Boolean, weaponInHand : Boolean) extends Response
   final case class PutDownFDU(target_guid : PlanetSideGUID) extends Response
   final case class Release(player : Player) extends Response
   final case class Reload(weapon_guid : PlanetSideGUID) extends Response
