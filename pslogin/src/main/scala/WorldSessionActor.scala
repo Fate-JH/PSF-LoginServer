@@ -3887,27 +3887,6 @@ class WorldSessionActor extends Actor with MDCContextAware {
 
         player.Position = pos
         player.Velocity = vel
-
-        val velocityVector = vel.getOrElse(Vector3.Zero)
-        val velocity = Vector3.Magnitude(velocityVector)
-        val moveDistance = Vector3.Distance(stablePosition, pos)
-        val deltaSeq = if(seq_time > seqTime) { seq_time - seqTime } else { 1023 + seq_time - seqTime }
-        val moveVelocity = velocity * (deltaSeq + 1 * 7.8125) // (31.25 / 4)
-        if(moveDistance < 1.6f || moveDistance <= moveVelocity) {
-          player.Position = pos
-          player.Velocity = vel
-          stablePosition = pos
-        }
-        else {
-          player.Velocity = None
-          player.Position = stablePosition
-          sendResponse(PlayerStateShiftMessage(ShiftState(1, stablePosition, player.Orientation.z)))
-          log.warn(s"move distance too far for time frame! - $moveDistance > $moveVelocity for $deltaSeq")
-        }
-
-        player.Position = pos
-        player.Velocity = vel
-
         player.Orientation = Vector3(player.Orientation.x, pitch, yaw)
         player.FacingYawUpper = yaw_upper
         player.Crouching = is_crouching
