@@ -13,6 +13,7 @@ class AmmoBoxDefinition(objectId: Int) extends EquipmentDefinition(objectId) {
   Name = "ammo box"
   Size = EquipmentSize.Inventory
   Packet = AmmoBoxDefinition.converter
+  registerAs = "ammo"
 
   def AmmoType: Ammo.Value = ammoType
 

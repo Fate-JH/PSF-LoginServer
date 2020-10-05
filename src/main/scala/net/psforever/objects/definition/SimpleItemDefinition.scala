@@ -8,6 +8,7 @@ class SimpleItemDefinition(objectId: Int) extends EquipmentDefinition(objectId) 
   SItem(objectId) //let throw NoSuchElementException
   Name = "tool"
   Size = EquipmentSize.Pistol //all items
+  registerAs = "items"
 }
 
 object SimpleItemDefinition {

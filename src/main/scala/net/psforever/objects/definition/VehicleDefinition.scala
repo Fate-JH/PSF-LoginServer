@@ -25,6 +25,8 @@ class VehicleDefinition(objectId: Int)
     with NtuContainerDefinition
     with ResistanceProfileMutators
     with DamageResistanceModel {
+  registerAs = "vehicles"
+
   /** vehicle shields offered through amp station facility benefits (generally: 20% of health + 1) */
   private var maxShields: Int = 0
   private val cargo: mutable.HashMap[Int, CargoDefinition] = mutable.HashMap[Int, CargoDefinition]()

@@ -101,4 +101,6 @@ abstract class ObjectDefinition(private val objectId: Int) extends BasicDefiniti
   }
 
   def ObjectId: Int = objectId
+
+  var registerAs: String = "dynamic"
 }

@@ -6,7 +6,6 @@ import akka.routing.RandomPool
 import net.psforever.objects.{PlanetSideGameObject, _}
 import net.psforever.objects.ballistics.{Projectile, SourceEntry}
 import net.psforever.objects.ce.Deployable
-import net.psforever.objects.entity.IdentifiableEntity
 import net.psforever.objects.equipment.Equipment
 import net.psforever.objects.guid.{NumberPoolHub, TaskResolver}
 import net.psforever.objects.guid.actor.UniqueNumberSystem
@@ -335,24 +334,29 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
   }
 
   def SetupNumberPools(): Unit = {
-    guid.AddPool("environment", (0 to 3000).toList) //TODO tailor to suit requirements of zone
-    //TODO unlump pools later; do not make any single pool too big
-    guid.AddPool("dynamic", (3001 to 10000).toList).Selector =
-      new RandomSelector //TODO all things will be registered here, for now
-    guid.AddPool("b", (10001 to 15000).toList).Selector = new RandomSelector
-    guid.AddPool("c", (15001 to 20000).toList).Selector = new RandomSelector
-    guid.AddPool("d", (20001 to 25000).toList).Selector = new RandomSelector
-    guid.AddPool("e", (25001 to 30000).toList).Selector = new RandomSelector
-    guid.AddPool("f", (30001 to 35000).toList).Selector = new RandomSelector
-    guid.AddPool("g", (35001 until 40100).toList).Selector = new RandomSelector
-    guid.AddPool("projectiles", (Projectile.baseUID until Projectile.rangeUID).toList)
-    guid.AddPool("locker-contents", (40150 until 40450).toList).Selector = new RandomSelector
-    //TODO disabled temporarily to lighten load times
-    //guid.AddPool("h", (40150 to 45000).toList).Selector = new RandomSelector
-    //guid.AddPool("i", (45001 to 50000).toList).Selector = new RandomSelector
-    //guid.AddPool("j", (50001 to 55000).toList).Selector = new RandomSelector
-    //guid.AddPool("k", (55001 to 60000).toList).Selector = new RandomSelector
-    //guid.AddPool("l", (60001 to 65535).toList).Selector = new RandomSelector
+    //TODO tailor to suit requirements of zone
+    guid.AddPool("environment", (0 to 3000).toList) //3000; read-only
+    guid.AddPool("players", (3001 to 3900).toList).Selector = new RandomSelector //900
+    //3901 to 4000
+    guid.AddPool("lockers", (4001 to 4450).toList).Selector = new RandomSelector //450
+    //4451 to 5000
+    guid.AddPool("tools", (5001 to 14900).toList).Selector = new RandomSelector //9900
+    //14901 to 15000
+    guid.AddPool("ammo", (15001 to 32100).toList).Selector = new RandomSelector //17100
+    //32101 to 33000
+    guid.AddPool("kits", (33001 to 34800).toList).Selector = new RandomSelector //1800
+    //34801 to 35000
+    guid.AddPool("items", (35001 to 38150).toList).Selector = new RandomSelector //3150
+    //38151 to 40099
+    guid.AddPool("projectiles", (Projectile.baseUID until Projectile.rangeUID).toList) //40100 + 49; read-only
+    guid.AddPool("locker-contents", (40150 until 40450).toList) //300; read-only
+    //40450 to 45000
+    guid.AddPool("vehicles", (45001 to 46000).toList).Selector = new RandomSelector //1000
+    //46001 to 47000
+    guid.AddPool("terminals", (47001 to 49000).toList).Selector = new RandomSelector //2000
+    //49001 to 50000
+    guid.AddPool("deployables", (50001 to 59000).toList).Selector = new RandomSelector //9000
+    //59001 to 65535
   }
 
   def findSpawns(
@@ -606,7 +610,7 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
 
   private def BuildSupportObjects(): Unit = {
     //guard against errors here, but don't worry about specifics; let ZoneActor.ZoneSetupCheck complain about problems
-    val other: ListBuffer[IdentifiableEntity] = new ListBuffer[IdentifiableEntity]()
+    val other: ListBuffer[PlanetSideGameObject] = new ListBuffer[PlanetSideGameObject]()
     //turret to weapon
     map.turretToWeapon.foreach({
       case (turret_guid, weapon_guid) =>
@@ -634,7 +638,7 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
         }
     })
     //after all fixed GUID's are defined  ...
-    other.foreach(obj => guid.register(obj, "dynamic"))
+    other.foreach(obj => guid.register(obj, obj.Definition.registerAs))
   }
 
   private def MakeBuildings(implicit context: ActorContext): PairMap[Int, Building] = {

@@ -40,6 +40,25 @@ object GUIDTask {
     * @return a `TaskResolver.GiveTask` message
     */
   def RegisterObjectTask(obj: IdentifiableEntity)(implicit guid: ActorRef): TaskResolver.GiveTask = {
+    RegisterObjectTask(obj, "generic")(guid)
+  }
+  /**
+    * Construct tasking that registers an object with a globally unique identifier selected from a pool of numbers.
+    * @param obj the object being registered
+    * @param guid implicit reference to a unique number system
+    * @return a `TaskResolver.GiveTask` message
+    */
+  def RegisterObjectTask(obj: PlanetSideGameObject)(implicit guid: ActorRef): TaskResolver.GiveTask = {
+    RegisterObjectTask(obj, obj.Definition.registerAs)(guid)
+  }
+  /**
+    * Construct tasking that registers an object with a globally unique identifier selected from a pool of numbers.
+    * @param obj the object being registered
+    * @param pool the suggested number pool from which a unique number will be drawn
+    * @param guid implicit reference to a unique number system
+    * @return a `TaskResolver.GiveTask` message
+    */
+  def RegisterObjectTask(obj: IdentifiableEntity, pool: String)(implicit guid: ActorRef): TaskResolver.GiveTask = {
     TaskResolver.GiveTask(new Task() {
       private val localObject   = obj
       private val localAccessor = guid
@@ -55,7 +74,7 @@ object GUIDTask {
 
       def Execute(resolver: ActorRef): Unit = {
         import net.psforever.objects.guid.actor.Register
-        localAccessor ! Register(localObject, "dynamic", resolver) //TODO pool should not be hardcoded
+        localAccessor ! Register(localObject, pool, resolver)
       }
     })
   }
