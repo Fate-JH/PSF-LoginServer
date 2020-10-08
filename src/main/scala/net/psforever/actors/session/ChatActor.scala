@@ -4,7 +4,7 @@ import akka.actor.Cancellable
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.{ActorRef, Behavior, PostStop, SupervisorStrategy}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
-import net.psforever.actors.zone.BuildingActor
+import net.psforever.actors.zone.{BuildingActor, GuidBeanCounter}
 import net.psforever.objects.avatar.{BattleRank, Certification, CommandRank, Cosmetic}
 import net.psforever.objects.serverobject.pad.{VehicleSpawnControl, VehicleSpawnPad}
 import net.psforever.objects.{Default, Player, Session}
@@ -18,6 +18,7 @@ import net.psforever.util.{Config, PointOfInterest}
 import net.psforever.zones.Zones
 import net.psforever.services.chat.ChatService
 import net.psforever.services.chat.ChatService.ChatChannel
+
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import akka.actor.typed.scaladsl.adapter._
@@ -276,8 +277,8 @@ class ChatActor(
               sessionActor ! SessionActor.SendResponse(message)
 
             /** Messages starting with ! are custom chat commands */
-            case (messageType, recipient, contents) if contents.startsWith("!") =>
-              (messageType, recipient, contents) match {
+            case (messageType, recipient, content) if content.startsWith("!") =>
+              (messageType, recipient, content) match {
                 case (_, _, contents) if contents.startsWith("!whitetext ") && session.account.gm =>
                   chatService ! ChatService.Message(
                     session,
@@ -302,7 +303,7 @@ class ChatActor(
                   }
 
                   zone match {
-                    case Some(zone) =>
+                    case Some(inZone) =>
                       sessionActor ! SessionActor.SendResponse(
                         ChatMsg(
                           CMT_GMOPEN,
@@ -313,7 +314,7 @@ class ChatActor(
                         )
                       )
 
-                      (zone.LivePlayers ++ zone.Corpses)
+                      (inZone.LivePlayers ++ inZone.Corpses)
                         .filter(_.CharId != session.player.CharId)
                         .sortBy(p => (p.Name, !p.isAlive))
                         .foreach(player => {
@@ -396,6 +397,9 @@ class ChatActor(
                           )
                       }
                   }
+
+                case (_, _, contents) if contents.startsWith("!zone-stats") && session.account.gm =>
+                  session.zone.Counter ! GuidBeanCounter.Report(sessionActor)
 
                 case _ =>
                 // unknown ! commands are ignored

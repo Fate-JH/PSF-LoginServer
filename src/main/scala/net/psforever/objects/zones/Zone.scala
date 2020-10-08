@@ -1,6 +1,7 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.zones
 
+import akka.actor.typed.scaladsl.adapter._
 import akka.actor.{ActorContext, ActorRef, Props}
 import akka.routing.RandomPool
 import net.psforever.objects.{PlanetSideGameObject, _}
@@ -35,7 +36,7 @@ import scalax.collection.GraphEdge._
 import scala.util.Try
 import akka.actor.typed
 import net.psforever.actors.session.AvatarActor
-import net.psforever.actors.zone.ZoneActor
+import net.psforever.actors.zone.{GuidBeanCounter, ZoneActor}
 import net.psforever.objects.avatar.Avatar
 import net.psforever.objects.geometry.d3.VolumetricGeometry
 import net.psforever.objects.serverobject.PlanetSideServerObject
@@ -93,6 +94,8 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
     * A `desiredSpanSize` of 50m divides the blockmap into 32041 sectors.
     */
   val blockMap: BlockMap = BlockMap(map.scale, desiredSpanSize = 100)
+
+  private var counter: typed.ActorRef[GuidBeanCounter.Command] = _
 
   /** A synchronized `List` of items (`Equipment`) dropped by players on the ground and can be collected again. */
   private val equipmentOnGround: ListBuffer[Equipment] = ListBuffer[Equipment]()
@@ -204,6 +207,7 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
         s"zone-$id-hotspots"
       )
       soi = context.actorOf(Props(classOf[SphereOfInfluenceActor], this), s"zone-$id-soi")
+      counter = new ClassicActorContextOps(context).spawn(GuidBeanCounter(this, this.guid), name = s"zone-$id-beancounter")
 
       avatarEvents = context.actorOf(Props(classOf[AvatarService], this), s"zone-$id-avatar-events")
       localEvents = context.actorOf(Props(classOf[LocalService], this), s"zone-$id-local-events")
@@ -336,27 +340,20 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
   def SetupNumberPools(): Unit = {
     //TODO tailor to suit requirements of zone
     guid.AddPool("environment", (0 to 3000).toList) //3000; read-only
-    guid.AddPool("players", (3001 to 3900).toList).Selector = new RandomSelector //900
-    //3901 to 4000
-    guid.AddPool("lockers", (4001 to 4450).toList).Selector = new RandomSelector //450
-    //4451 to 5000
-    guid.AddPool("tools", (5001 to 14900).toList).Selector = new RandomSelector //9900
-    //14901 to 15000
-    guid.AddPool("ammo", (15001 to 32100).toList).Selector = new RandomSelector //17100
-    //32101 to 33000
-    guid.AddPool("kits", (33001 to 34800).toList).Selector = new RandomSelector //1800
-    //34801 to 35000
-    guid.AddPool("items", (35001 to 38150).toList).Selector = new RandomSelector //3150
-    //38151 to 40099
+    guid.AddPool("players", (3001 to 4500).toList).Selector = new RandomSelector //1500
+    guid.AddPool("lockers", (4501 to 5000).toList).Selector = new RandomSelector //500
+    guid.AddPool("tools", (5001 to 9500).toList).Selector = new RandomSelector //4500
+    guid.AddPool("ammo", (9501 to 23000).toList).Selector = new RandomSelector //13500
+    guid.AddPool("kits", (23001 to 36500).toList).Selector = new RandomSelector //13500
+    guid.AddPool("items", (36501 to 39000).toList).Selector = new RandomSelector //3000
+    //39001 to 40099 = 1099
     guid.AddPool("projectiles", (Projectile.baseUID until Projectile.rangeUID).toList) //40100 + 49; read-only
-    guid.AddPool("locker-contents", (40150 until 40450).toList) //300; read-only
-    //40450 to 45000
-    guid.AddPool("vehicles", (45001 to 46000).toList).Selector = new RandomSelector //1000
-    //46001 to 47000
-    guid.AddPool("terminals", (47001 to 49000).toList).Selector = new RandomSelector //2000
-    //49001 to 50000
-    guid.AddPool("deployables", (50001 to 59000).toList).Selector = new RandomSelector //9000
-    //59001 to 65535
+    guid.AddPool("locker-contents", (40150 to 40450).toList) //300; read-only
+    //40451 to 45000 = 4550
+    guid.AddPool("vehicles", (45001 to 47000).toList).Selector = new RandomSelector //2000
+    guid.AddPool("terminals", (47001 to 48000).toList).Selector = new RandomSelector //1000
+    guid.AddPool("deployables", (48001 to 64000).toList).Selector = new RandomSelector //16000
+    //64001 to 65535 = 1535
   }
 
   def findSpawns(
@@ -504,6 +501,8 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
       false
     }
   }
+
+  def Counter: typed.ActorRef[GuidBeanCounter.Command] = counter
 
   /**
     * Recover an object from the globally unique identifier system by the number that was assigned previously.
@@ -752,10 +751,12 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
 
   def StartPlayerManagementSystems(): Unit = {
     soi ! SOI.Start()
+    counter ! GuidBeanCounter.Start()
   }
 
   def StopPlayerManagementSystems(): Unit = {
     soi ! SOI.Stop()
+    counter ! GuidBeanCounter.Stop()
   }
 
   def Activity: ActorRef = projector

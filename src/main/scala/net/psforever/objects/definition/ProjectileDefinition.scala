@@ -15,7 +15,7 @@ class ProjectileDefinition(objectId: Int)
   extends ObjectDefinition(objectId)
     with DamageWithPosition {
   registerAs = "projectiles"
-  
+
   /** ascertain that this object is a valid projectile type */
   private val projectileType: Projectiles.Value     = Projectiles(objectId) //let throw NoSuchElementException
   /** how much faster (or slower) the projectile moves (m/s^2^) */

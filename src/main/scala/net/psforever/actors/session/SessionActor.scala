@@ -5,8 +5,11 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.actor.{Actor, ActorRef, Cancellable, MDCContextAware, typed}
 import akka.pattern.ask
 import akka.util.Timeout
-import net.psforever.actors.net.MiddlewareActor
 import net.psforever.actors.zone.ZoneActor
+
+import net.psforever.actors.net.MiddlewareActor
+import net.psforever.actors.zone.GuidBeanCounter
+
 import net.psforever.login.WorldSession._
 import net.psforever.objects._
 import net.psforever.objects.avatar._
@@ -61,8 +64,8 @@ import net.psforever.services.galaxy.{GalaxyAction, GalaxyResponse, GalaxyServic
 import net.psforever.services.local.support.{CaptureFlagManager, HackCaptureActor}
 import net.psforever.services.local.{LocalAction, LocalResponse, LocalServiceMessage, LocalServiceResponse}
 import net.psforever.services.properties.PropertyOverrideManager
-import net.psforever.services.teamwork.{SquadResponse, SquadServiceMessage, SquadServiceResponse, SquadAction => SquadServiceAction}
 import net.psforever.services.hart.HartTimer
+import net.psforever.services.teamwork.{SquadResponse, SquadServiceMessage, SquadServiceResponse, SquadAction => SquadServiceAction}
 import net.psforever.services.vehicle.{VehicleAction, VehicleResponse, VehicleServiceMessage, VehicleServiceResponse}
 import net.psforever.services.{RemoverActor, Service, ServiceManager, InterstellarClusterService => ICS}
 import net.psforever.types._
@@ -116,6 +119,8 @@ object SessionActor {
   final case class Suicide() extends Command
 
   final case class Kick(player: Player, time: Option[Long] = None) extends Command
+
+  final case class ObjectAllocationReport(zone: Zone, objects: List[GuidBeanCounter.ListOfRegisteredEntities]) extends Command
 
   /**
     * The message that progresses some form of user-driven activity with a certain eventual outcome
@@ -1451,6 +1456,9 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
 
     case msg @ Containable.CanNotPutItemInSlot(_: PlanetSideServerObject with Container, _: Equipment, _: Int) =>
       log.debug(s"CanNotPutItemInSlot: $msg")
+
+    case SessionActor.ObjectAllocationReport(zone, objects) =>
+      log.info(s"objects in ${zone.id}: ${objects.mkString(", ")}")
 
     case default =>
       log.warn(s"Invalid packet class received: $default from ${sender()}")

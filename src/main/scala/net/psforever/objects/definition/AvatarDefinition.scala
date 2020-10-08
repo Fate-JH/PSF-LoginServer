@@ -12,6 +12,7 @@ import net.psforever.objects.vital.VitalityDefinition
   */
 class AvatarDefinition(objectId: Int) extends ObjectDefinition(objectId) with VitalityDefinition {
   Avatars(objectId) //let throw NoSuchElementException
+  Name = "player"
   Packet = AvatarDefinition.converter
   Geometry = GeometryForm.representPlayerByCylinder(radius = 1.6f)
   registerAs = "players"
