@@ -150,7 +150,7 @@ object SessionActor {
   private final case class NtuDischarging(tplayer: Player, vehicle: Vehicle, silo_guid: PlanetSideGUID)
 
   private final case class FinalizeDeployable(
-      obj: PlanetSideGameObject with Deployable,
+      obj: Deployable,
       tool: ConstructionItem,
       index: Int
   )
@@ -1112,12 +1112,6 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
       CommonDestroyConstructionItem(tool, index)
       FindReplacementConstructionItem(tool, index)
 
-    case SessionActor.FinalizeDeployable(obj: ComplexDeployable, tool, index) =>
-      //tank_traps, spitfires, deployable field turrets and the deployable_shield_generator
-      DeployableBuildActivity(obj)
-      CommonDestroyConstructionItem(tool, index)
-      FindReplacementConstructionItem(tool, index)
-
     case SessionActor.FinalizeDeployable(obj: TelepadDeployable, tool, index) =>
       if (obj.Health > 0) {
         val guid = obj.GUID
@@ -1151,7 +1145,13 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
         }
       }
 
-    case SessionActor.FinalizeDeployable(obj: PlanetSideGameObject with Deployable, tool, index) =>
+    case SessionActor.FinalizeDeployable(obj: Deployable, tool, index) =>
+      //tank_traps, spitfires, deployable field turrets and the deployable_shield_generator
+      DeployableBuildActivity(obj)
+      CommonDestroyConstructionItem(tool, index)
+      FindReplacementConstructionItem(tool, index)
+
+    case SessionActor.FinalizeDeployable(obj, tool, index) =>
       val guid       = obj.GUID
       val definition = obj.Definition
       sendResponse(GenericObjectActionMessage(guid, 21)) //reset build cooldown
@@ -1444,19 +1444,6 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
           )
         }
       }
-
-    case Vitality.DamageResolution(target: TelepadDeployable, _) =>
-      //telepads
-      if (target.Health <= 0) {
-        //update if destroyed
-        target.Destroyed = true
-        val guid = target.GUID
-        continent.AvatarEvents ! AvatarServiceMessage(continent.id, AvatarAction.ObjectDelete(player.GUID, guid))
-        Deployables.AnnounceDestroyDeployable(target, Some(0 seconds))
-      }
-
-    case Vitality.DamageResolution(target: PlanetSideGameObject, _) =>
-      log.warn(s"DamageResolution: vital target ${target.Definition.Name} damage resolution not supported")
 
     case ResponseToSelf(pkt) =>
       sendResponse(pkt)
@@ -2368,14 +2355,6 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
           DeconstructDeployable(obj, dguid, pos, obj.Orientation, 2)
         }
 
-      case LocalResponse.EliminateDeployable(obj: ComplexDeployable, dguid, pos) =>
-        if (obj.Destroyed) {
-          DeconstructDeployable(obj, dguid, pos)
-        } else {
-          obj.Destroyed = true
-          DeconstructDeployable(obj, dguid, pos, obj.Orientation, 1)
-        }
-
       case LocalResponse.EliminateDeployable(obj: TelepadDeployable, dguid, pos) =>
         //if active, deactivate
         if (obj.Active) {
@@ -2405,6 +2384,14 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
         } else {
           obj.Destroyed = true
           DeconstructDeployable(obj, dguid, pos, obj.Orientation, 2)
+        }
+
+      case LocalResponse.EliminateDeployable(obj: Deployable, dguid, pos) =>
+        if (obj.Destroyed) {
+          DeconstructDeployable(obj, dguid, pos)
+        } else {
+          obj.Destroyed = true
+          DeconstructDeployable(obj, dguid, pos, obj.Orientation, 1)
         }
 
       case LocalResponse.EliminateDeployable(obj, dguid, pos) =>
@@ -4606,7 +4593,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
               RemoverActor.AddTask(obj, continent, Some(0 seconds))
             )
 
-          case Some(obj: PlanetSideGameObject with Deployable) =>
+          case Some(obj: Deployable) =>
             continent.LocalEvents ! LocalServiceMessage.Deployables(RemoverActor.ClearSpecific(List(obj), continent))
             continent.LocalEvents ! LocalServiceMessage.Deployables(
               RemoverActor.AddTask(obj, continent, Some(0 seconds))
@@ -5135,7 +5122,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
             }
             log.info(s"${player.Name} is constructing a $ammoType deployable")
             CancelZoningProcessWithDescriptiveReason("cancel_use")
-            val dObj: PlanetSideGameObject with Deployable = Deployables.Make(ammoType)()
+            val dObj: Deployable = Deployables.Make(ammoType)()
             dObj.Position = pos
             dObj.Orientation = orient
             dObj.Faction = player.Faction
@@ -8009,11 +7996,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
         log.info(s"${player.Name} is attacking ${obj.OwnerName.getOrElse("someone")}'s ${obj.Definition.Name}")
         obj.Actor ! Vitality.Damage(func)
       case obj: Amenity if obj.CanDamage           => obj.Actor ! Vitality.Damage(func)
-      case obj: ComplexDeployable if obj.CanDamage => obj.Actor ! Vitality.Damage(func)
-
-      case obj: SimpleDeployable if obj.CanDamage =>
-        //damage is synchronized on `LSA` (results returned to and distributed from this `WorldSessionActor`)
-        continent.LocalEvents ! Vitality.DamageOn(obj, func)
+      case obj: Deployable if obj.CanDamage => obj.Actor ! Vitality.Damage(func)
       case _ => ;
     }
   }
@@ -8104,7 +8087,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
     * @see `SetCurrentAvatar`
     * @param obj a `Deployable` object
     */
-  def RedrawDeployableIcons(obj: PlanetSideGameObject with Deployable): Unit = {
+  def RedrawDeployableIcons(obj: Deployable): Unit = {
     val deployInfo = DeployableInfo(
       obj.GUID,
       Deployable.Icon(obj.Definition.Item),
@@ -8135,7 +8118,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
     * @see `SetCurrentAvatar`
     * @param obj a `Deployable` object
     */
-  def DontRedrawIcons(obj: PlanetSideGameObject with Deployable): Unit = {}
+  def DontRedrawIcons(obj: Deployable): Unit = {}
 
   /**
     * The custom behavior responding to the message `ChangeFireModeMessage` for `ConstructionItem` game objects.
@@ -8207,7 +8190,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
     * the owner has no other means of controlling the created object that it is associated with.
     * @param obj the `Deployable` object to be built
     */
-  def DeployableBuildActivity(obj: PlanetSideGameObject with Deployable): Unit = {
+  def DeployableBuildActivity(obj: Deployable): Unit = {
     val guid        = obj.GUID
     val definition  = obj.Definition
     val item        = definition.Item
@@ -8459,7 +8442,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
     * @param guid the globally unique identifier for the deployable
     * @param pos the previous position of the deployable
     */
-  def DeconstructDeployable(obj: PlanetSideGameObject with Deployable, guid: PlanetSideGUID, pos: Vector3): Unit = {
+  def DeconstructDeployable(obj: Deployable, guid: PlanetSideGUID, pos: Vector3): Unit = {
     sendResponse(SetEmpireMessage(guid, PlanetSideEmpire.NEUTRAL)) //for some, removes the green marker circle
     sendResponse(ObjectDeleteMessage(guid, 0))
     if (player.Faction == obj.Faction) {
@@ -8481,7 +8464,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
     * @param deletionType the value passed to `ObjectDeleteMessage` concerning the deconstruction animation
     */
   def DeconstructDeployable(
-      obj: PlanetSideGameObject with Deployable,
+      obj: Deployable,
       guid: PlanetSideGUID,
       pos: Vector3,
       orient: Vector3,
