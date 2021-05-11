@@ -7,7 +7,7 @@ import net.psforever.objects.ce._
 import net.psforever.objects.definition.{ComplexDeployableDefinition, SimpleDeployableDefinition}
 import net.psforever.objects.definition.converter.SmallDeployableConverter
 import net.psforever.objects.equipment.JammableUnit
-import net.psforever.objects.geometry.Geometry3D
+import net.psforever.objects.geometry.d3.Geometry3D
 import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.serverobject.{CommonMessages, PlanetSideServerObject}
 import net.psforever.objects.serverobject.damage.{Damageable, DamageableEntity}
