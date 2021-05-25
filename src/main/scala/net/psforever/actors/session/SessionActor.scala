@@ -5922,6 +5922,9 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
           self.toTyped[ICS.DroppodLaunchExchange]
         )
 
+      case msg @ OutfitRequest(_, _) =>
+        log.info(s"$msg")
+
       case msg @ ActionCancelMessage(u1, u2, u3) =>
         progressBarUpdate.cancel()
         progressBarValue = None
