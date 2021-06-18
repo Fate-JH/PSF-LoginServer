@@ -339,21 +339,21 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
 
   def SetupNumberPools(): Unit = {
     //TODO tailor to suit requirements of zone
-    guid.AddPool("environment", (0 to 3000).toList) //3000; read-only
-    guid.AddPool("players", (3001 to 4500).toList).Selector = new RandomSelector //1500
-    guid.AddPool("lockers", (4501 to 5000).toList).Selector = new RandomSelector //500
-    guid.AddPool("tools", (5001 to 9500).toList).Selector = new RandomSelector //4500
-    guid.AddPool("ammo", (9501 to 23000).toList).Selector = new RandomSelector //13500
-    guid.AddPool("kits", (23001 to 36500).toList).Selector = new RandomSelector //13500
-    guid.AddPool("items", (36501 to 39000).toList).Selector = new RandomSelector //3000
-    //39001 to 40099 = 1099
-    guid.AddPool("projectiles", (Projectile.baseUID until Projectile.rangeUID).toList) //40100 + 49; read-only
-    guid.AddPool("locker-contents", (40150 to 40450).toList) //300; read-only
-    //40451 to 45000 = 4550
-    guid.AddPool("vehicles", (45001 to 47000).toList).Selector = new RandomSelector //2000
-    guid.AddPool("terminals", (47001 to 48000).toList).Selector = new RandomSelector //1000
-    guid.AddPool("deployables", (48001 to 64000).toList).Selector = new RandomSelector //16000
-    //64001 to 65535 = 1535
+    guid.AddPool(name = "environment", (0 to 3000).toList) //3000; read-only
+    guid.AddPool(name = "players", (3001 to 4500).toList).Selector = new RandomSelector //1500
+    guid.AddPool(name = "lockers", (4501 to 5000).toList).Selector = new RandomSelector //500
+    guid.AddPool(name = "tools", (5001 to 9500).toList).Selector = new RandomSelector //4500
+    guid.AddPool(name = "ammo", (9501 to 23000).toList).Selector = new RandomSelector //13500
+    guid.AddPool(name = "kits", (23001 to 36500).toList).Selector = new RandomSelector //13500
+    guid.AddPool(name = "items", (36501 to 39000).toList).Selector = new RandomSelector //3000
+    //39001 to 40099 = 1099, generic
+    guid.AddPool(name = "projectiles", (Projectile.baseUID until Projectile.rangeUID).toList) //40100 + 49; read-only
+    guid.AddPool(name = "locker-contents", (40150 to 40450).toList) //300; read-only
+    //40451 to 45000 = 4550, generic
+    guid.AddPool(name = "vehicles", (45001 to 47000).toList).Selector = new RandomSelector //2000
+    guid.AddPool(name = "terminals", (47001 to 48000).toList).Selector = new RandomSelector //1000
+    guid.AddPool(name = "deployables", (48001 to 64000).toList).Selector = new RandomSelector //16000
+    //64001 to 65535 = 1535, generic
   }
 
   def findSpawns(
