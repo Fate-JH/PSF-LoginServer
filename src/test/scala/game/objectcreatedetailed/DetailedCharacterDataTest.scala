@@ -91,7 +91,7 @@ class DetailedCharacterDataTest extends Specification {
                   b.outfit_logo mustEqual 0
                   b.backpack mustEqual false
                   b.facingPitch mustEqual 2.8125f
-                  b.facingYawUpper mustEqual 61.875f
+                  b.facingYawUpper mustEqual -298.125f
                   b.lfs mustEqual true
                   b.grenade_state mustEqual GrenadeState.None
                   b.is_cloaking mustEqual false
@@ -279,7 +279,7 @@ class DetailedCharacterDataTest extends Specification {
                   b.outfit_logo mustEqual 0
                   b.backpack mustEqual false
                   b.facingPitch mustEqual 5.625f
-                  b.facingYawUpper mustEqual 61.875f
+                  b.facingYawUpper mustEqual -298.125f
                   b.lfs mustEqual true
                   b.grenade_state mustEqual GrenadeState.None
                   b.is_cloaking mustEqual false
@@ -1548,7 +1548,7 @@ class DetailedCharacterDataTest extends Specification {
         false,
         false,
         2.8125f,
-        61.875f,
+        -298.125f,
         true,
         GrenadeState.None,
         false,
@@ -1685,11 +1685,7 @@ class DetailedCharacterDataTest extends Specification {
 
       val msg      = ObjectCreateDetailedMessage(0x79, PlanetSideGUID(75), obj)
       val pkt      = PacketCoding.encodePacket(msg).require.toByteVector
-      val pkt_bitv = pkt.toBitVector
-      val ori_bitv = string.toBitVector
-      pkt_bitv.take(724) mustEqual ori_bitv.take(724) //skip 1; this is the highest bit of facingPitch
-      pkt_bitv.drop(725) mustEqual ori_bitv.drop(725)
-      //TODO work on DetailedCharacterData to make this pass as a single stream
+      pkt mustEqual string
     }
 
     "encode (character, seated)" in {
@@ -1730,7 +1726,7 @@ class DetailedCharacterDataTest extends Specification {
         false,
         false,
         5.625f,
-        61.875f,
+        -298.125f,
         true,
         GrenadeState.None,
         false,
@@ -1869,11 +1865,7 @@ class DetailedCharacterDataTest extends Specification {
       val msg =
         ObjectCreateDetailedMessage(0x79, PlanetSideGUID(75), ObjectCreateMessageParent(PlanetSideGUID(43981), 0), obj)
       val pkt      = PacketCoding.encodePacket(msg).require.toByteVector
-      val pkt_bitv = pkt.toBitVector
-      val ori_bitv = string_seated.toBitVector
-      pkt_bitv.take(668) mustEqual ori_bitv.take(668) //skip 1; this is the highest bit of facingPitch
-      pkt_bitv.drop(670) mustEqual ori_bitv.drop(670)
-      //TODO work on DetailedCharacterData to make this pass as a single stream
+      pkt mustEqual string_seated
     }
 
     "encode (max)" in {
@@ -5724,6 +5716,7 @@ class DetailedCharacterDataTest extends Specification {
 
       val msg      = ObjectCreateDetailedMessage(0x79, PlanetSideGUID(3390), obj)
       val pkt      = PacketCoding.encodePacket(msg).require.toByteVector
+      //pkt mustEqual string_xrider912
       val pkt_bitv = pkt.toBitVector
       val ori_bitv = string_xrider912.toBitVector
       pkt_bitv.take(140) mustEqual ori_bitv.take(140) //skip 1; this is the highest bit of PlacementData::Orientation::z

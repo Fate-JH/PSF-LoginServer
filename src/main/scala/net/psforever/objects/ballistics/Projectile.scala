@@ -42,13 +42,14 @@ final case class Projectile(
     attribute_to: Int,
     shot_origin: Vector3,
     shot_angle: Vector3,
+    shot_velocity: Option[Vector3],
     quality: ProjectileQuality = ProjectileQuality.Normal,
     id: Long = Projectile.idGenerator.getAndIncrement(),
     fire_time: Long = System.currentTimeMillis()
 ) extends PlanetSideGameObject {
   Position = shot_origin
   Orientation = shot_angle
-  Velocity = {
+  Velocity = shot_velocity.getOrElse {
     val initVel: Int     = profile.InitialVelocity              //initial velocity
     val radAngle: Double = math.toRadians(shot_angle.y)         //angle of elevation
     val rise: Float      = initVel * math.sin(radAngle).toFloat //z
@@ -77,6 +78,7 @@ final case class Projectile(
       attribute_to,
       shot_origin,
       shot_angle,
+      shot_velocity,
       value,
       id,
       fire_time
@@ -134,7 +136,7 @@ object Projectile {
       shot_origin: Vector3,
       shot_angle: Vector3
   ): Projectile = {
-    Projectile(profile, tool_def, fire_mode, SourceEntry(owner), tool_def.ObjectId, shot_origin, shot_angle)
+    Projectile(profile, tool_def, fire_mode, SourceEntry(owner), tool_def.ObjectId, shot_origin, shot_angle, None)
   }
 
   /**
@@ -157,6 +159,18 @@ object Projectile {
       shot_origin: Vector3,
       shot_angle: Vector3
   ): Projectile = {
-    Projectile(profile, tool_def, fire_mode, SourceEntry(owner), attribute_to, shot_origin, shot_angle)
+    Projectile(profile, tool_def, fire_mode, SourceEntry(owner), attribute_to, shot_origin, shot_angle, None)
+  }
+
+  def apply(
+             profile: ProjectileDefinition,
+             tool_def: ToolDefinition,
+             fire_mode: FireModeDefinition,
+             owner: SourceEntry,
+             attribute_to: Int,
+             shot_origin: Vector3,
+             shot_angle: Vector3
+           ): Projectile = {
+    Projectile(profile, tool_def, fire_mode, owner, attribute_to, shot_origin, shot_angle, None)
   }
 }

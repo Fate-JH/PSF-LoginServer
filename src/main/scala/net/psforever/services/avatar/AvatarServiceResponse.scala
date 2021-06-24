@@ -8,7 +8,7 @@ import net.psforever.objects.inventory.InventoryItem
 import net.psforever.objects.serverobject.environment.OxygenStateTarget
 import net.psforever.packet.PlanetSideGamePacket
 import net.psforever.packet.game.objectcreate.ConstructorData
-import net.psforever.packet.game.ObjectCreateMessage
+import net.psforever.packet.game.{ObjectCreateMessage, ProjectileCharacteristics}
 import net.psforever.types.{ExoSuitType, PlanetSideEmpire, PlanetSideGUID, TransactionType, Vector3}
 import net.psforever.services.GenericEventBusMsg
 
@@ -83,6 +83,13 @@ object AvatarResponse {
   final case class Revive(target_guid: PlanetSideGUID)                                     extends Response
   final case class SetEmpire(object_guid: PlanetSideGUID, faction: PlanetSideEmpire.Value) extends Response
   final case class StowEquipment(target_guid: PlanetSideGUID, slot: Int, item: Equipment)  extends Response
+  final case class WeaponFire(
+                               weapon_guid: PlanetSideGUID,
+                               shot_origin: Vector3,
+                               max_distance: Int,
+                               characteristics: ProjectileCharacteristics,
+                               velocity: Option[Vector3]
+                             ) extends Response
   final case class WeaponDryFire(weapon_guid: PlanetSideGUID)                              extends Response
 
   final case class SendResponse(msg: PlanetSideGamePacket)                                      extends Response

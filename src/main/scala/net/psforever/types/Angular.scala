@@ -61,18 +61,21 @@ object Angular {
 
   def codec_yaw(bits: Int, North: Float): Codec[Float] =
     newcodecs
-      .q_float(360.0f, 0.0f, bits)
+      .q_float(min = 360.0f, max = 0.0f, bits)
       .xmap[Float](
         yaw => decodeCorrectedAngle(yaw, North),
         yaw => encodeCorrectedAngle(yaw, North)
       )
 
-  val codec_zero_centered: Codec[Float] = codec_yaw(North = 0).xmap[Float](
-    out => if (out > 180) out - 360 else out,
+  val codec_zero_centered: Codec[Float] = newcodecs
+    .q_float(min = 720.0f, max = 0.0f, bits = 8)
+    .xmap[Float](
+    out =>
+      if (out > 360) out - 720f else out,
     in => {
-      val adjustedIn = in % 360
-      if (adjustedIn < 0) 360 + adjustedIn
-      else if (adjustedIn > 180) 360 - adjustedIn
+      val adjustedIn = in % 720f
+      if (adjustedIn <= 0) 720f + adjustedIn
+      else if (adjustedIn > 360f) 720f - adjustedIn
       else adjustedIn
     }
   )

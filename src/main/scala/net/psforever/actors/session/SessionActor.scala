@@ -1630,7 +1630,8 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
         context.stop(self)
 
       case AvatarResponse.SendResponse(msg) =>
-        sendResponse(msg)
+        if(guid != tplayer_guid)
+          sendResponse(msg)
 
       case AvatarResponse.SendResponseTargeted(target_guid, msg) =>
         if (tplayer_guid == target_guid) {
@@ -1939,6 +1940,25 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
               item.GUID,
               ObjectCreateMessageParent(target, slot),
               definition.Packet.DetailedConstructorData(item).get
+            )
+          )
+        }
+
+      case AvatarResponse.WeaponFire(weapon_guid, shot_origin, max_distance, characteristics, velocity) =>
+        if (tplayer_guid != guid) {
+          sendResponse(
+            WeaponFireMessage(
+              0,
+              weapon_guid,
+              PlanetSideGUID(0),
+              shot_origin,
+              0,
+              0,
+              0,
+              max_distance,
+              255,
+              characteristics,
+              Option(velocity)
             )
           )
         }
@@ -4080,8 +4100,9 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
                 prefire = None
                 shooting = Some(item_guid)
                 shootingStart = System.currentTimeMillis()
-                //special case - suppress the decimator's alternate fire mode, by projectile
-                if (tool.Projectile != GlobalDefinitions.phoenix_missile_guided_projectile) {
+                //special case - the maelstrom's primary fire does not generate a projectile until it hits something
+                //as it does not generate a projectile, it would also not animate until it hits something
+                if (tool.Definition == GlobalDefinitions.maelstrom && tool.FireModeIndex == 0) {
                   continent.AvatarEvents ! AvatarServiceMessage(
                     continent.id,
                     AvatarAction.ChangeFireState_Start(player.GUID, item_guid)
@@ -4104,7 +4125,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
                 )
                 EmptyMagazine(item_guid, tool)
               }
-            case Some(_) => //permissible, for now
+            case Some(_) =>
               prefire = None
               shooting = Some(item_guid)
               shootingStart = System.currentTimeMillis()
@@ -4120,34 +4141,24 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
       case msg @ ChangeFireStateMessage_Stop(item_guid) =>
         prefire = None
         shootingStop = System.currentTimeMillis()
+        if (shooting.contains(item_guid)) {
+          shooting = None
+        }
         val weapon: Option[Equipment] = if (shooting.contains(item_guid)) {
           shooting = None
-          continent.AvatarEvents ! AvatarServiceMessage(
-            continent.id,
-            AvatarAction.ChangeFireState_Stop(player.GUID, item_guid)
-          )
           FindEquipment
         } else {
           FindEquipment match {
             case Some(tool: Tool) => //special cases
-              //the decimator does not send a ChangeFireState_Start on the last shot
+              //the decimator does not send a ChangeFireState_Start on the last shot; heaven knows why
               if (
                 tool.Definition == GlobalDefinitions.phoenix &&
                 tool.Projectile != GlobalDefinitions.phoenix_missile_guided_projectile
               ) {
-                //suppress the decimator's alternate fire mode, however
-                continent.AvatarEvents ! AvatarServiceMessage(
-                  continent.id,
-                  AvatarAction.ChangeFireState_Start(player.GUID, item_guid)
-                )
                 shootingStart = System.currentTimeMillis() - 1L
               }
-              continent.AvatarEvents ! AvatarServiceMessage(
-                continent.id,
-                AvatarAction.ChangeFireState_Stop(player.GUID, item_guid)
-              )
               Some(tool)
-            case Some(tool) => //permissible, for now
+            case Some(tool) =>
               continent.AvatarEvents ! AvatarServiceMessage(
                 continent.id,
                 AvatarAction.ChangeFireState_Stop(player.GUID, item_guid)
@@ -4158,8 +4169,15 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
               None
           }
         }
-        weapon match {
+        FindEquipment match {
           case Some(tool: Tool) =>
+            //only the maelstrom
+            if (tool.Definition == GlobalDefinitions.maelstrom && tool.FireModeIndex == 0) {
+              continent.AvatarEvents ! AvatarServiceMessage(
+                continent.id,
+                AvatarAction.ChangeFireState_Stop(player.GUID, item_guid)
+              )
+            }
             tool.FireMode match {
               case mode: ChargeFireModeDefinition =>
                 sendResponse(QuantityUpdateMessage(tool.AmmoSlot.Box.GUID, tool.Magazine))
@@ -4970,7 +4988,13 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
           case Some(tool: Tool) =>
             if (tool.Definition == GlobalDefinitions.maelstrom && code == 35) {
               //maelstrom primary fire mode effect (no target)
-              HandleWeaponFireAccountability(object_guid, PlanetSideGUID(Projectile.baseUID))
+              HandleWeaponFire(
+                object_guid,
+                PlanetSideGUID(Projectile.baseUID),
+                player.Position,
+                None,
+                ProjectileCharacteristics.Standard
+              )
             }
           case _ => ;
         }
@@ -5128,19 +5152,21 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
         }
 
       case msg @ WeaponFireMessage(
-            seq_time,
+            _,
             weapon_guid,
             projectile_guid,
             shot_origin,
-            unk1,
-            unk2,
-            unk3,
-            unk4,
-            unk5,
-            unk6,
-            unk7
+            _,
+            _,
+            _,
+            _, //max_distance,
+            _,
+            projectile_type,
+            thrown_projectile_vel
           ) =>
-        HandleWeaponFire(weapon_guid, projectile_guid, shot_origin)
+        //log.info(s"$msg")
+        HandleWeaponFire(weapon_guid, projectile_guid, shot_origin, thrown_projectile_vel.flatten, projectile_type)
+        //sendResponse(msg) //shots fired feedback loop
 
       case msg @ WeaponLazeTargetPositionMessage(_, _, pos2) =>
         log.info(s"${player.Name} is lazing the position ${continent.id}@(${pos2.x},${pos2.y},${pos2.z})")
@@ -9009,94 +9035,16 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
     middlewareActor ! MiddlewareActor.Teardown()
   }
 
-  def HandleWeaponFire(weaponGUID: PlanetSideGUID, projectileGUID: PlanetSideGUID, shotOrigin: Vector3): Unit = {
+  def HandleWeaponFire(
+                        weaponGUID: PlanetSideGUID,
+                        projectileGUID: PlanetSideGUID,
+                        shotOrigin: Vector3,
+                        shotVelocity: Option[Vector3],
+                        shotCharacteristics: ProjectileCharacteristics
+                      ): Unit = {
     HandleWeaponFireAccountability(weaponGUID, projectileGUID) match {
       case (Some(obj), Some(tool)) =>
-        val projectileIndex = projectileGUID.guid - Projectile.baseUID
-        val projectilePlace = projectiles(projectileIndex)
-        if (
-          projectilePlace match {
-            case Some(projectile) =>
-              !projectile.isResolved && System.currentTimeMillis() - projectile.fire_time < projectile.profile.Lifespan.toLong
-            case None =>
-              false
-          }
-        ) {
-          log.debug(
-            s"WeaponFireMessage: overwriting unresolved projectile ${projectileGUID.guid}, known to ${player.Name}"
-          )
-        }
-        val (angle, attribution, acceptableDistanceToOwner) = obj match {
-          case p: Player =>
-            (
-              SimpleWorldEntity.validateOrientationEntry(
-                p.Orientation + Vector3.z(p.FacingYawUpper)
-              ),
-              tool.Definition.ObjectId,
-              10f + (if (p.Velocity.nonEmpty) {
-                       5f
-                     } else {
-                       0f
-                     })
-            )
-          case v: Vehicle if v.Definition.CanFly =>
-            (tool.Orientation, obj.Definition.ObjectId, 1000f) //TODO this is too simplistic to find proper angle
-          case _: Vehicle =>
-            (tool.Orientation, obj.Definition.ObjectId, 225f) //TODO this is too simplistic to find proper angle
-          case _ =>
-            (obj.Orientation, obj.Definition.ObjectId, 300f)
-        }
-        val distanceToOwner = Vector3.DistanceSquared(shotOrigin, player.Position)
-        if (distanceToOwner <= acceptableDistanceToOwner) {
-          val projectile_info = tool.Projectile
-          val projectile =
-            Projectile(
-              projectile_info,
-              tool.Definition,
-              tool.FireMode,
-              player,
-              attribution,
-              shotOrigin,
-              angle
-            )
-          val initialQuality = tool.FireMode match {
-            case mode: ChargeFireModeDefinition =>
-              ProjectileQuality.Modified((projectile.fire_time - shootingStart) / mode.Time.toFloat)
-            case _ =>
-              ProjectileQuality.Normal
-          }
-          projectiles(projectileIndex) = Some(projectile.quality(initialQuality))
-          if (projectile_info.ExistsOnRemoteClients) {
-            log.trace(
-              s"WeaponFireMessage: ${player.Name}'s ${projectile_info.Name} is a remote projectile"
-            )
-            continent.tasks ! (if (projectile.HasGUID) {
-                                 continent.AvatarEvents ! AvatarServiceMessage(
-                                   continent.id,
-                                   AvatarAction.ProjectileExplodes(
-                                     player.GUID,
-                                     projectile.GUID,
-                                     projectile
-                                   )
-                                 )
-                                 ReregisterProjectile(projectile)
-                               } else {
-                                 RegisterProjectile(projectile)
-                               })
-          }
-          projectilesToCleanUp(projectileIndex) = false
-
-          obj match {
-            case turret: FacilityTurret if turret.Definition == GlobalDefinitions.vanu_sentry_turret =>
-              turret.Actor ! FacilityTurret.WeaponDischarged()
-            case _ => ;
-          }
-        } else {
-          log.warn(
-            s"WeaponFireMessage: ${player.Name}'s ${tool.Definition.Name} projectile is too far from owner position at time of discharge ($distanceToOwner > $acceptableDistanceToOwner); suspect"
-          )
-        }
-
+        generateProjectile(obj, tool, projectileGUID, shotOrigin, shotVelocity, shotCharacteristics)
       case _ => ;
     }
   }
@@ -9137,6 +9085,112 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
         out
       case _ =>
         (None, None)
+    }
+  }
+
+  def generateProjectile(
+                           obj: PlanetSideGameObject with Container,
+                           tool: Tool,
+                           projectileGUID: PlanetSideGUID,
+                           shotOrigin: Vector3,
+                           shotVelocity: Option[Vector3],
+                           shotCharacteristics: ProjectileCharacteristics
+                         ): Unit = {
+    val projectileIndex = projectileGUID.guid - Projectile.baseUID
+    val projectilePlace = projectiles(projectileIndex)
+    if (
+      projectilePlace match {
+        case Some(projectile) =>
+          !projectile.isResolved && System.currentTimeMillis() - projectile.fire_time < projectile.profile.Lifespan.toLong
+        case None =>
+          false
+      }
+    ) {
+      log.debug(
+        s"WeaponFireMessage: overwriting unresolved projectile ${projectileGUID.guid}, known to ${player.Name}"
+      )
+    }
+    val (angle, attribution, acceptableDistanceToOwner) = obj match {
+      case p: Player =>
+        (
+          SimpleWorldEntity.validateOrientationEntry(
+            p.Orientation + Vector3.z(p.FacingYawUpper)
+          ),
+          tool.Definition.ObjectId,
+          10f + (if (p.Velocity.nonEmpty) {
+            5f
+          } else {
+            0f
+          })
+        )
+      case v: Vehicle if v.Definition.CanFly =>
+        (tool.Orientation, obj.Definition.ObjectId, 1000f) //TODO this is too simplistic to find proper angle
+      case _: Vehicle =>
+        (tool.Orientation, obj.Definition.ObjectId, 225f) //TODO this is too simplistic to find proper angle
+      case _ =>
+        (obj.Orientation, obj.Definition.ObjectId, 300f)
+    }
+    val distanceToOwner = Vector3.DistanceSquared(shotOrigin, player.Position)
+    if (distanceToOwner <= acceptableDistanceToOwner) {
+      val projectile_info = tool.Projectile
+      val projectile = Projectile(
+        projectile_info,
+        tool.Definition,
+        tool.FireMode,
+        PlayerSource(player),
+        attribution,
+        shotOrigin,
+        angle,
+        shotVelocity
+      )
+      val initialQuality = tool.FireMode match {
+        case mode: ChargeFireModeDefinition =>
+          ProjectileQuality.Modified((projectile.fire_time - shootingStart) / mode.Time.toFloat)
+        case _ =>
+          ProjectileQuality.Normal
+      }
+      projectiles(projectileIndex) = Some(projectile.quality(initialQuality))
+      if (projectile_info.ExistsOnRemoteClients) {
+        log.trace(
+          s"WeaponFireMessage: ${player.Name}'s ${projectile_info.Name} is a remote projectile"
+        )
+        continent.tasks ! (if (projectile.HasGUID) {
+          continent.AvatarEvents ! AvatarServiceMessage(
+            continent.id,
+            AvatarAction.ProjectileExplodes(
+              player.GUID,
+              projectile.GUID,
+              projectile
+            )
+          )
+          ReregisterProjectile(projectile)
+        } else {
+          RegisterProjectile(projectile)
+        })
+      } else {
+        continent.AvatarEvents ! AvatarServiceMessage(
+          continent.id,
+          AvatarAction.WeaponFire(
+          player.GUID,
+            tool.GUID,
+            shotOrigin,
+            (projectile.profile.Lifespan * projectile.profile.InitialVelocity).toInt,
+            shotCharacteristics,
+            shotVelocity
+          )
+        )
+      }
+      projectilesToCleanUp(projectileIndex) = false
+
+      obj match {
+        case turret: FacilityTurret if turret.Definition == GlobalDefinitions.vanu_sentry_turret =>
+          turret.Actor ! FacilityTurret.WeaponDischarged()
+        case _ => ;
+      }
+    } else {
+      log.warn(
+        s"WeaponFireMessage: ${player.Name}'s ${tool.Definition.Name} projectile is too far from owner position at time of discharge ($distanceToOwner > $acceptableDistanceToOwner); suspect"
+      )
     }
   }
 

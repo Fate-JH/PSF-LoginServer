@@ -556,8 +556,7 @@ class CharacterDataTest extends Specification {
         false, //unk2
         false, //unk3
         false, //unk4
-        351.5625f,
-        0f,    //also: -8.4375f, 0f
+        -8.4375f, 0f,
         false, //lfs
         GrenadeState.None,
         false, //is_cloaking

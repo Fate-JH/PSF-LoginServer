@@ -9,6 +9,7 @@ import net.psforever.objects.inventory.InventoryItem
 import net.psforever.objects.serverobject.environment.OxygenStateTarget
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.PlanetSideGamePacket
+import net.psforever.packet.game.ProjectileCharacteristics
 import net.psforever.packet.game.objectcreate.{ConstructorData, ObjectCreateMessageParent}
 import net.psforever.types.{ExoSuitType, PlanetSideEmpire, PlanetSideGUID, TransactionType, Vector3}
 
@@ -115,6 +116,14 @@ object AvatarAction {
       extends Action
   final case class StowEquipment(player_guid: PlanetSideGUID, target_guid: PlanetSideGUID, slot: Int, item: Equipment)
       extends Action
+  final case class WeaponFire(
+                               player_guid: PlanetSideGUID,
+                               weapon_guid: PlanetSideGUID,
+                               shot_origin: Vector3,
+                               max_distance: Int,
+                               characteristics: ProjectileCharacteristics,
+                               velocity: Option[Vector3]
+                             ) extends Action
   final case class WeaponDryFire(player_guid: PlanetSideGUID, weapon_guid: PlanetSideGUID) extends Action
 
   final case class SendResponse(player_guid: PlanetSideGUID, msg: PlanetSideGamePacket)         extends Action

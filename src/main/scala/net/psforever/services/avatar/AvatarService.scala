@@ -303,6 +303,14 @@ class AvatarService(zone: Zone) extends Actor {
               AvatarResponse.StowEquipment(target_guid, slot, obj)
             )
           )
+        case AvatarAction.WeaponFire(player_guid, weapon_guid, shot_origin, max_distance, characteristics, velocity) =>
+          AvatarEvents.publish(
+            AvatarServiceResponse(
+              s"/$forChannel/Avatar",
+              player_guid,
+              AvatarResponse.WeaponFire(weapon_guid, shot_origin, max_distance, characteristics, velocity)
+            )
+          )
         case AvatarAction.WeaponDryFire(player_guid, weapon_guid) =>
           AvatarEvents.publish(
             AvatarServiceResponse(s"/$forChannel/Avatar", player_guid, AvatarResponse.WeaponDryFire(weapon_guid))
