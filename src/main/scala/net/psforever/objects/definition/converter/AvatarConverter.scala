@@ -105,7 +105,8 @@ object AvatarConverter {
       unk7 = false,
       on_zipline = None
     )
-    CharacterAppearanceData(aa, ab, RibbonBars())
+    val ribbonBars = obj.avatar.ribbonBars
+    CharacterAppearanceData(aa, ab, RibbonBars(ribbonBars.head, ribbonBars(1), ribbonBars(2), ribbonBars(3)))
   }
 
   def MakeCharacterData(obj: Player): (Boolean, Boolean) => CharacterData = {

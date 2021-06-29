@@ -88,6 +88,7 @@ case class Avatar(
     stamina: Int = 100,
     fatigued: Boolean = false,
     cosmetics: Option[Set[Cosmetic]] = None,
+    ribbonBars: Array[MeritCommendation.Value] = Array.fill[MeritCommendation.Value](4)(MeritCommendation.None),
     certifications: Set[Certification] = Set(),
     loadouts: Seq[Option[Loadout]] = Seq.fill(15)(None),
     squadLoadouts: Seq[Option[SquadLoadout]] = Seq.fill(10)(None),

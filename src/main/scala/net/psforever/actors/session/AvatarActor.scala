@@ -1130,10 +1130,33 @@ class AvatarActor(
       case Success(avatars) =>
         val gen       = new AtomicInteger(1)
         val converter = new CharacterSelectConverter
+        val trMerits = Array(
+          MeritCommendation.DefenseTR1,
+          MeritCommendation.DefenseTR2,
+          MeritCommendation.DefenseTR4,
+          MeritCommendation.TwoYearTR
+        )
+        val ncMerits = Array(
+          MeritCommendation.DefenseNC1,
+          MeritCommendation.DefenseNC2,
+          MeritCommendation.DefenseNC4,
+          MeritCommendation.TwoYearNC
+        )
+        val vsMerits = Array(
+          MeritCommendation.DefenseVS1,
+          MeritCommendation.DefenseVS2,
+          MeritCommendation.DefenseVS4,
+          MeritCommendation.TwoYearVS
+        )
 
         avatars.filter(!_.deleted) foreach { a =>
           val secondsSinceLastLogin = Seconds.secondsBetween(a.lastLogin, LocalDateTime.now()).getSeconds
-          val avatar                = a.toAvatar
+          val avatar                = a.toAvatar.copy(ribbonBars = a.factionId match {
+            case 0 => trMerits
+            case 1 => ncMerits
+            case 2 => vsMerits
+            case _ => Array.fill(4)(MeritCommendation.None)
+          })
           val player                = new Player(avatar)
 
           player.ExoSuit = ExoSuitType.Reinforced
