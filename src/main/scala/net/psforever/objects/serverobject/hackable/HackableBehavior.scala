@@ -1,8 +1,11 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.serverobject.hackable
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
+import net.psforever.objects.{PlanetSideGameObject, Player}
 import net.psforever.objects.serverobject.CommonMessages
+
+import scala.annotation.unused
 
 object HackableBehavior {
 
@@ -13,17 +16,29 @@ object HackableBehavior {
     */
   trait GenericHackable {
     this: Actor =>
-    def HackableObject: Hackable
+    def HackableObject: PlanetSideGameObject with Hackable
 
-    val hackableBehavior: Receive = {
-      case CommonMessages.Hack(player, _, _) =>
-        val obj = HackableObject
-        obj.HackedBy = player
-        sender() ! true
-
+    val clearHackBehavior: Receive = {
       case CommonMessages.ClearHack() =>
-        val obj = HackableObject
-        obj.HackedBy = None
+        performClearHack(None, sender())
+    }
+
+    val hackableBehavior: Receive = clearHackBehavior
+      .orElse {
+        case CommonMessages.Hack(player, _, _) =>
+          performHack(player, None, sender())
+      }
+
+    def performHack(player: Player, @unused data: Option[Any], replyTo: ActorRef): Unit = {
+      val obj = HackableObject
+      obj.HackedBy = player
+      replyTo ! CommonMessages.EntityHackState(obj, hackState = true)
+    }
+
+    def performClearHack(@unused data: Option[Any], replyTo: ActorRef): Unit = {
+      val obj = HackableObject
+      obj.HackedBy = None
+      replyTo ! CommonMessages.EntityHackState(obj, hackState = false)
     }
   }
 }

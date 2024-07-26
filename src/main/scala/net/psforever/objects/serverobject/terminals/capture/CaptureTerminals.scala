@@ -10,7 +10,6 @@ import scala.util.{Failure, Success}
 
 object CaptureTerminals {import scala.concurrent.duration._
   private val log = org.log4s.getLogger("CaptureTerminals")
-  private implicit val timeout: Timeout = 1.second
 
   /**
     * The process of hacking an object is completed.
@@ -28,31 +27,33 @@ object CaptureTerminals {import scala.concurrent.duration._
     log.info(s"${hackingPlayer.toString} hacked a ${target.Definition.Name}")
     // Wait for the target actor to set the HackedBy property
     import scala.concurrent.ExecutionContext.Implicits.global
-    ask(target.Actor, CommonMessages.Hack(hackingPlayer, target)).mapTo[Boolean].onComplete {
-      case Success(_) =>
-        val zone = target.Zone
-        val zoneid = zone.id
-        val events = zone.LocalEvents
-        val isResecured = hackingPlayer.Faction == target.Faction
-        events ! LocalServiceMessage(
-          zoneid,
-          LocalAction.TriggerSound(hackingPlayer.GUID, target.HackSound, hackingPlayer.Position, 30, 0.49803925f)
-        )
-        if (isResecured) {
-          // Resecure the CC
+    ask(target.Actor, CommonMessages.Hack(hackingPlayer, target))(timeout = 2 second)
+      .mapTo[CommonMessages.EntityHackState]
+      .onComplete {
+        case Success(_) =>
+          val zone = target.Zone
+          val zoneid = zone.id
+          val events = zone.LocalEvents
+          val isResecured = hackingPlayer.Faction == target.Faction
           events ! LocalServiceMessage(
             zoneid,
-            LocalAction.ResecureCaptureTerminal(target, PlayerSource(hackingPlayer))
+            LocalAction.TriggerSound(hackingPlayer.GUID, target.HackSound, hackingPlayer.Position, 30, 0.49803925f)
           )
-        } else {
-          // Start the CC hack timer
-          events ! LocalServiceMessage(
-            zoneid,
-            LocalAction.StartCaptureTerminalHack(target)
-          )
-        }
-      case Failure(_) =>
-        log.warn(s"Hack message failed on target guid: ${target.GUID}")
+          if (isResecured) {
+            // Resecure the CC
+            events ! LocalServiceMessage(
+              zoneid,
+              LocalAction.ResecureCaptureTerminal(target, PlayerSource(hackingPlayer))
+            )
+          } else {
+            // Start the CC hack timer
+            events ! LocalServiceMessage(
+              zoneid,
+              LocalAction.StartCaptureTerminalHack(target)
+            )
+          }
+        case Failure(_) =>
+          log.warn(s"Hack message failed on target guid: ${target.GUID}")
     }
   }
 }

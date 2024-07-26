@@ -120,25 +120,28 @@ object GenericHackables {
   def FinishHacking(target: PlanetSideServerObject with Hackable, user: Player, unk: Long)(): Unit = {
     import akka.pattern.ask
     import scala.concurrent.duration._
-    log.info(s"${user.Name} hacked a ${target.Definition.Name}")
     // Wait for the target actor to set the HackedBy property, otherwise LocalAction.HackTemporarily will not complete properly
     import scala.concurrent.ExecutionContext.Implicits.global
     val tplayer = user
-    ask(target.Actor, CommonMessages.Hack(tplayer, target))(1 second).mapTo[Boolean].onComplete {
-      case Success(_) =>
-        val zone   = target.Zone
-        val zoneId = zone.id
-        val pguid  = tplayer.GUID
-        zone.LocalEvents ! LocalServiceMessage(
-          zoneId,
-          LocalAction.TriggerSound(pguid, target.HackSound, tplayer.Position, 30, 0.49803925f)
-        )
-        zone.LocalEvents ! LocalServiceMessage(
-          zoneId,
-          LocalAction
-            .HackTemporarily(pguid, zone, target, unk, target.HackEffectDuration(user.avatar.hackingSkillLevel()))
-        )
-      case Failure(_) => log.warn(s"Hack message failed on target guid: ${target.GUID}")
+    ask(target.Actor, CommonMessages.Hack(tplayer, target))(timeout = 2 second)
+      .mapTo[CommonMessages.EntityHackState]
+      .onComplete {
+        case Success(_) =>
+          val zone   = target.Zone
+          val zoneId = zone.id
+          val pguid  = tplayer.GUID
+          log.info(s"${user.Name} hacked a ${target.Definition.Name}")
+          zone.LocalEvents ! LocalServiceMessage(
+            zoneId,
+            LocalAction.TriggerSound(pguid, target.HackSound, tplayer.Position, 30, 0.49803925f)
+          )
+          zone.LocalEvents ! LocalServiceMessage(
+            zoneId,
+            LocalAction
+              .HackTemporarily(pguid, zone, target, unk, target.HackEffectDuration(user.avatar.hackingSkillLevel()))
+          )
+        case Failure(_) =>
+          log.warn(s"Hack message failed on target: ${target.Definition.Name}@${target.GUID.guid}")
     }
   }
 }
