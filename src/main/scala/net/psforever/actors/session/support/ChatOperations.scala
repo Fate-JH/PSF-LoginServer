@@ -1263,6 +1263,16 @@ class ChatOperations(
     true
   }
 
+  def customCommandInvulnerabilityOff(params: Seq[String]): Boolean = {
+    params.last match {
+      case "of" | "off" =>
+        sessionLogic.general.invulnerability = Some(false)
+        true
+      case _ =>
+        false
+    }
+  }
+
   def firstParam[T](
                              session: Session,
                              buffer: Iterable[String],

@@ -48,6 +48,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
 
   private val avatarActor: typed.ActorRef[AvatarActor.Command] = ops.avatarActor
 
+  ops.invulnerability = ops.invulnerability.orElse(Some(true)) //retain previous state, or default
+
   def handleConnectToWorldRequest(pkt: ConnectToWorldRequestMessage): Unit = { /* intentionally blank */ }
 
   def handleCharacterCreateRequest(pkt: CharacterCreateRequestMessage): Unit = { /* intentionally blank */ }
@@ -74,29 +76,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     sessionLogic.persist()
     sessionLogic.turnCounterFunc(avatarGuid)
     sessionLogic.updateBlockMap(player, pos)
-    //below half health, full heal
-    val maxHealth = player.MaxHealth.toLong
-    if (player.Health < maxHealth) {
-      player.Health = maxHealth.toInt
-      player.LogActivity(player.ClearHistory().head)
-      sendResponse(PlanetsideAttributeMessage(avatarGuid, 0, maxHealth))
-      continent.AvatarEvents ! AvatarServiceMessage(continent.id, AvatarAction.PlanetsideAttribute(avatarGuid, 0, maxHealth))
-    }
-    //below half stamina, full stamina
-    val avatar = player.avatar
-    val maxStamina = avatar.maxStamina
-    if (avatar.stamina < maxStamina) {
-      avatarActor ! AvatarActor.RestoreStamina(maxStamina)
-      sendResponse(PlanetsideAttributeMessage(player.GUID, 2, maxStamina.toLong))
-    }
-    //below half armor, full armor
-    val maxArmor = player.MaxArmor.toLong
-    if (player.Armor < maxArmor) {
-      player.Armor = maxArmor.toInt
-      sendResponse(PlanetsideAttributeMessage(avatarGuid, 4, maxArmor))
-      continent.AvatarEvents ! AvatarServiceMessage(continent.id, AvatarAction.PlanetsideAttribute(avatarGuid, 4, maxArmor))
-    }
-    //expected
+    CustomerServiceRepresentativeMode.topOffHealthOfInvulnerablePlayer(sessionLogic, player)
     val isMoving     = WorldEntity.isMoving(vel)
     val isMovingPlus = isMoving || isJumping || jumpThrust
     if (isMovingPlus) {

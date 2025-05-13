@@ -225,6 +225,7 @@ class ChatLogic(val ops: ChatOperations, implicit val context: ActorContext) ext
         case "hidespectators" => customCommandHideSpectators()
         case "sayspectator" => customCommandSpeakAsSpectator(params, message)
         case "setempire" => customCommandSetEmpire(params)
+        case "invulnerable" => customCommandInvulnerability(params)
         case _ =>
           // command was not handled
           sendResponse(
@@ -409,6 +410,18 @@ class ChatLogic(val ops: ChatOperations, implicit val context: ActorContext) ext
         }
         true
       }
+  }
+
+  private def customCommandInvulnerability(params: Seq[String]): Boolean = {
+    params.last match {
+      case "" | "o" | "on" if !ops.sessionLogic.general.invulnerability.contains(true) =>
+        ops.sessionLogic.general.invulnerability = Some(true)
+        true
+      case "" | "o" | "on" =>
+        true //already on
+      case _ =>
+        ops.customCommandInvulnerabilityOff(params)
+    }
   }
 
   override def stop(): Unit = {

@@ -1,6 +1,7 @@
 // Copyright (c) 2024 PSForever
 package net.psforever.actors.session.csr
 
+import net.psforever.actors.session.AvatarActor
 import net.psforever.actors.session.support.{ChatFunctions, GalaxyHandlerFunctions, GeneralFunctions, LocalHandlerFunctions, ModeLogic, MountHandlerFunctions, PlayerMode, SessionData, SquadHandlerFunctions, TerminalHandlerFunctions, VehicleFunctions, VehicleHandlerFunctions, WeaponAndProjectileFunctions}
 import net.psforever.objects.{Deployables, PlanetSideGameObject, Player, Session, Vehicle}
 import net.psforever.objects.avatar.Certification
@@ -9,6 +10,7 @@ import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.Zone
 import net.psforever.objects.zones.blockmap.BlockMapEntity
+import net.psforever.packet.PlanetSidePacket
 import net.psforever.packet.game.{ChatMsg, ObjectCreateDetailedMessage, PlanetsideAttributeMessage}
 import net.psforever.packet.game.objectcreate.RibbonBars
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
@@ -111,69 +113,18 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
   private def keepAlivePersistanceCSR(): Unit = {
     val player = data.player
     data.keepAlivePersistence()
-    topOffHealthOfPlayer(player)
     player.allowInteraction = false
-    topOffHealthOfPlayer(player)
+    CustomerServiceRepresentativeMode.topOffHealthOfInvulnerablePlayer(data, player)
     data.continent.GUID(data.player.VehicleSeated)
       .collect {
         case obj: PlanetSideGameObject with Vitality with BlockMapEntity =>
-          topOffHealth(obj)
+          CustomerServiceRepresentativeMode.topOffHealthOfInvulnerable(data, obj)
           data.updateBlockMap(obj, obj.Position)
           obj
       }
       .getOrElse {
         data.updateBlockMap(player, player.Position)
       }
-  }
-
-  private def topOffHealth(obj: PlanetSideGameObject with Vitality): Unit = {
-    obj match {
-      case p: Player => topOffHealthOfPlayer(p)
-      case v: Vehicle => topOffHealthOfVehicle(v)
-      case o: PlanetSideGameObject with Vitality => topOffHealthOfGeneric(o)
-      case _ => ()
-    }
-  }
-
-  private def topOffHealthOfPlayer(player: Player): Unit = {
-    //driver below half health, full heal
-    val maxHealthOfPlayer = player.MaxHealth.toLong
-    if (player.Health < maxHealthOfPlayer * 0.5f) {
-      player.Health = maxHealthOfPlayer.toInt
-      player.LogActivity(player.ClearHistory().head)
-      data.sendResponse(PlanetsideAttributeMessage(player.GUID, 0, maxHealthOfPlayer))
-      data.continent.AvatarEvents ! AvatarServiceMessage(data.zoning.zoneChannel, AvatarAction.PlanetsideAttribute(player.GUID, 0, maxHealthOfPlayer))
-    }
-  }
-
-  private def topOffHealthOfVehicle(vehicle: Vehicle): Unit = {
-    topOffHealthOfGeneric(vehicle)
-    //vehicle shields below half, full shields
-    val maxShieldsOfVehicle = vehicle.MaxShields.toLong
-    val shieldsUi = vehicle.Definition.shieldUiAttribute
-    if (vehicle.Shields < maxShieldsOfVehicle) {
-      val guid = vehicle.GUID
-      vehicle.Shields = maxShieldsOfVehicle.toInt
-      data.sendResponse(PlanetsideAttributeMessage(guid, shieldsUi, maxShieldsOfVehicle))
-      data.continent.VehicleEvents ! VehicleServiceMessage(
-        data.continent.id,
-        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, shieldsUi, maxShieldsOfVehicle)
-      )
-    }
-  }
-
-  private def topOffHealthOfGeneric(obj: PlanetSideGameObject with Vitality): Unit = {
-    //below half health, full heal
-    val guid = obj.GUID
-    val maxHealthOf = obj.MaxHealth.toLong
-    if (obj.Health < maxHealthOf) {
-      obj.Health = maxHealthOf.toInt
-      data.sendResponse(PlanetsideAttributeMessage(guid, 0, maxHealthOf))
-      data.continent.VehicleEvents ! VehicleServiceMessage(
-        data.continent.id,
-        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, 0, maxHealthOf)
-      )
-    }
   }
 }
 
@@ -200,5 +151,89 @@ case object CustomerServiceRepresentativeMode extends PlayerMode {
       packet.ConstructorData(player).get,
       None
     ))
+  }
+
+  private[csr] def topOffHealthOfInvulnerable(data: SessionData, objs: PlanetSideGameObject with Vitality *): Unit = {
+    if (data.general.invulnerability.contains(true)) {
+      objs.foreach { obj =>
+        topOffHealthOf(data, obj)
+      }
+    }
+  }
+
+  private[csr] def topOffHealthOfInvulnerablePlayer(data: SessionData, obj: Player): Unit = {
+    if (data.general.invulnerability.contains(true)) {
+      topOffHealthOfPlayer(data, obj)
+    }
+  }
+
+  private def topOffHealthOf(data: SessionData, obj: PlanetSideGameObject with Vitality): Unit = {
+    obj match {
+      case p: Player => topOffHealthOfPlayer(data, p)
+      case v: Vehicle => topOffHealthOfVehicle(data, v)
+      case o: PlanetSideGameObject with Vitality => topOffHealthOfGeneric(data, o)
+      case _ => ()
+    }
+  }
+
+  private def topOffHealthOfPlayer(data: SessionData, player: Player): Unit = {
+    val avatarGuid = player.GUID
+    val continent = data.continent
+    val continentId = continent.id
+    val avatarEvents = continent.AvatarEvents
+    val sendResponse: PlanetSidePacket => Unit = data.sendResponse
+    //below full health, full health
+    val maxHealth = player.MaxHealth.toLong
+    if (player.Health < maxHealth) {
+      player.Health = maxHealth.toInt
+      player.LogActivity(player.ClearHistory().head)
+      sendResponse(PlanetsideAttributeMessage(avatarGuid, 0, maxHealth))
+      avatarEvents ! AvatarServiceMessage(continentId, AvatarAction.PlanetsideAttribute(avatarGuid, 0, maxHealth))
+    }
+    //below full stamina, full stamina
+    val avatar = player.avatar
+    val maxStamina = avatar.maxStamina
+    if (avatar.stamina < maxStamina) {
+      player.Actor ! AvatarActor.RestoreStamina(maxStamina)
+      sendResponse(PlanetsideAttributeMessage(avatarGuid, 2, maxStamina.toLong))
+    }
+    //below full armor, full armor
+    val maxArmor = player.MaxArmor.toLong
+    if (player.Armor < maxArmor) {
+      player.Armor = maxArmor.toInt
+      sendResponse(PlanetsideAttributeMessage(avatarGuid, 4, maxArmor))
+      avatarEvents ! AvatarServiceMessage(continentId, AvatarAction.PlanetsideAttribute(avatarGuid, 4, maxArmor))
+    }
+  }
+
+  private def topOffHealthOfVehicle(data: SessionData, vehicle: Vehicle): Unit = {
+    topOffHealthOfPlayer(data, data.player)
+    topOffHealthOfGeneric(data, vehicle)
+    //vehicle shields below half, full shields
+    val maxShieldsOfVehicle = vehicle.MaxShields.toLong
+    val shieldsUi = vehicle.Definition.shieldUiAttribute
+    if (vehicle.Shields < maxShieldsOfVehicle * 0.5f) {
+      val guid = vehicle.GUID
+      vehicle.Shields = maxShieldsOfVehicle.toInt
+      data.sendResponse(PlanetsideAttributeMessage(guid, shieldsUi, maxShieldsOfVehicle))
+      data.continent.VehicleEvents ! VehicleServiceMessage(
+        data.continent.id,
+        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, shieldsUi, maxShieldsOfVehicle)
+      )
+    }
+  }
+
+  private def topOffHealthOfGeneric(data: SessionData, obj: PlanetSideGameObject with Vitality): Unit = {
+    //below full health, full heal
+    val guid = obj.GUID
+    val maxHealthOf = obj.MaxHealth.toLong
+    if (obj.Health < maxHealthOf) {
+      obj.Health = maxHealthOf.toInt
+      data.sendResponse(PlanetsideAttributeMessage(guid, 0, maxHealthOf))
+      data.continent.VehicleEvents ! VehicleServiceMessage(
+        data.continent.id,
+        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, 0, maxHealthOf)
+      )
+    }
   }
 }

@@ -143,6 +143,7 @@ class ChatLogic(val ops: ChatOperations, implicit val context: ActorContext) ext
         case "list" => ops.customCommandList(session, params, message)
         case "nearby" => ops.customCommandNearby(session)
         case "loc" => ops.customCommandLoc(session, message)
+        case "invulnerable" => ops.customCommandInvulnerabilityOff(params)
         case _ => false
       }
     } else {
