@@ -155,6 +155,7 @@ object AvatarAction {
   final case class DropSpecialItem() extends Action
   final case class UseKit(kit_guid: PlanetSideGUID, kit_objid: Int) extends Action
   final case class KitNotUsed(kit_guid: PlanetSideGUID, msg: String) extends Action
+  final case class SetInvulnerabilityFlag(state: Boolean, expiresAfter: Long) extends Action
 
   final case class UpdateKillsDeathsAssists(charId: Long, kda: KDAStat) extends Action
   final case class AwardBep(charId: Long, bep: Long, expType: ExperienceType) extends Action

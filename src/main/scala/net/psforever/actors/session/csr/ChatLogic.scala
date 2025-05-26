@@ -4,7 +4,7 @@ package net.psforever.actors.session.csr
 import akka.actor.ActorContext
 import net.psforever.actors.session.SessionActor
 import net.psforever.actors.session.normal.NormalMode
-import net.psforever.actors.session.support.{ChatFunctions, ChatOperations, SessionData}
+import net.psforever.actors.session.support.{ChatFunctions, ChatOperations, SessionData, SpecialInvulnerability}
 import net.psforever.objects.{GlobalDefinitions, PlanetSideGameObject, Session, TurretDeployable}
 import net.psforever.objects.ce.{Deployable, DeployableCategory}
 import net.psforever.objects.serverobject.affinity.FactionAffinity
@@ -413,14 +413,65 @@ class ChatLogic(val ops: ChatOperations, implicit val context: ActorContext) ext
   }
 
   private def customCommandInvulnerability(params: Seq[String]): Boolean = {
-    params.last match {
-      case "" | "o" | "on" if !ops.sessionLogic.general.invulnerability.contains(true) =>
-        ops.sessionLogic.general.invulnerability = Some(true)
+    val (nameOpt, state, timeOpt, isSelf) = ChatOperations.parseInvulnerabilityParams(params, session)
+    if (isSelf) {
+      //self, set directly
+      if (state && !ops.sessionLogic.general.invulnerability.exists(_.state)) {
+        ops.sessionLogic.general.invulnerability = Some(SpecialInvulnerability)
         true
-      case "" | "o" | "on" =>
-        true //already on
-      case _ =>
+      } else if (state) {
+        //already invulnerable
+        true
+      } else if (!player.spectator) {
         ops.customCommandInvulnerabilityOff(params)
+      } else {
+        false
+      }
+    } else {
+      //other, send message
+      val verifiedPlayerName: Option[String] = nameOpt match {
+        case Some("-h") | Some("--help") =>
+          sendResponse(ChatMsg(ChatMessageType.UNK_227, "Usage: !invulnerable [name] [o[n]|of[f]] [time]"))
+          None
+        case Some(id) if id.toIntOption.isDefined =>
+          val cid = id.toInt
+          continent.Players.find(_.id == cid).map(_.basic.name)
+        case Some(name) =>
+          continent.Players.find(_.basic.name.equalsIgnoreCase(name)) match {
+            case p @ Some(_) =>
+              p.map(_.basic.name) //make certain it matches case-wise
+            case None =>
+              sendResponse(ChatMsg(ChatMessageType.UNK_227, s"Usage: can not find player with name or id - ${nameOpt.getOrElse("NO_NAME")}"))
+              None
+          }
+        case None =>
+          //this should not be possible
+          None
+      }
+      val verifiedTime: Option[Long] = if (timeOpt.isEmpty) {
+        Some(System.currentTimeMillis() + 1800000L)
+      } else {
+        timeOpt.flatMap(_.toIntOption) match {
+          case Some(timeString) if timeString > 0 =>
+            Some(System.currentTimeMillis() + timeString.toLong * 1000L)
+          case Some(_) =>
+            sendResponse(ChatMsg(ChatMessageType.UNK_227, s"Usage: time value can not be negative"))
+            None
+          case None =>
+            sendResponse(ChatMsg(ChatMessageType.UNK_227, s"Usage: time value or format is not recognized (wants seconds) - ${timeOpt.getOrElse("NO_TIME")}"))
+            None
+        }
+      }
+      (verifiedPlayerName, verifiedTime) match {
+        case (Some(name), Some(time)) if state =>
+          continent.AvatarEvents ! AvatarServiceMessage(name, AvatarAction.SetInvulnerabilityFlag(state=true, time))
+          true
+        case (Some(name), _) if !state =>
+          continent.AvatarEvents ! AvatarServiceMessage(name, AvatarAction.SetInvulnerabilityFlag(state=false, 0L))
+          true
+        case _ =>
+          false
+      }
     }
   }
 

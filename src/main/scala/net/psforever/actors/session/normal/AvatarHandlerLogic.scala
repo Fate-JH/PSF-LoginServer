@@ -2,7 +2,7 @@
 package net.psforever.actors.session.normal
 
 import akka.actor.{ActorContext, typed}
-import net.psforever.actors.session.support.AvatarHandlerFunctions
+import net.psforever.actors.session.support.{AvatarHandlerFunctions, Invulnerable, Vulnerable}
 import net.psforever.actors.zone.ZoneActor
 import net.psforever.objects.inventory.Container
 import net.psforever.objects.{Default, PlanetSideGameObject}
@@ -667,6 +667,15 @@ class AvatarHandlerLogic(val ops: SessionAvatarHandlers, implicit val context: A
             // check that the magazine is still empty before sending WeaponDryFireMessage
             // if it has been reloaded since then, other clients will not see it firing
             sendResponse(WeaponDryFireMessage(weaponGuid))
+        }
+
+      case AvatarResponse.SetInvulnerabilityFlag(state, expiresAfter) =>
+        if (state && !ops.sessionLogic.general.invulnerability.exists(_.state)) {
+          sessionLogic.general.invulnerability = Some(Invulnerable(expiresAfter))
+        } else if (state) {
+          //already invulnerable
+        } else {
+          sessionLogic.general.invulnerability = Some(Vulnerable)
         }
 
       case _ => ()

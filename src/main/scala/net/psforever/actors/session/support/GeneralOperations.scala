@@ -182,7 +182,7 @@ class GeneralOperations(
   private[session] var heightLast: Float = 0f
   private[session] var heightTrend: Boolean = false //up = true, down = false
   private[session] var heightHistory: Float = 0f
-  private[session] var invulnerability: Option[Boolean] = None
+  private[session] var invulnerability: Option[VulnerabilityFlag] = None
   private[session] var progressBarUpdate: Cancellable = Default.Cancellable
   private var charSavedTimer: Cancellable = Default.Cancellable
 

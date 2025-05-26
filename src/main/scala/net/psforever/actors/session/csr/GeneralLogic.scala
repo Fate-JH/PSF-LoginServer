@@ -3,7 +3,7 @@ package net.psforever.actors.session.csr
 
 import akka.actor.{ActorContext, ActorRef, typed}
 import net.psforever.actors.session.AvatarActor
-import net.psforever.actors.session.support.{GeneralFunctions, GeneralOperations, SessionData}
+import net.psforever.actors.session.support.{GeneralFunctions, GeneralOperations, SessionData, SpecialInvulnerability, Vulnerability}
 import net.psforever.objects.{Account, BoomerDeployable, BoomerTrigger, ConstructionItem, GlobalDefinitions, LivePlayerList, Player, SensorDeployable, ShieldGeneratorDeployable, SpecialEmp, TelepadDeployable, Tool, TrapDeployable, TurretDeployable, Vehicle}
 import net.psforever.objects.avatar.{Avatar, PlayerControl}
 import net.psforever.objects.ballistics.Projectile
@@ -48,7 +48,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
 
   private val avatarActor: typed.ActorRef[AvatarActor.Command] = ops.avatarActor
 
-  ops.invulnerability = ops.invulnerability.orElse(Some(true)) //retain previous state, or default
+  ops.invulnerability = ops.invulnerability.orElse(Some(SpecialInvulnerability)) //retain previous state, or default
 
   def handleConnectToWorldRequest(pkt: ConnectToWorldRequestMessage): Unit = { /* intentionally blank */ }
 
@@ -76,7 +76,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     sessionLogic.persist()
     sessionLogic.turnCounterFunc(avatarGuid)
     sessionLogic.updateBlockMap(player, pos)
-    CustomerServiceRepresentativeMode.topOffHealthOfInvulnerablePlayer(sessionLogic, player)
+    Vulnerability.topOffHealthOfInvulnerablePlayer(sessionLogic, player)
     val isMoving     = WorldEntity.isMoving(vel)
     val isMovingPlus = isMoving || isJumping || jumpThrust
     if (isMovingPlus) {

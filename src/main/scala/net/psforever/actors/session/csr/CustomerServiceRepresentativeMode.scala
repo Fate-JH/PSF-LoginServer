@@ -1,8 +1,7 @@
 // Copyright (c) 2024 PSForever
 package net.psforever.actors.session.csr
 
-import net.psforever.actors.session.AvatarActor
-import net.psforever.actors.session.support.{ChatFunctions, GalaxyHandlerFunctions, GeneralFunctions, LocalHandlerFunctions, ModeLogic, MountHandlerFunctions, PlayerMode, SessionData, SquadHandlerFunctions, TerminalHandlerFunctions, VehicleFunctions, VehicleHandlerFunctions, WeaponAndProjectileFunctions}
+import net.psforever.actors.session.support.{SpecialInvulnerability, ChatFunctions, GalaxyHandlerFunctions, GeneralFunctions, LocalHandlerFunctions, ModeLogic, MountHandlerFunctions, PlayerMode, SessionData, SquadHandlerFunctions, TerminalHandlerFunctions, VehicleFunctions, VehicleHandlerFunctions, Vulnerability, Vulnerable, WeaponAndProjectileFunctions}
 import net.psforever.objects.{Deployables, PlanetSideGameObject, Player, Session, Vehicle}
 import net.psforever.objects.avatar.Certification
 import net.psforever.objects.serverobject.ServerObject
@@ -10,12 +9,10 @@ import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.Zone
 import net.psforever.objects.zones.blockmap.BlockMapEntity
-import net.psforever.packet.PlanetSidePacket
-import net.psforever.packet.game.{ChatMsg, ObjectCreateDetailedMessage, PlanetsideAttributeMessage}
+import net.psforever.packet.game.{ChatMsg, ObjectCreateDetailedMessage}
 import net.psforever.packet.game.objectcreate.RibbonBars
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.chat.{CustomerServiceChannel, SpectatorChannel}
-import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
 import net.psforever.types.{ChatMessageType, MeritCommendation, PlanetSideGUID}
 
 class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
@@ -64,6 +61,7 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
     if (player.silenced) {
       data.chat.commandIncomingSilence(session, ChatMsg(ChatMessageType.CMT_SILENCE, "player 0"))
     }
+    data.general.invulnerability = Some(SpecialInvulnerability)
     data.chat.JoinChannel(SpectatorChannel)
     data.chat.JoinChannel(CustomerServiceChannel)
     data.sendResponse(ChatMsg(ChatMessageType.UNK_225, "CSR MODE ON"))
@@ -90,6 +88,7 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
     //
     CustomerServiceRepresentativeMode.renderPlayer(data, continent, player)
     player.allowInteraction = true
+    data.general.invulnerability = Some(Vulnerable)
     data.chat.LeaveChannel(SpectatorChannel)
     data.chat.LeaveChannel(CustomerServiceChannel)
     data.sendResponse(ChatMsg(ChatMessageType.UNK_225, "CSR MODE OFF"))
@@ -114,17 +113,22 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
     val player = data.player
     data.keepAlivePersistence()
     player.allowInteraction = false
-    CustomerServiceRepresentativeMode.topOffHealthOfInvulnerablePlayer(data, player)
+    Vulnerability.topOffHealthOfInvulnerablePlayer(data, player)
     data.continent.GUID(data.player.VehicleSeated)
       .collect {
         case obj: PlanetSideGameObject with Vitality with BlockMapEntity =>
-          CustomerServiceRepresentativeMode.topOffHealthOfInvulnerable(data, obj)
+          Vulnerability.topOffHealthOfInvulnerable(data, obj)
           data.updateBlockMap(obj, obj.Position)
           obj
       }
       .getOrElse {
         data.updateBlockMap(player, player.Position)
       }
+    if (player.HasGUID) {
+      data.turnCounterFunc(player.GUID)
+    } else {
+      data.turnCounterFunc(PlanetSideGUID(0))
+    }
   }
 }
 
@@ -151,89 +155,5 @@ case object CustomerServiceRepresentativeMode extends PlayerMode {
       packet.ConstructorData(player).get,
       None
     ))
-  }
-
-  private[csr] def topOffHealthOfInvulnerable(data: SessionData, objs: PlanetSideGameObject with Vitality *): Unit = {
-    if (data.general.invulnerability.contains(true)) {
-      objs.foreach { obj =>
-        topOffHealthOf(data, obj)
-      }
-    }
-  }
-
-  private[csr] def topOffHealthOfInvulnerablePlayer(data: SessionData, obj: Player): Unit = {
-    if (data.general.invulnerability.contains(true)) {
-      topOffHealthOfPlayer(data, obj)
-    }
-  }
-
-  private def topOffHealthOf(data: SessionData, obj: PlanetSideGameObject with Vitality): Unit = {
-    obj match {
-      case p: Player => topOffHealthOfPlayer(data, p)
-      case v: Vehicle => topOffHealthOfVehicle(data, v)
-      case o: PlanetSideGameObject with Vitality => topOffHealthOfGeneric(data, o)
-      case _ => ()
-    }
-  }
-
-  private def topOffHealthOfPlayer(data: SessionData, player: Player): Unit = {
-    val avatarGuid = player.GUID
-    val continent = data.continent
-    val continentId = continent.id
-    val avatarEvents = continent.AvatarEvents
-    val sendResponse: PlanetSidePacket => Unit = data.sendResponse
-    //below full health, full health
-    val maxHealth = player.MaxHealth.toLong
-    if (player.Health < maxHealth) {
-      player.Health = maxHealth.toInt
-      player.LogActivity(player.ClearHistory().head)
-      sendResponse(PlanetsideAttributeMessage(avatarGuid, 0, maxHealth))
-      avatarEvents ! AvatarServiceMessage(continentId, AvatarAction.PlanetsideAttribute(avatarGuid, 0, maxHealth))
-    }
-    //below full stamina, full stamina
-    val avatar = player.avatar
-    val maxStamina = avatar.maxStamina
-    if (avatar.stamina < maxStamina) {
-      player.Actor ! AvatarActor.RestoreStamina(maxStamina)
-      sendResponse(PlanetsideAttributeMessage(avatarGuid, 2, maxStamina.toLong))
-    }
-    //below full armor, full armor
-    val maxArmor = player.MaxArmor.toLong
-    if (player.Armor < maxArmor) {
-      player.Armor = maxArmor.toInt
-      sendResponse(PlanetsideAttributeMessage(avatarGuid, 4, maxArmor))
-      avatarEvents ! AvatarServiceMessage(continentId, AvatarAction.PlanetsideAttribute(avatarGuid, 4, maxArmor))
-    }
-  }
-
-  private def topOffHealthOfVehicle(data: SessionData, vehicle: Vehicle): Unit = {
-    topOffHealthOfPlayer(data, data.player)
-    topOffHealthOfGeneric(data, vehicle)
-    //vehicle shields below half, full shields
-    val maxShieldsOfVehicle = vehicle.MaxShields.toLong
-    val shieldsUi = vehicle.Definition.shieldUiAttribute
-    if (vehicle.Shields < maxShieldsOfVehicle * 0.5f) {
-      val guid = vehicle.GUID
-      vehicle.Shields = maxShieldsOfVehicle.toInt
-      data.sendResponse(PlanetsideAttributeMessage(guid, shieldsUi, maxShieldsOfVehicle))
-      data.continent.VehicleEvents ! VehicleServiceMessage(
-        data.continent.id,
-        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, shieldsUi, maxShieldsOfVehicle)
-      )
-    }
-  }
-
-  private def topOffHealthOfGeneric(data: SessionData, obj: PlanetSideGameObject with Vitality): Unit = {
-    //below full health, full heal
-    val guid = obj.GUID
-    val maxHealthOf = obj.MaxHealth.toLong
-    if (obj.Health < maxHealthOf) {
-      obj.Health = maxHealthOf.toInt
-      data.sendResponse(PlanetsideAttributeMessage(guid, 0, maxHealthOf))
-      data.continent.VehicleEvents ! VehicleServiceMessage(
-        data.continent.id,
-        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, 0, maxHealthOf)
-      )
-    }
   }
 }

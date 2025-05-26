@@ -1,7 +1,7 @@
 // Copyright (c) 2024 PSForever
 package net.psforever.actors.session.spectator
 
-import net.psforever.actors.session.support.{AvatarHandlerFunctions, ChatFunctions, GalaxyHandlerFunctions, GeneralFunctions, LocalHandlerFunctions, MountHandlerFunctions, SquadHandlerFunctions, TerminalHandlerFunctions, VehicleFunctions, VehicleHandlerFunctions, WeaponAndProjectileFunctions}
+import net.psforever.actors.session.support.{AvatarHandlerFunctions, SpecialInvulnerability, ChatFunctions, GalaxyHandlerFunctions, GeneralFunctions, LocalHandlerFunctions, MountHandlerFunctions, SquadHandlerFunctions, TerminalHandlerFunctions, VehicleFunctions, VehicleHandlerFunctions, Vulnerable, WeaponAndProjectileFunctions}
 import net.psforever.actors.zone.ZoneActor
 import net.psforever.objects.avatar.{BattleRank, CommandRank, DeployableToolbox, FirstTimeEvents, Implant, ProgressDecoration, Shortcut => AvatarShortcut}
 import net.psforever.objects.ce.Deployable
@@ -120,6 +120,7 @@ class SpectatorModeLogic(data: SessionData) extends ModeLogic {
     //
     player.spectator = true
     player.allowInteraction = false
+    data.general.invulnerability = Some(SpecialInvulnerability)
     data.chat.JoinChannel(SpectatorChannel)
     val newPlayer = SpectatorModeLogic.spectatorCharacter(player)
     newPlayer.LogActivity(player.History.headOption)
@@ -155,6 +156,7 @@ class SpectatorModeLogic(data: SessionData) extends ModeLogic {
     //
     player.spectator = false
     player.allowInteraction = true
+    data.general.invulnerability = Some(Vulnerable)
     data.general.stop()
     player.avatar.shortcuts.slice(1, 4)
       .zipWithIndex

@@ -1264,13 +1264,19 @@ class ChatOperations(
   }
 
   def customCommandInvulnerabilityOff(params: Seq[String]): Boolean = {
-    params.last match {
-      case "of" | "off" =>
-        sessionLogic.general.invulnerability = Some(false)
-        true
-      case _ =>
-        false
+    val (_, state, _, _) = ChatOperations.parseInvulnerabilityParams(params, session)
+    if (!state) {
+      sessionLogic.general.invulnerability = Some(Vulnerable)
+      true
+    } else {
+      //TODO command format message?
+      false
     }
+  }
+
+  def customCommandInvulnerabilityOff(): Boolean = {
+    sessionLogic.general.invulnerability = Some(Vulnerable)
+    true
   }
 
   def firstParam[T](
@@ -1315,5 +1321,40 @@ class ChatOperations(
   override protected[session] def stop(): Unit = {
     silenceTimer.cancel()
     chatService ! ChatService.LeaveAllChannels(chatServiceAdapter)
+  }
+}
+
+object ChatOperations {
+  /**
+   * Extract states and data from the following parameter list related tpo the custom invulnerability command.
+   * @param params the parameter list
+   * @param session na
+   * @return a tuple of four values:
+   *         an optional String value that is the player's name,
+   *         a Boolean value that determines whether invulnerability will be on or off after this command,
+   *         an optional String value that reports the time of the invulnerability, and
+   *         a Boolean value that determines if this affects a respective user or some other player (see first value)
+   */
+  def parseInvulnerabilityParams(params: Seq[String], session: Session): (Option[String], Boolean, Option[String], Boolean) = {
+    (params.headOption, params.lift(1), params.lift(2)) match {
+      //self
+      case (None, _, _) => (None, true, None, true)
+      case (Some("o") | Some("on"), _, _) => (None, true, None, true)
+      case (Some("of") | Some("off"), _, _) => (None, false, None, true)
+      case (Some(name), _, _)
+        if name.equalsIgnoreCase(session.player.Name) => (None, true, None, true)
+      case (Some(name), Some("o") | Some("on"), _)
+        if name.equalsIgnoreCase(session.player.Name) => (None, true, None, true)
+      case (Some(name), Some("of") | Some("off"), _)
+        if name.equalsIgnoreCase(session.player.Name) => (None, false, None, true)
+      //others
+      case (Some(name), None, _) => (Some(name), true, Some("1800000"), false)
+      case (Some(name), Some("o") | Some("on"), None) => (Some(name), true, Some("1800000"), false)
+      case (Some(name), Some("of") | Some("off"), _) => (Some(name), false, None, false)
+      case (Some(name), Some(time), None) => (Some(name), true, Some(time), false)
+      case (Some(name), Some("o") | Some("on"), Some(time)) => (Some(name), true, Some(time), false)
+      //bad
+      case _ => (None, false, None, false)
+    }
   }
 }

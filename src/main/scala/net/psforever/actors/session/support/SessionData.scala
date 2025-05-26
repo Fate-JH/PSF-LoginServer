@@ -458,6 +458,13 @@ class SessionData(
   def keepAlivePersistence(): Unit = {
     zoning.spawn.interimUngunnedVehicle = None
     persist()
+    Vulnerability.topOffHealthOfInvulnerablePlayer(data = this, player)
+    continent.GUID(player.VehicleSeated)
+      .collect {
+        case obj: PlanetSideGameObject with Vitality with BlockMapEntity =>
+          Vulnerability.topOffHealthOfInvulnerable(data = this, obj)
+          obj
+      }
     if (player.HasGUID) {
       turnCounterFunc(player.GUID)
     } else {

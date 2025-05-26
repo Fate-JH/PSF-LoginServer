@@ -3,7 +3,7 @@ package net.psforever.actors.session.csr
 
 import akka.actor.{ActorContext, typed}
 import net.psforever.actors.session.AvatarActor
-import net.psforever.actors.session.support.{SessionData, VehicleFunctions, VehicleOperations}
+import net.psforever.actors.session.support.{SessionData, VehicleFunctions, VehicleOperations, Vulnerability}
 import net.psforever.objects.serverobject.PlanetSideServerObject
 import net.psforever.objects.{PlanetSideGameObject, Vehicle, Vehicles}
 import net.psforever.objects.serverobject.deploy.Deployment
@@ -51,7 +51,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
         if (obj.MountedIn.isEmpty) {
           sessionLogic.updateBlockMap(obj, pos)
         }
-        CustomerServiceRepresentativeMode.topOffHealthOfInvulnerable(sessionLogic, player, obj)
+        Vulnerability.topOffHealthOfInvulnerable(sessionLogic, player, obj)
         player.Position = pos //convenient
         if (obj.WeaponControlledFromSeat(0).isEmpty) {
           player.Orientation = Vector3.z(ang.z) //convenient
@@ -132,7 +132,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
         //we're driving the vehicle
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
-        CustomerServiceRepresentativeMode.topOffHealthOfInvulnerable(sessionLogic, player, obj)
+        Vulnerability.topOffHealthOfInvulnerable(sessionLogic, player, obj)
         val (position, angle, velocity, notMountedState) = continent.GUID(obj.MountedIn) match {
           case Some(v: Vehicle) =>
             sessionLogic.updateBlockMap(obj, pos)
@@ -223,7 +223,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       case (Some(obj: PlanetSideGameObject with Vitality), _) =>
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
-        CustomerServiceRepresentativeMode.topOffHealthOfInvulnerable(sessionLogic, player, obj)
+        Vulnerability.topOffHealthOfInvulnerable(sessionLogic, player, obj)
       case _ =>
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)

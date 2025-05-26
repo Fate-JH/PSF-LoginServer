@@ -127,6 +127,7 @@ object AvatarResponse {
   //  final case class PlayerStateShift(itemID : PlanetSideGUID) extends Response
   final case class UseKit(kit_guid: PlanetSideGUID, kit_objid: Int) extends Response
   final case class KitNotUsed(kit_guid: PlanetSideGUID, msg: String) extends Response
+  final case class SetInvulnerabilityFlag(state: Boolean, expiresAfter: Long) extends Response
 
   final case class UpdateKillsDeathsAssists(charId: Long, kda: KDAStat) extends Response
   final case class AwardBep(charId: Long, bep: Long, expType: ExperienceType) extends Response

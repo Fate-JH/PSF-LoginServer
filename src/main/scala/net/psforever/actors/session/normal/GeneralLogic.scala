@@ -4,7 +4,7 @@ package net.psforever.actors.session.normal
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.{ActorContext, ActorRef, typed}
 import net.psforever.actors.session.{AvatarActor, SessionActor}
-import net.psforever.actors.session.support.{GeneralFunctions, GeneralOperations, SessionData}
+import net.psforever.actors.session.support.{GeneralFunctions, GeneralOperations, SessionData, Vulnerability}
 import net.psforever.objects.{Account, BoomerDeployable, BoomerTrigger, ConstructionItem, GlobalDefinitions, LivePlayerList, Player, SensorDeployable, ShieldGeneratorDeployable, SpecialEmp, TelepadDeployable, Tool, TrapDeployable, TurretDeployable, Vehicle}
 import net.psforever.objects.avatar.{Avatar, PlayerControl, SpecialCarry}
 import net.psforever.objects.ballistics.Projectile
@@ -101,6 +101,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     sessionLogic.persist()
     sessionLogic.turnCounterFunc(avatarGuid)
     sessionLogic.updateBlockMap(player, pos)
+    Vulnerability.topOffHealthOfInvulnerablePlayer(sessionLogic, player)
     val isMoving     = WorldEntity.isMoving(vel)
     val isMovingPlus = isMoving || isJumping || jumpThrust
     if (isMovingPlus) {

@@ -422,6 +422,15 @@ class AvatarService(zone: Zone) extends Actor {
             )
           )
 
+        case AvatarAction.SetInvulnerabilityFlag(state, expiresAfter) =>
+          AvatarEvents.publish(
+            AvatarServiceResponse(
+              s"/$forChannel/Avatar",
+              Service.defaultPlayerGUID,
+              AvatarResponse.SetInvulnerabilityFlag(state, expiresAfter)
+            )
+          )
+
         case AvatarAction.UpdateKillsDeathsAssists(charId, stat) =>
           AvatarEvents.publish(
             AvatarServiceResponse(

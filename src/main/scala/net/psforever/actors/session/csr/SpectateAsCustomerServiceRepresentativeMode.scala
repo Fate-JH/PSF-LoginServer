@@ -1,7 +1,7 @@
 // Copyright (c) 2024 PSForever
 package net.psforever.actors.session.csr
 
-import net.psforever.actors.session.support.{AvatarHandlerFunctions, ChatFunctions, GalaxyHandlerFunctions, GeneralFunctions, LocalHandlerFunctions, MountHandlerFunctions, SquadHandlerFunctions, TerminalHandlerFunctions, VehicleFunctions, VehicleHandlerFunctions, WeaponAndProjectileFunctions}
+import net.psforever.actors.session.support.{AvatarHandlerFunctions, SpecialInvulnerability, ChatFunctions, GalaxyHandlerFunctions, GeneralFunctions, LocalHandlerFunctions, MountHandlerFunctions, SquadHandlerFunctions, TerminalHandlerFunctions, VehicleFunctions, VehicleHandlerFunctions, WeaponAndProjectileFunctions}
 import net.psforever.objects.serverobject.ServerObject
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.{Player, Session, Vehicle}
@@ -44,6 +44,7 @@ class SpectatorCSRModeLogic(data: SessionData) extends ModeLogic {
     }
     //
     player.spectator = true
+    data.general.invulnerability = Some(SpecialInvulnerability)
     data.chat.JoinChannel(SpectatorChannel)
     continent.AvatarEvents ! AvatarServiceMessage(continent.id, AvatarAction.ObjectDelete(pguid, pguid))
     sendResponse(ChatMsg(ChatMessageType.CMT_TOGGLESPECTATORMODE, "on"))

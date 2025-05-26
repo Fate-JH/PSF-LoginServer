@@ -138,7 +138,7 @@ class ChatLogic(val ops: ChatOperations, implicit val context: ActorContext) ext
         case "grenade" => ops.customCommandGrenade(session, log)
         case "macro" => ops.customCommandMacro(session, params)
         case "progress" => ops.customCommandProgress(session, params)
-        case "invulnerable" => ops.customCommandInvulnerabilityOff(params)
+        case "invulnerable" => ops.customCommandInvulnerabilityOff()
         case _ =>
           // command was not handled
           sendResponse(
