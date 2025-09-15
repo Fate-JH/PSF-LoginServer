@@ -6,10 +6,11 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
 import net.psforever.actors.zone.BuildingActor
 import net.psforever.objects.serverobject.structures.Building
-import net.psforever.services.InterstellarClusterService
+import net.psforever.services.cluster.InterstellarClusterService
 
 /**
   * A package class that conveys the important information for handling facility updates.
+ *
   * @param building building entity
   * @param context message-passing reference
   * @param galaxyService event system for state updates to the whole server

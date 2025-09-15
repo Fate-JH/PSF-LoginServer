@@ -314,6 +314,14 @@ class LocalService(zone: Zone) extends Actor {
               LocalResponse.ForceZoneChange(zone)
             )
           )
+        case LocalAction.WeatherReport(zoneNumber, clouds, storms) =>
+          LocalEvents.publish(
+            LocalServiceResponse(
+              s"/$forChannel/Local",
+              Service.defaultPlayerGUID,
+              LocalResponse.WeatherReport(zoneNumber, clouds, storms)
+            )
+          )
         case _ => ;
       }
 

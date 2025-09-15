@@ -39,9 +39,10 @@ import net.psforever.objects.serverobject.turret.{FacilityTurret, TurretUpgrade,
 import net.psforever.objects.zones.Zoning
 import net.psforever.packet.game.objectcreate.DrawnSlot
 import net.psforever.packet.game.{ChatMsg, CreateShortcutMessage, DeadState, RequestDestroyMessage, Shortcut}
-import net.psforever.services.{CavernRotationService, InterstellarClusterService}
+import net.psforever.services.CavernRotationService
 import net.psforever.services.chat.ChatService
 import net.psforever.services.chat.ChatChannel
+import net.psforever.services.cluster.InterstellarClusterService
 import net.psforever.types.ChatMessageType.{CMT_GMOPEN, UNK_227, UNK_229}
 import net.psforever.types.{ChatMessageType, Cosmetic, ExperienceType, ImplantType, PlanetSideEmpire, PlanetSideGUID, Vector3}
 import net.psforever.util.{Config, PointOfInterest}

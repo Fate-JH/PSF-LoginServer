@@ -3,7 +3,7 @@ package game
 
 import org.specs2.mutable._
 import net.psforever.packet._
-import net.psforever.packet.game.{WeatherMessage, CloudInfo, StormInfo}
+import net.psforever.packet.game.{WeatherMessage, CloudData, StormData}
 import net.psforever.types.Vector3
 import scodec.bits._
 
@@ -84,19 +84,19 @@ class WeatherMessageTest extends Specification {
 
   "encode" in {
     val msg = WeatherMessage(
-      CloudInfo(0, Vector3(-2.109881f, -1.1199901f, 0.0f), Vector3(0.89903474f, -0.13332401f, 0.0f)) ::
+      CloudData(0, Vector3(-2.109881f, -1.1199901f, 0.0f), Vector3(0.89903474f, -0.13332401f, 0.0f)) ::
         Nil,
-      StormInfo(Vector3(0.4402771f, 0.55555797f, 0.0f), 100, 68) ::
-        StormInfo(Vector3(0.3744458f, 0.1182538f, 0.0f), 164, 98) ::
-        StormInfo(Vector3(0.6001494f, 0.6809498f, 0.0f), 89, 125) ::
-        StormInfo(Vector3(0.53745425f, 0.07750241f, 0.0f), 8, 0) ::
-        StormInfo(Vector3(0.44811276f, 0.8235843f, 0.0f), 57, 25) ::
-        StormInfo(Vector3(0.90892875f, 0.04458676f, 0.0f), 1, 0) ::
-        StormInfo(Vector3(0.813318f, 0.7436465f, 0.0f), 60, 48) ::
-        StormInfo(Vector3(0.47319263f, 0.27812937f, 0.0f), 107, 86) ::
-        StormInfo(Vector3(0.99670076f, 0.4756217f, 0.0f), 182, 193) ::
-        StormInfo(Vector3(0.76002514f, 0.9003859f, 0.0f), 0, 0) ::
-        StormInfo(Vector3(0.24905223f, 0.40665582f, 0.0f), 50, 10) ::
+      StormData(Vector3(0.4402771f, 0.55555797f, 0.0f), 100, 68) ::
+        StormData(Vector3(0.3744458f, 0.1182538f, 0.0f), 164, 98) ::
+        StormData(Vector3(0.6001494f, 0.6809498f, 0.0f), 89, 125) ::
+        StormData(Vector3(0.53745425f, 0.07750241f, 0.0f), 8, 0) ::
+        StormData(Vector3(0.44811276f, 0.8235843f, 0.0f), 57, 25) ::
+        StormData(Vector3(0.90892875f, 0.04458676f, 0.0f), 1, 0) ::
+        StormData(Vector3(0.813318f, 0.7436465f, 0.0f), 60, 48) ::
+        StormData(Vector3(0.47319263f, 0.27812937f, 0.0f), 107, 86) ::
+        StormData(Vector3(0.99670076f, 0.4756217f, 0.0f), 182, 193) ::
+        StormData(Vector3(0.76002514f, 0.9003859f, 0.0f), 0, 0) ::
+        StormData(Vector3(0.24905223f, 0.40665582f, 0.0f), 50, 10) ::
         Nil
     )
     val pkt = PacketCoding.encodePacket(msg).require.toByteVector

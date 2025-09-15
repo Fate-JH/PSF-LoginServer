@@ -14,7 +14,7 @@ import akka.{actor => classic}
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.joran.JoranConfigurator
 import io.sentry.{Sentry, SentryOptions}
-import net.psforever.actors.net.{LoginActor, MiddlewareActor, SocketSetup, SocketSetupInfo, SocketPane}
+import net.psforever.actors.net.{LoginActor, MiddlewareActor, SocketPane, SocketSetup, SocketSetupInfo}
 import net.psforever.actors.session.SessionActor
 import net.psforever.login.psadmin.PsAdminActor
 import net.psforever.login._
@@ -25,7 +25,7 @@ import net.psforever.services.chat.ChatService
 import net.psforever.services.galaxy.GalaxyService
 import net.psforever.services.properties.PropertyOverrideManager
 import net.psforever.services.teamwork.SquadService
-import net.psforever.services.{CavernRotationService, InterstellarClusterService, ServiceManager}
+import net.psforever.services.{CavernRotationService, ServiceManager}
 import net.psforever.util.Config
 import net.psforever.zones.Zones
 import org.apache.commons.io.FileUtils
@@ -37,6 +37,7 @@ import scopt.OParser
 import akka.actor.typed.scaladsl.adapter._
 import kamon.Kamon
 import net.psforever.packet.PlanetSidePacket
+import net.psforever.services.cluster.{InterstellarClusterService, WeatherService}
 import net.psforever.services.hart.HartService
 
 import scala.concurrent.duration.Duration
@@ -109,6 +110,7 @@ object Server {
 
     system.spawn(CavernRotationService(), CavernRotationService.CavernRotationServiceKey.id)
     system.spawn(InterstellarClusterService(zones), InterstellarClusterService.InterstellarClusterServiceKey.id)
+    system.spawn(WeatherService(zones), WeatherService.InterstellarClusterServiceKey.id)
     system.spawn(ChatService(), ChatService.ChatServiceKey.id)
 
     // typed to classic wrappers for login and session actors

@@ -12,7 +12,8 @@ import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.shuttle.{OrbitalShuttle, OrbitalShuttlePad, OrbitalShuttlePadControl, ShuttleAmenity}
 import net.psforever.objects.serverobject.structures.{Building, StructureType}
 import net.psforever.objects.zones.{Zone, ZoneMap, ZoneVehicleActor}
-import net.psforever.services.{InterstellarClusterService, Service, ServiceManager}
+import net.psforever.services.cluster.InterstellarClusterService
+import net.psforever.services.{Service, ServiceManager}
 import net.psforever.services.galaxy.GalaxyService
 import net.psforever.services.hart.HartService
 import net.psforever.types.PlanetSideEmpire

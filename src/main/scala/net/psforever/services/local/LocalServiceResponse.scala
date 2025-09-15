@@ -88,4 +88,5 @@ object LocalResponse {
   final case class UpdateForceDomeStatus(building_guid: PlanetSideGUID, activated: Boolean)           extends Response
   final case class RechargeVehicleWeapon(mountable_guid: PlanetSideGUID, weapon_guid: PlanetSideGUID) extends Response
   final case class ForceZoneChange(zone: Zone) extends Response
+  final case class WeatherReport(zoneNumber: Int, clouds: Seq[CloudData], storms: Seq[StormData]) extends Response
 }

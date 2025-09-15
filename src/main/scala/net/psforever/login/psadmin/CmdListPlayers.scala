@@ -2,9 +2,10 @@ package net.psforever.login.psadmin
 
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.{Actor, ActorRef}
-import net.psforever.services.{InterstellarClusterService, ServiceManager}
+import net.psforever.services.ServiceManager
 import scala.collection.mutable.Map
 import akka.actor.typed.scaladsl.adapter._
+import net.psforever.services.cluster.InterstellarClusterService
 
 private case class Player(name: String, faction_id: Int)
 

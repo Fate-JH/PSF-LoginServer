@@ -21,8 +21,9 @@ import net.psforever.objects.sourcing.{PlayerSource, SourceEntry, VehicleSource}
 import net.psforever.objects.vital.{InGameHistory, IncarnationActivity, ReconstructionActivity, SpawningActivity}
 import net.psforever.objects.zones.blockmap.BlockMapEntity
 import net.psforever.packet.game.GenericAction.FirstPersonViewWithEffect
-import net.psforever.packet.game.{CampaignStatistic, ChangeFireStateMessage_Start, CloudInfo, GenericActionMessage, GenericObjectActionEnum, HackState7, MailMessage, ObjectDetectedMessage, SessionStatistic, StormInfo, TriggeredSound, WeatherMessage}
+import net.psforever.packet.game.{CampaignStatistic, ChangeFireStateMessage_Start, GenericActionMessage, GenericObjectActionEnum, HackState7, MailMessage, ObjectDetectedMessage, SessionStatistic, TriggeredSound}
 import net.psforever.services.chat.DefaultChannel
+import net.psforever.services.cluster.WeatherService
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -66,13 +67,14 @@ import net.psforever.services.RemoverActor
 import net.psforever.services.ServiceManager.{Lookup, LookupResult}
 import net.psforever.services.account.{AccountPersistenceService, PlayerToken}
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
+import net.psforever.services.cluster.{InterstellarClusterService => ICS}
 import net.psforever.services.galaxy.{GalaxyAction, GalaxyServiceMessage}
 import net.psforever.services.hart.HartTimer
 import net.psforever.services.local.support.HackCaptureActor
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.services.properties.PropertyOverrideManager
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
-import net.psforever.services.{CavernRotationService, Service, ServiceManager, InterstellarClusterService => ICS}
+import net.psforever.services.{CavernRotationService, Service, ServiceManager}
 import net.psforever.types._
 import net.psforever.util.{Config, DefinitionUtil}
 import net.psforever.zones.Zones
@@ -200,6 +202,7 @@ class ZoningOperations(
                         avatarActor: typed.ActorRef[AvatarActor.Command],
                         galaxyService: ActorRef,
                         cluster: typed.ActorRef[ICS.Command],
+                        weatherService: typed.ActorRef[WeatherService.Command],
                         implicit val context: ActorContext
                       ) extends CommonSessionInterfacingFunctionality {
   private[session] var zoningStatus: Zoning.Status = Zoning.Status.None
@@ -301,6 +304,7 @@ class ZoningOperations(
     continent.VehicleEvents ! Service.Join(name)
     continent.VehicleEvents ! Service.Join(continentId)
     continent.VehicleEvents ! Service.Join(factionChannel)
+    weatherService ! WeatherService.ReportFor(continent.Number, player.Name)
     if (sessionLogic.connectionState != 100) configZone(continent)
     sendResponse(TimeOfDayMessage(1135214592))
     //custom
@@ -2532,19 +2536,6 @@ class ZoningOperations(
             sessionLogic.general.toggleTeleportSystem(obj, TelepadLike.AppraiseTeleportationSystem(obj, continent))
           }
       }
-      //make weather happen
-      sendResponse(WeatherMessage(List(),List(
-        StormInfo(Vector3(0.1f, 0.15f, 0.0f), 240, 217),
-        StormInfo(Vector3(0.5f, 0.11f, 0.0f), 240, 215),
-        StormInfo(Vector3(0.15f, 0.4f, 0.0f), 249, 215),
-        StormInfo(Vector3(0.15f, 0.87f, 0.0f), 240, 215),
-        StormInfo(Vector3(0.3f, 0.65f, 0.0f), 240, 215),
-        StormInfo(Vector3(0.5f, 0.475f, 0.0f), 245, 215),
-        StormInfo(Vector3(0.725f, 0.38f, 0.0f), 243, 215),
-        StormInfo(Vector3(0.9f, 0.57f, 0.0f), 244, 215),
-        StormInfo(Vector3(0.9f, 0.9f, 0.0f), 243, 215),
-        StormInfo(Vector3(0.1f, 0.2f, 0.0f), 241, 215),
-        StormInfo(Vector3(0.95f, 0.2f, 0.0f), 241, 215))))
       //begin looking for conditions to set the avatar
       context.system.scheduler.scheduleOnce(delay = 250 millisecond, context.self, SessionActor.SetCurrentAvatar(player, 200))
     }
@@ -2655,19 +2646,6 @@ class ZoningOperations(
           log.debug(s"AvatarRejoin: ${player.Name} - $guid -> $data")
       }
       setupAvatarFunc = AvatarCreate
-      //make weather happen
-        sendResponse(WeatherMessage(List(),List(
-          StormInfo(Vector3(0.1f, 0.15f, 0.0f), 240, 217),
-          StormInfo(Vector3(0.5f, 0.11f, 0.0f), 240, 215),
-          StormInfo(Vector3(0.15f, 0.4f, 0.0f), 249, 215),
-          StormInfo(Vector3(0.15f, 0.87f, 0.0f), 240, 215),
-          StormInfo(Vector3(0.3f, 0.65f, 0.0f), 240, 215),
-          StormInfo(Vector3(0.5f, 0.475f, 0.0f), 245, 215),
-          StormInfo(Vector3(0.725f, 0.38f, 0.0f), 243, 215),
-          StormInfo(Vector3(0.9f, 0.57f, 0.0f), 244, 215),
-          StormInfo(Vector3(0.9f, 0.9f, 0.0f), 243, 215),
-          StormInfo(Vector3(0.1f, 0.2f, 0.0f), 241, 215),
-          StormInfo(Vector3(0.95f, 0.2f, 0.0f), 241, 215))))
       //begin looking for conditions to set the avatar
       context.system.scheduler.scheduleOnce(delay = 750 millisecond, context.self, SessionActor.SetCurrentAvatar(player, 200))
     }

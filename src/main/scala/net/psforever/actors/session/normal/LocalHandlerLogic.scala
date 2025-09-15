@@ -7,8 +7,9 @@ import net.psforever.objects.ce.Deployable
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.vehicles.MountableWeapons
 import net.psforever.objects.{BoomerDeployable, ExplosiveDeployable, TelepadDeployable, Tool, TurretDeployable}
-import net.psforever.packet.game.{ChatMsg, DeployableObjectsInfoMessage, GenericActionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HackMessage, HackState, HackState1, InventoryStateMessage, ObjectAttachMessage, ObjectCreateMessage, ObjectDeleteMessage, ObjectDetachMessage, OrbitalShuttleTimeMsg, PadAndShuttlePair, PlanetsideAttributeMessage, ProximityTerminalUseMessage, SetEmpireMessage, TriggerEffectMessage, TriggerSoundMessage, TriggeredSound, VehicleStateMessage}
-import net.psforever.services.{InterstellarClusterService, Service}
+import net.psforever.packet.game.{ChatMsg, CloudData, DeployableObjectsInfoMessage, GenericActionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HackMessage, HackState, HackState1, InventoryStateMessage, ObjectAttachMessage, ObjectCreateMessage, ObjectDeleteMessage, ObjectDetachMessage, OrbitalShuttleTimeMsg, PadAndShuttlePair, PlanetsideAttributeMessage, ProximityTerminalUseMessage, SetEmpireMessage, TriggerEffectMessage, TriggerSoundMessage, TriggeredSound, VehicleStateMessage, WeatherMessage}
+import net.psforever.services.Service
+import net.psforever.services.cluster.InterstellarClusterService
 import net.psforever.services.local.LocalResponse
 import net.psforever.types.{ChatMessageType, PlanetSideGUID, SpawnGroup}
 
@@ -258,6 +259,9 @@ class LocalHandlerLogic(val ops: SessionLocalHandlers, implicit val context: Act
             context.self
           )
         }
+
+      case LocalResponse.WeatherReport(_, _, storms) =>
+        sendResponse(WeatherMessage(List[CloudData](), storms.toList))
 
       case _ => ()
     }

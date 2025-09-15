@@ -23,7 +23,8 @@ import net.psforever.objects.vital.projectile.ProjectileReason
 import net.psforever.objects.zones.{Zone, ZoneMap}
 import net.psforever.objects.{GlobalDefinitions, Player, Tool, Vehicle}
 import net.psforever.services.galaxy.GalaxyService
-import net.psforever.services.{InterstellarClusterService, ServiceManager}
+import net.psforever.services.ServiceManager
+import net.psforever.services.cluster.InterstellarClusterService
 import net.psforever.types._
 
 import scala.collection.concurrent.TrieMap

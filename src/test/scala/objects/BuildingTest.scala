@@ -10,7 +10,8 @@ import net.psforever.objects.zones.Zone
 import net.psforever.types.PlanetSideEmpire
 import org.specs2.mutable.Specification
 import akka.actor.typed.scaladsl.adapter._
-import net.psforever.services.{InterstellarClusterService, ServiceManager}
+import net.psforever.services.ServiceManager
+import net.psforever.services.cluster.InterstellarClusterService
 
 class AmenityTest extends Specification {
   val definition = new AmenityDefinition(0) {

@@ -5,6 +5,7 @@ import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.{ActorContext, ActorRef, typed}
 import net.psforever.services.chat.ChatService
+import net.psforever.services.cluster.WeatherService
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -32,7 +33,8 @@ import net.psforever.packet.game._
 import net.psforever.services.account.AccountPersistenceService
 import net.psforever.services.ServiceManager.LookupResult
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
-import net.psforever.services.{Service, InterstellarClusterService => ICS}
+import net.psforever.services.Service
+import net.psforever.services.cluster.{InterstellarClusterService => ICS}
 import net.psforever.types._
 import net.psforever.util.Config
 
@@ -85,6 +87,7 @@ class SessionData(
   private[session] var squadService: ActorRef = Default.Actor
   private[session] var cluster: typed.ActorRef[ICS.Command] = Default.typed.Actor
   private[session] var chatService: typed.ActorRef[ChatService.Command] = Default.typed.Actor
+  private[session] var weather: typed.ActorRef[WeatherService.Command] = Default.typed.Actor
   private[session] var connectionState: Int = 25
   private[session] var persistFunc: () => Unit = noPersistence
   private[session] var persist: () => Unit = updatePersistenceOnly
@@ -124,6 +127,7 @@ class SessionData(
   ServiceManager.serviceManager ! Lookup("galaxy")
   ServiceManager.serviceManager ! Lookup("squad")
   ServiceManager.receptionist ! Receptionist.Find(ICS.InterstellarClusterServiceKey, context.self)
+  ServiceManager.receptionist ! Receptionist.Find(WeatherService.InterstellarClusterServiceKey, context.self)
   ServiceManager.receptionist ! Receptionist.Find(ChatService.ChatServiceKey, context.self)
 
   /**
@@ -160,20 +164,24 @@ class SessionData(
       case LookupResult("galaxy", endpoint) =>
         galaxyService = endpoint
         buildDependentOperationsForGalaxy(endpoint)
-        buildDependentOperationsForZoning(endpoint, cluster)
+        buildDependentOperationsForZoning(endpoint, cluster, weather)
         true
       case LookupResult("squad", endpoint) =>
         squadService = endpoint
         buildDependentOperationsForSquad(endpoint)
-        buildDependentOperationsForChat(chatService, endpoint, cluster)
+        buildDependentOperationsForChat(chatService, endpoint, cluster, weather)
         true
       case ICS.InterstellarClusterServiceKey.Listing(listings) =>
         cluster = listings.head
-        buildDependentOperationsForZoning(galaxyService, cluster)
+        buildDependentOperationsForZoning(galaxyService, cluster, weather)
         true
       case ChatService.ChatServiceKey.Listing(listings) =>
         chatService = listings.head
-        buildDependentOperationsForChat(chatService, squadService, cluster)
+        buildDependentOperationsForChat(chatService, squadService, cluster, weather)
+        true
+      case WeatherService.InterstellarClusterServiceKey.Listing(listings) =>
+        weather = listings.head
+        buildDependentOperationsForZoning(galaxyService, cluster, weather)
         true
 
       case _ =>
@@ -188,9 +196,17 @@ class SessionData(
     }
   }
 
-  def buildDependentOperationsForZoning(galaxyActor: ActorRef, clusterActor: typed.ActorRef[ICS.Command]): Unit = {
-    if (zoningOpt.isEmpty && galaxyActor != Default.Actor && clusterActor != Default.typed.Actor) {
-      zoningOpt = Some(new ZoningOperations(sessionLogic=this, avatarActor, galaxyActor, clusterActor, context))
+  def buildDependentOperationsForZoning(
+                                         galaxyActor: ActorRef,
+                                         clusterActor: typed.ActorRef[ICS.Command],
+                                         weatherService: typed.ActorRef[WeatherService.Command]
+                                       ): Unit = {
+    if (zoningOpt.isEmpty &&
+      galaxyActor != Default.Actor &&
+      clusterActor != Default.typed.Actor &&
+      weatherService != Default.typed.Actor
+    ) {
+      zoningOpt = Some(new ZoningOperations(sessionLogic=this, avatarActor, galaxyActor, clusterActor, weatherService, context))
     }
   }
 
@@ -203,12 +219,14 @@ class SessionData(
   def buildDependentOperationsForChat(
                                        chatService: typed.ActorRef[ChatService.Command],
                                        squadService: ActorRef,
-                                       clusterActor: typed.ActorRef[ICS.Command]
+                                       clusterActor: typed.ActorRef[ICS.Command],
+                                       weatherService: typed.ActorRef[WeatherService.Command]
                                      ): Unit = {
     if (chatOpt.isEmpty &&
       chatService != Default.typed.Actor &&
       squadService !=Default.Actor &&
-      clusterActor != Default.typed.Actor) {
+      clusterActor != Default.typed.Actor &&
+      weatherService != Default.typed.Actor) {
       chatOpt = Some(new ChatOperations(sessionLogic=this, avatarActor, chatService, squadService, clusterActor, context))
     }
   }

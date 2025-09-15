@@ -18,7 +18,8 @@ import net.psforever.types._
 import org.specs2.mutable.Specification
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.objects.avatar.Avatar
-import net.psforever.services.{InterstellarClusterService, Service, ServiceManager}
+import net.psforever.services.cluster.InterstellarClusterService
+import net.psforever.services.{Service, ServiceManager}
 import net.psforever.services.galaxy.GalaxyService
 
 import scala.collection.concurrent.TrieMap

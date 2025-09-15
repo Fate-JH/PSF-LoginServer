@@ -11,7 +11,8 @@ import net.psforever.objects.zones.Zone
 import net.psforever.persistence
 import net.psforever.services.galaxy.{GalaxyAction, GalaxyServiceMessage}
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
-import net.psforever.services.{InterstellarClusterService, ServiceManager}
+import net.psforever.services.ServiceManager
+import net.psforever.services.cluster.InterstellarClusterService
 import net.psforever.types.PlanetSideEmpire
 import net.psforever.util.Database.ctx
 import org.log4s.Logger
