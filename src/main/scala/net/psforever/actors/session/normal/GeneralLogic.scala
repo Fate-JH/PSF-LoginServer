@@ -116,6 +116,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     ops.fallHeightTracker(pos.z)
 //    if (isCrouching && !player.Crouching) {
 //      //dev stuff goes here
+//      }
 //    }
     player.Position = pos
     player.Velocity = vel

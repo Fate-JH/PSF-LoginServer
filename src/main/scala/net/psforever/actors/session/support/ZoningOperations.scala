@@ -305,6 +305,7 @@ class ZoningOperations(
     continent.VehicleEvents ! Service.Join(continentId)
     continent.VehicleEvents ! Service.Join(factionChannel)
     weatherService ! WeatherService.ReportFor(continent.Number, player.Name)
+
     if (sessionLogic.connectionState != 100) configZone(continent)
     sendResponse(TimeOfDayMessage(1135214592))
     //custom

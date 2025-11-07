@@ -110,7 +110,7 @@ object Server {
 
     system.spawn(CavernRotationService(), CavernRotationService.CavernRotationServiceKey.id)
     system.spawn(InterstellarClusterService(zones), InterstellarClusterService.InterstellarClusterServiceKey.id)
-    system.spawn(WeatherService(zones), WeatherService.InterstellarClusterServiceKey.id)
+    system.spawn(WeatherService(zones), WeatherService.WeatherServiceKey.id)
     system.spawn(ChatService(), ChatService.ChatServiceKey.id)
 
     // typed to classic wrappers for login and session actors

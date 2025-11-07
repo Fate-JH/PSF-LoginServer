@@ -127,7 +127,7 @@ class SessionData(
   ServiceManager.serviceManager ! Lookup("galaxy")
   ServiceManager.serviceManager ! Lookup("squad")
   ServiceManager.receptionist ! Receptionist.Find(ICS.InterstellarClusterServiceKey, context.self)
-  ServiceManager.receptionist ! Receptionist.Find(WeatherService.InterstellarClusterServiceKey, context.self)
+  ServiceManager.receptionist ! Receptionist.Find(WeatherService.WeatherServiceKey, context.self)
   ServiceManager.receptionist ! Receptionist.Find(ChatService.ChatServiceKey, context.self)
 
   /**
@@ -179,7 +179,7 @@ class SessionData(
         chatService = listings.head
         buildDependentOperationsForChat(chatService, squadService, cluster, weather)
         true
-      case WeatherService.InterstellarClusterServiceKey.Listing(listings) =>
+      case WeatherService.WeatherServiceKey.Listing(listings) =>
         weather = listings.head
         buildDependentOperationsForZoning(galaxyService, cluster, weather)
         true
