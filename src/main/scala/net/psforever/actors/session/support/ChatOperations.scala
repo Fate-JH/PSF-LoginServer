@@ -15,6 +15,7 @@ import net.psforever.objects.sourcing.PlayerSource
 import net.psforever.objects.zones.ZoneInfo
 import net.psforever.packet.game.SetChatFilterMessage
 import net.psforever.services.chat.{DefaultChannel, SquadChannel}
+import net.psforever.services.cluster.WeatherService
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.services.teamwork.{SquadResponse, SquadService, SquadServiceResponse}
 import net.psforever.types.ChatMessageType.CMT_QUIT
@@ -522,7 +523,7 @@ class ChatOperations(
     (coordinates, waypoint) match {
       case (Some((x, y, z)), None) if List(x, y, z).forall { str =>
         val coordinate = str.toFloatOption
-        coordinate.isDefined && coordinate.get >= 0 && coordinate.get <= 8191
+        coordinate.isDefined && coordinate.get >= 0 && coordinate.get <= 8192
       } =>
         context.self ! SessionActor.SetPosition(Vector3(x.toFloat, y.toFloat, z.toFloat))
       case (None, Some(waypoint)) if waypoint == "-list" =>
@@ -1335,6 +1336,11 @@ class ChatOperations(
 
       case _ => ()
     }
+    true
+  }
+
+  def customWeather(weatherPacket: WeatherService.Command): Boolean = {
+    cluster ! InterstellarClusterService.Weather(weatherPacket)
     true
   }
 

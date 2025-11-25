@@ -6,10 +6,19 @@ import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, Tim
 import akka.actor.typed.{Behavior, SupervisorStrategy}
 import net.psforever.objects.zones.{Zone, ZoneInfo}
 import net.psforever.packet.game.StormData
+import net.psforever.services.cluster.StormState.StormOverview
 import net.psforever.services.cluster.Weather.Type
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.types.Vector3
 import net.psforever.zones.Zones
+
+object Weather {
+  trait Type
+  case object Clear extends Type
+  case object Rain extends Type
+  case object Snow extends Type
+  case object Sandstorm extends Type
+}
 
 trait StormInfo {
   def location: Vector3
@@ -17,43 +26,46 @@ trait StormInfo {
   def intensity: Int
 }
 
-trait StormState extends StormInfo {
-  def prior: StormState = this
+sealed trait StormState extends StormInfo {
+  def data: StormOverview
 }
 
-private case class StandaloneStormState(
-                                       location: Vector3,
-                                       radius: Int,
-                                       intensity: Int
-                                     ) extends StormState
+private[cluster] object StormState {
+  final case class StormOverview(
+                                  location: Vector3,
+                                  radius: Int, //start radius, lower bound of radius
+                                  maxRadius:Int,
+                                  intensity: Int, //start intensity
+                                  minIntensity: Int, //lower bound of intensity
+                                  maxIntensity: Int, //upper bound of intensity
+                                  growth: Int, //rate applied to intensity
+                                  duration: Int, //minutes
+                                  decay: Int //rate applied to intensity,
+                                )
 
-final case class DevelopingStorm(
-                                  override val prior: StormState,
+  final case class DevelopingStorm(
+                                    data: StormOverview,
+                                    location: Vector3,
+                                    radius: Int,
+                                    intensity: Int
+                                  ) extends StormState
+
+  final case class OngoingStorm(
+                                 data: StormOverview,
+                                 location: Vector3,
+                                 radius: Int,
+                                 intensity: Int,
+                                 duration: Int
+                               ) extends StormState
+
+  final case class DecayingStorm(
+                                  data: StormOverview,
                                   location: Vector3,
                                   radius: Int,
                                   intensity: Int
                                 ) extends StormState
-
-object DevelopingStorm {
-  def apply(location: Vector3, radius: Int, intensity: Int): DevelopingStorm = {
-    DevelopingStorm(StandaloneStormState(location, radius, intensity), location, 0, 0)
-  }
 }
 
-final case class RagingStorm(
-                             override val prior: StormState,
-                             location: Vector3,
-                             radius: Int,
-                             intensity: Int,
-                             duration: Int
-                           ) extends StormState
-
-final case class DecayingStorm(
-                               override val prior: StormState,
-                               location: Vector3,
-                               radius: Int,
-                               intensity: Int
-                             ) extends StormState
 
 object WeatherService {
   val WeatherServiceKey: ServiceKey[Command] = ServiceKey[WeatherService.Command]("WeatherControl")
@@ -74,21 +86,27 @@ object WeatherService {
 
   sealed trait Command
 
-  final case class Start(weatherType: Type, zoneId: Int, location: Vector3, radius: Int, intensity: Int) extends Command
+  final case class Start(
+                          weatherType: Type,
+                          zoneId: Int,
+                          location: Vector3,
+                          radius: Int,
+                          maxRadius: Int,
+                          intensity: Int,
+                          minIntensity: Int,
+                          maxIntensity: Int,
+                          growthRate: Int,
+                          timeAlive: Int,
+                          decayRate: Int
+                        ) extends Command
 
-  final case class Stop(weatherTypes: Seq[Weather.Type], zoneId: Int, location: Vector3) extends Command
+  final case class RandomStart(stormsToStart: Int) extends Command
+
+  final case class Stop(weatherType: Weather.Type, zoneId: Int, location: Vector3) extends Command
 
   object Stop {
     def apply(zoneId: Int, location: Vector3): Stop = {
-      Stop(Seq(), zoneId, location)
-    }
-
-    def apply(weatherType: Weather.Type): Stop = {
-      Stop(Seq(weatherType), -1)
-    }
-
-    def apply(weatherTypes: Seq[Weather.Type], zoneId: Int): Stop = {
-      Stop(weatherTypes, zoneId, Vector3.Zero.copy(z = -1f))
+      Stop(Weather.Clear, zoneId, location)
     }
   }
 
@@ -96,29 +114,24 @@ object WeatherService {
 
   final case class ReportFor(zoneNumber: Int, replyTo: String) extends Command
 
-  final case class WeatherConditions(index:Int, windSpeed: Int, windDirection: Vector3)
+  final case class WeatherConditions(index:Int, wtype: Weather.Type, windSpeed: Int, windDirection: Vector3)
 
-  private def NoWeatherConditions(index: Int): WeatherConditions = {
-    WeatherConditions(index, 0, Vector3.Zero)
-  }
-
-  private def StormsPerZone(list: List[StormInfo]): Map[Int, List[(LocalCoordinateResult, StormInfo)]] = {
+  private[this] def RawStormsPerZone(list: List[StormInfo]): List[(LocalCoordinateResult, StormInfo)] = {
     list
       .flatMap { entry =>
         GlobalMap
           .GlobalCoordinatesToLocalMaps(entry.location.x, entry.location.y)
           .map { localCoords => (localCoords, entry) }
       }
+  }
+
+  private def StormsPerZone(list: List[StormInfo]): Map[Int, List[(LocalCoordinateResult, StormInfo)]] = {
+    RawStormsPerZone(list)
       .groupBy(_._1.zoneNumber)
   }
 
   private def StormsInZone(zoneId: Int, list: List[StormInfo]): Map[Int, List[(LocalCoordinateResult, StormInfo)]] = {
-    list
-      .flatMap { entry =>
-        GlobalMap
-          .GlobalCoordinatesToLocalMaps(entry.location.x, entry.location.y)
-          .map { localCoords => (localCoords, entry) }
-      }
+    RawStormsPerZone(list)
       .filter(_._1.zoneNumber == zoneId)
       .groupBy(_._1.zoneNumber)
   }
@@ -133,14 +146,18 @@ object WeatherService {
 
   private def SendWeatherReport(zoneId: Int, storms: List[StormInfo], toChannelOpt: Option[String]): Unit = {
     Zones.zones.find(_.Number == zoneId).foreach { zone =>
-      val outChannel = toChannelOpt.getOrElse(zone.id)
-      zone.LocalEvents ! LocalServiceMessage(outChannel,
-        LocalAction.WeatherReport(
-          zoneId,
-          Seq(),
-          storms.map(storm => StormData(storm.location, storm.intensity, storm.radius)))
-      )
+      SendWeatherReport(zone, storms, toChannelOpt)
     }
+  }
+
+  private def SendWeatherReport(zone: Zone, storms: List[StormInfo], toChannelOpt: Option[String]): Unit = {
+    val outChannel = toChannelOpt.getOrElse(zone.id)
+    zone.LocalEvents ! LocalServiceMessage(outChannel,
+      LocalAction.WeatherReport(
+        zone.Number,
+        Seq(),
+        storms.map(storm => StormData(storm.location, storm.intensity, storm.radius)))
+    )
   }
 }
 
@@ -150,56 +167,20 @@ class WeatherService(
                       _zones: Iterable[Zone])
   extends AbstractBehavior[WeatherService.Command](context) {
   import WeatherService._
+  import StormState._
   //private[this] val log = org.log4s.getLogger("WeatherService")
 
-  private val weatherConditionsInZone: List[WeatherConditions] = List(
-    NoWeatherConditions(index = 0), //0.nowhere
-    WeatherConditions(1, 0, Vector3(0,1,0)), //1.solsar
-    WeatherConditions(2, 0, Vector3(0,1,0)), //2.hossin
-    WeatherConditions(3, 0, Vector3(0,1,0)), //3.cyssor
-    WeatherConditions(4, 0, Vector3(0,1,0)), //4.ishundar
-    WeatherConditions(5, 0, Vector3(0,1,0)), //5.forseral
-    WeatherConditions(6, 0, Vector3(0,1,0)), //6.ceryshen
-    WeatherConditions(7, 0, Vector3(0,1,0)), //7.esamir
-    WeatherConditions(8, 0, Vector3(0,1,0)), //8.oshur
-    WeatherConditions(9, 0, Vector3(0,1,0)), //9.searhus
-    WeatherConditions(10, 0, Vector3(0,1,0)), //10.amerish
-    WeatherConditions(11, 0, Vector3(0,1,0)), //11.nc
-    WeatherConditions(12, 0, Vector3(0,1,0)), //12.tr
-    WeatherConditions(13, 0, Vector3(0,1,0)), //13.vs
-    NoWeatherConditions(index = 14), //14.tr, shooting
-    NoWeatherConditions(index = 15), //15.tr, driving
-    NoWeatherConditions(index = 16), //16.tr, co-op
-    NoWeatherConditions(index = 17), //17.nc, shooting
-    NoWeatherConditions(index = 18), //18.nc, driving
-    NoWeatherConditions(index = 19), //19.nc, co-op
-    NoWeatherConditions(index = 20), //20.vs, shooting
-    NoWeatherConditions(index = 21), //21.vs, driving
-    NoWeatherConditions(index = 22), //22.vs, co-op
-    NoWeatherConditions(index = 23), //23.supai
-    NoWeatherConditions(index = 24), //24.hunhau
-    NoWeatherConditions(index = 25), //25.adlivun
-    NoWeatherConditions(index = 26), //26.byblos
-    NoWeatherConditions(index = 27), //27.annwn
-    NoWeatherConditions(index = 28), //28.drugaskan
-    NoWeatherConditions(index = 29), //29.bi, extinction
-    NoWeatherConditions(index = 30), //30.bi, ascension
-    NoWeatherConditions(index = 31), //31.bi, desolation
-    NoWeatherConditions(index = 32)  //32.bi, nexus
-  )
+  //private val radiusToLocalMapScale: Float = 8.192f
 
-  private var activeStorms: List[StormState] = GlobalMap.Details
-    .filter(_.corner != GlobalMap.ZeroCoordinates)
-    .flatMap { entry =>
-      ZoneInfo
-        .values
-        .find(_.value == entry.index)
-        .map { zone =>
-          val resolvedCoordinates = GlobalMap.LocalMapToGlobalCoordinates(entry.index, zone.map.scale.width * 0.5f, zone.map.scale.height * 0.5f).get
-          val location = Vector3(resolvedCoordinates.x, resolvedCoordinates.y, 0f)
-          RagingStorm(StandaloneStormState(location, 217, 240), location, 217, 240, 5)
-        }
-    }
+  private var weatherStartTest: Int = 10
+
+  private val weatherConditionsInZone: List[WeatherConditions] =
+    WeatherConditions(0, Weather.Clear, 0, Vector3.Zero) +:
+    ZoneInfo.values.map { info => WeatherConditions(info.value, info.weather, 0, Vector3(0,1,0)) }.sortBy(_.index).toList
+
+  private val stormRandomizer: scala.util.Random = new scala.util.Random
+
+  private var activeStorms: List[StormState] = List[StormState]()
 
   override def onMessage(msg: WeatherService.Command): Behavior[WeatherService.Command] = {
     Behaviors
@@ -210,57 +191,70 @@ class WeatherService(
           //TODO storms interact
           val (updatedStorms, reportedStorms): (List[Option[StormState]], List[StormInfo]) = {
             activeStorms.map {
-              case stormInfo @ DevelopingStorm(prior, location, radius, intensity) =>
-                val changedStorm: StormState = if (radius < prior.radius || intensity < prior.intensity) {stormInfo.copy(
-                    radius = prior.radius,
-                    intensity = Math.min(intensity + 5, prior.intensity)
+              case stormInfo @ DevelopingStorm(data, location, radius, intensity) =>
+                val changedStorm: StormState = if (radius < data.radius || intensity < data.intensity) {
+                  stormInfo.copy(
+                    radius = Math.min(radius + data.growth, data.radius),
+                    intensity = Math.min(intensity + data.growth, data.intensity)
                   )
                 } else {
-                  RagingStorm(stormInfo, location, radius, intensity, 30)
+                  OngoingStorm(data, location, radius, intensity, data.duration)
                 }
                 (Some(changedStorm), changedStorm)
 
-              case stormInfo @ RagingStorm(_, location, radius, intensity, duration) =>
+              case stormInfo @ OngoingStorm(data, location, radius, intensity, duration) =>
                 val windInfluence: Vector3 = CalculateWindInfluenceOnStorm(location)
                 val changedStorm: StormState = if (duration == 0) {
-                  DecayingStorm(stormInfo, location + windInfluence, radius, Math.max(intensity - 5, 0))
+                  DecayingStorm(data, location + windInfluence, radius, intensity)
                 } else {
                   stormInfo.copy(
                     location = location + windInfluence,
+                    radius = math.min(data.radius, math.max(data.maxRadius, radius + stormRandomizer.between(-3, 3))),
+                    intensity = math.min(data.intensity, math.max(data.maxIntensity, intensity + stormRandomizer.between(-3, 3))),
                     duration = duration - 1
                   )
                 }
                 (Some(changedStorm), changedStorm)
 
-              case stormInfo @ DecayingStorm(_, location, _, intensity) =>
+              case stormInfo @ DecayingStorm(data, location, radius, intensity) =>
                 val windInfluence: Vector3 = CalculateWindInfluenceOnStorm(location)
                 val changedStorm: StormState = stormInfo.copy(
                   location = location + windInfluence,
-                  //radius = Math.max(radius - 5, 0),
-                  intensity = Math.max(intensity - 5, 0)
+                  radius = Math.max(radius - stormRandomizer.between(-1, 2), 0),
+                  intensity = Math.max(intensity - data.decay + stormRandomizer.between(-1, 1), 0)
                 )
                 if (changedStorm.intensity > 0) {
                   (Some(changedStorm), changedStorm)
                 } else {
                   (None, changedStorm)
                 }
+
+              case state =>
+                (None, DecayingStorm(state.data, Vector3.Zero, 0, 0))
             }
           }.unzip
           //organize storm display data
           activeStorms = updatedStorms.flatten
           //dispatch messages
           SendWeatherReport(StormsPerZone(reportedStorms))
+          //start new weather?
+          PerformWeatherStartTest(zonesToSelect = 3)
           Behaviors.same
 
         case ReportFor(zoneNumber, replyTo) =>
           SendWeatherReport(StormsInZone(zoneNumber, activeStorms), Some(replyTo))
           Behaviors.same
 
-        case WeatherService.Start(_, zoneId, location, radius, intensity) =>
+        case WeatherService.Start(_, zoneId, location, radius, maxRadius, intensity, minIntensity, maxIntensity, growthRate, lifetime, decayRate) =>
           GlobalMap
             .LocalMapToGlobalCoordinates(zoneId, location.x, location.y)
             .foreach { coords =>
-              val newStorm = DevelopingStorm(coords.toVector, radius, intensity)
+              val newStorm = DevelopingStorm(
+                StormOverview(coords.toVector, radius, maxRadius, intensity, minIntensity, maxIntensity, growthRate, lifetime, decayRate),
+                coords.toVector,
+                0,
+                0
+              )
               val stormsInZone = StormsInZone(zoneId, activeStorms)
               if (!stormsInZone(zoneId).exists { case (localCoords, _) =>
                 Vector3.DistanceSquared(localCoords.toVector, location) < 168100f
@@ -276,6 +270,14 @@ class WeatherService(
             }
           Behaviors.same
 
+        case WeatherService.RandomStart(numberOfStormsToStart) =>
+          val stormsBefore = activeStorms.size
+          RunWeatherStartTest(numberOfStormsToStart)
+          if (activeStorms.size > stormsBefore) {
+            weatherStartTest = 10
+          }
+          Behaviors.same
+
         case WeatherService.Stop(_, zoneId, location) =>
           val (stormsInThisZone, allStorms): (List[Option[StormInfo]], List[StormState]) = {
             activeStorms.map {
@@ -284,7 +286,7 @@ class WeatherService(
                 if (!localInfo.exists(_.zoneNumber == zoneId)) {
                   (None, globalInfo)
                 } else if (localInfo.exists { localCoords => Vector3.DistanceSquared(localCoords.toVector, location) < 168100f}) {
-                  val newStorm = DecayingStorm(globalInfo, globalInfo.location, globalInfo.radius, globalInfo.intensity)
+                  val newStorm = DecayingStorm(globalInfo.data, globalInfo.location, globalInfo.radius, globalInfo.intensity)
                   (Some(newStorm), newStorm)
                 } else {
                   (Some(globalInfo), globalInfo)
@@ -298,30 +300,48 @@ class WeatherService(
   }
   
   private def CalculateWindInfluenceOnStorm(location: Vector3): Vector3 = {
-    Vector3.Unit(
-      GlobalMap
-        .GlobalCoordinatesToLocalMaps(location.x, location.y)
-        .map { coords =>
-          val conditions = weatherConditionsInZone
-            .find(_.index == coords.zoneNumber)
-            .getOrElse(weatherConditionsInZone.head)
-          conditions.windDirection * conditions.windSpeed.toFloat
-        }
-        .foldLeft(Vector3.Zero)(_ + _)
-    ) * 0.0025f
+    GlobalMap
+      .GlobalCoordinatesToLocalMaps(location.x, location.y)
+      .map { coords =>
+        val conditions = weatherConditionsInZone
+          .find(_.index == coords.zoneNumber)
+          .getOrElse(weatherConditionsInZone.head)
+        Vector3.Unit(conditions.windDirection) * conditions.windSpeed.toFloat
+      }
+      .foldLeft(Vector3.Zero)(_ + _) * 0.0021f
   }
-}
 
-object Weather {
-  trait Type
+  private def PerformWeatherStartTest(zonesToSelect: Int): Unit = {
+    if (weatherStartTest == 0) {
+      weatherStartTest = 10
+      RunWeatherStartTest(zonesToSelect)
+    } else {
+      weatherStartTest -= 1
+    }
+  }
 
-  object Default extends Type
-
-  object Clear extends Type
-
-  object Rain extends Type
-
-  object Snow extends Type
-
-  object Sandstorm extends Type
+  private def RunWeatherStartTest(zonesToSelect: Int): Unit = {
+    val newStorms: List[(Zone, StormState)] = stormRandomizer
+      .shuffle(weatherConditionsInZone)
+      .take(zonesToSelect)
+      .filterNot(_.wtype == Weather.Clear)
+      .flatMap { entry =>
+        Zones.zones.find(_.Number == entry.index)
+      }
+      .filter { zone =>
+        StormsInZone(zone.Number, activeStorms).isEmpty
+      }
+      .map { zone =>
+        val resolvedCoordinates = GlobalMap.LocalMapToGlobalCoordinates(zone.Number, zone.map.scale.width * 0.5f, zone.map.scale.height * 0.5f).get
+        val location = Vector3(resolvedCoordinates.x, resolvedCoordinates.y, 0f)
+        (zone, DevelopingStorm(StormOverview(location, 217, 217, 240, 240, 240, 5, 55, 5), location, 0, 0))
+      }
+    if (newStorms.nonEmpty) {
+      activeStorms = activeStorms ++ newStorms.map(_._2)
+      newStorms.foreach { case (zone, allNewStormsInZone) =>
+        activeStorms = activeStorms :+ allNewStormsInZone
+        WeatherService.SendWeatherReport(zone, List(allNewStormsInZone), None)
+      }
+    }
+  }
 }

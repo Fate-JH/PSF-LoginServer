@@ -1,6 +1,7 @@
 package net.psforever.objects.zones
 
 import enumeratum.values.{IntEnum, IntEnumEntry}
+import net.psforever.services.cluster.Weather
 
 final case class AliasLookup(
                               zone: Seq[String] = Seq(),
@@ -13,6 +14,7 @@ sealed abstract class ZoneInfo(
     val id: String,
     val map: MapInfo,
     val aliases: AliasLookup = ZoneInfo.defaultAliases,
+    val weather: Weather.Type = Weather.Clear
 ) extends IntEnumEntry {}
 
 case object ZoneInfo extends IntEnum[ZoneInfo] {
@@ -23,7 +25,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 1,
         name = "Solsar",
         id = "z1",
-        map = MapInfo.Map01
+        map = MapInfo.Map01,
+        weather = Weather.Sandstorm
       )
 
   case object Hossin
@@ -31,7 +34,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 2,
         name = "Hossin",
         id = "z2",
-        map = MapInfo.Map02
+        map = MapInfo.Map02,
+        weather = Weather.Rain
       )
 
   case object Cyssor
@@ -39,7 +43,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 3,
         name = "Cyssor",
         id = "z3",
-        map = MapInfo.Map03
+        map = MapInfo.Map03,
+        weather = Weather.Rain
       )
 
   case object Ishundar
@@ -47,7 +52,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 4,
         name = "Ishundar",
         id = "z4",
-        map = MapInfo.Map04
+        map = MapInfo.Map04,
+        weather = Weather.Sandstorm
       )
 
   case object Forseral
@@ -55,7 +61,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 5,
         name = "Forseral",
         id = "z5",
-        map = MapInfo.Map05
+        map = MapInfo.Map05,
+        weather = Weather.Rain
       )
 
   case object Ceryshen
@@ -63,7 +70,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 6,
         name = "Ceryshen",
         id = "z6",
-        map = MapInfo.Map06
+        map = MapInfo.Map06,
+        weather = Weather.Snow
       )
 
   case object Esamir
@@ -71,7 +79,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 7,
         name = "Esamir",
         id = "z7",
-        map = MapInfo.Map07
+        map = MapInfo.Map07,
+        weather = Weather.Snow
       )
 
   case object Oshur
@@ -87,7 +96,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 9,
         name = "Searhus",
         id = "z9",
-        map = MapInfo.Map09
+        map = MapInfo.Map09,
+        weather = Weather.Rain
       )
 
   case object Amerish
@@ -95,7 +105,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         value = 10,
         name = "Amerish",
         id = "z10",
-        map = MapInfo.Map10
+        map = MapInfo.Map10,
+        weather = Weather.Rain
       )
 
   case object NcSanctuary
@@ -104,7 +115,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "NC Sanctuary",
         id = "home1",
         map = MapInfo.Map11,
-        aliases = AliasLookup(zone = Seq("nc-sanctuary"))
+        aliases = AliasLookup(zone = Seq("nc-sanctuary")),
+        weather = Weather.Rain
       )
 
   case object TrSanctuary
@@ -113,7 +125,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "TR Sanctuary",
         id = "home2",
         map = MapInfo.Map12,
-        aliases = AliasLookup(zone = Seq("tr-sanctuary"))
+        aliases = AliasLookup(zone = Seq("tr-sanctuary")),
+        weather = Weather.Rain
       )
 
   case object VsSanctuary
@@ -122,7 +135,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "VS Sanctuary",
         id = "home3",
         map = MapInfo.Map13,
-        aliases = AliasLookup(zone = Seq("vs-sanctuary"))
+        aliases = AliasLookup(zone = Seq("vs-sanctuary")),
+        weather = Weather.Rain
       )
 
   case object tzshtr

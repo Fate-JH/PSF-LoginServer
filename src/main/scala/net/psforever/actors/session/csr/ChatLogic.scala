@@ -16,8 +16,10 @@ import net.psforever.packet.game.{ChatMsg, SetChatFilterMessage}
 import net.psforever.services.Service
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.chat.{ChatChannel, DefaultChannel, SpectatorChannel, SquadChannel}
-import net.psforever.types.ChatMessageType.{CMT_TOGGLESPECTATORMODE, CMT_TOGGLE_GM}
-import net.psforever.types.{ChatMessageType, PlanetSideEmpire}
+import net.psforever.services.cluster.{Weather, WeatherService}
+import net.psforever.types.ChatMessageType.{CMT_TOGGLESPECTATORMODE, CMT_TOGGLE_GM, UNK_227, UNK_229}
+import net.psforever.types.{ChatMessageType, PlanetSideEmpire, Vector3}
+import net.psforever.util.PointOfInterest
 import net.psforever.zones.Zones
 
 import scala.util.Success
@@ -227,6 +229,7 @@ class ChatLogic(val ops: ChatOperations, implicit val context: ActorContext) ext
         case "sayspectator" => customCommandSpeakAsSpectator(params, message)
         case "setempire" => customCommandSetEmpire(params)
         case "weaponlock" => customCommandZoneWeaponUnlock(session, params)
+        case "weather" => customWeather(session, message, params)
         case _ =>
           // command was not handled
           sendResponse(
@@ -481,6 +484,9 @@ class ChatLogic(val ops: ChatOperations, implicit val context: ActorContext) ext
           PlanetSideEmpire.values.toSeq,
           customCommandOnOffState(stateOpt)
         )
+
+      case _ =>
+        (Seq(), Seq(), Seq(), Seq(), None)
     }
     //resolve
     if (usageMessage) {
@@ -507,6 +513,195 @@ class ChatLogic(val ops: ChatOperations, implicit val context: ActorContext) ext
       }
     }
     true
+  }
+
+  private def customWeather(session: Session, message: ChatMsg, params: Seq[String]): Boolean = {
+    var errorHint: List[String] = List()
+    val usageMessage: Boolean = params.exists(_.matches("--help")) || params.exists(_.matches("-h"))
+    if (usageMessage) {
+      sendResponse(
+        message.copy(messageType = UNK_229, contents = "usage: !weather stop|start [x y z|'curr'|waypoint] [0|(rate radius intensity)] [0|(time max_radius low_intensity high_intensity)] [0|rate]")
+      )
+    } else {
+      var readPosition: Int = 1
+      val startState: Option[Boolean] = params.headOption match {
+        case Some("stop") =>
+          Some(false)
+        case Some("start") =>
+          Some(true)
+        case _ =>
+          errorHint = errorHint.appended("no action state")
+          None
+      }
+      val location: Vector3 = {
+        val (coord, token) = (params.lift(readPosition), params.lift(readPosition + 1), params.lift(readPosition + 2)) match {
+          case (Some(x), Some(y), Some(z)) if List(x, y, z).forall { str =>
+            val coordinate = str.toFloatOption
+            coordinate.exists(coord => coord >= 0 && coord <= 8192)
+          } => (Some((x, y, z)), None)
+          case (Some(token), _, _) => (None, Some(token))
+          case _ => (None, None)
+        }
+        (coord, token) match {
+          case (None, None) =>
+            player.Position
+          case (None, Some(curr)) if curr.matches("cur{1,2}") =>
+            readPosition = readPosition + 1
+            player.Position
+          case (Some((x, _, _)), None) if x.matches("0") =>
+            //do not interpret this as coordinate data
+            player.Position
+          case (Some((x, y, z)), None) =>
+            readPosition = readPosition + 3
+            Vector3(x.toFloat, y.toFloat, z.toFloat)
+          case (None, Some(waypoint)) =>
+            PointOfInterest
+              .getWarpLocation(session.zone.id, waypoint)
+              .map { entry =>
+                readPosition = readPosition + 1
+                entry
+              }
+              .getOrElse({
+                errorHint = errorHint.appended(s"waypoint '$waypoint' not found")
+                errorHint = errorHint.appended(s"Please check '/warp -list' for available waypoints")
+                Vector3.Zero
+              })
+          case _ =>
+            player.Position
+        }
+      }
+
+      val weatherPacket: Option[WeatherService.Command] = if (errorHint.nonEmpty) {
+        None
+      } else if (startState.contains(true)) {
+        val paramCountFeel = params.size - readPosition
+        val developState: Option[(Int, Int, Int)] = (params.lift(readPosition), params.lift(readPosition+1), params.lift(readPosition+2)) match {
+          case (None, _, _) if paramCountFeel == 0 =>
+            //unflagged skipped cycle
+            Some((120, 217, 240))
+          case (Some("0"), _, _) =>
+            //flagged skipped cycle
+            readPosition = readPosition + 1
+            Some((120, 217, 240))
+          case (Some(rate), Some(radius), Some(intensity))
+            if rate.toIntOption.nonEmpty && radius.toIntOption.nonEmpty && intensity.toIntOption.nonEmpty =>
+            readPosition = readPosition + 3
+            Some((rate.toInt, radius.toInt, intensity.toInt))
+          case (Some(rate), Some(radius), Some(intensity)) =>
+            //error; not enough string data or string data does not resolve into integer value
+            errorHint = customWeatherFormatError(
+              section = "formation",
+              errorHint,
+              List(("rate",rate), ("radius",radius), ("intensity",intensity))
+            )
+            None
+          case (rate, radius, intensity) =>
+            //error; not enough string data or string data does not resolve into integer value
+            errorHint = customWeatherFormatErrorNone(
+              section = "formation",
+              errorHint,
+              List(("rate",rate), ("radius",radius), ("intensity",intensity))
+            )
+            None
+        }
+        val activeState: Option[(Int, Int, Int, Int)] = (params.lift(readPosition), params.lift(readPosition+1), params.lift(readPosition+2), params.lift(readPosition+3)) match {
+          case (None, _, _, _) if paramCountFeel == 0 =>
+            //unflagged skipped cycle
+            val radius = developState.map(_._2).getOrElse(100)
+            val intensity = developState.map(_._3).getOrElse(100)
+            Some((60, radius, intensity, intensity))
+          case (Some("0"), _, _, _) =>
+            //flagged skipped cycle
+            readPosition = readPosition + 1
+            val radius = developState.map(_._2).getOrElse(100)
+            val intensity = developState.map(_._3).getOrElse(100)
+            Some((60, radius, intensity, intensity))
+          case (Some(time), Some(maxRadius), Some(lowIntensity), Some(highIntensity))
+            if time.toIntOption.nonEmpty && maxRadius.toIntOption.nonEmpty && lowIntensity.toIntOption.nonEmpty && highIntensity.toIntOption.nonEmpty =>
+            readPosition = readPosition + 3
+            Some((time.toInt, maxRadius.toInt, lowIntensity.toInt, highIntensity.toInt))
+          case (Some(time), Some(maxRadius), Some(lowIntensity), Some(highIntensity)) =>
+            //error; not enough string data or string data does not resolve into integer value
+            errorHint = customWeatherFormatError(
+              section = "active",
+              errorHint,
+              List(("time",time), ("max-radius",maxRadius), ("low-intensity",lowIntensity), ("high-intensity",highIntensity))
+            )
+            None
+          case (time, maxRadius, lowIntensity, highIntensity) =>
+            //error; not enough string data or string data does not resolve into integer value
+            errorHint = customWeatherFormatErrorNone(
+              section = "active",
+              errorHint,
+              List(("time",time), ("max-radius",maxRadius), ("low-intensity",lowIntensity), ("high-intensity",highIntensity))
+            )
+            None
+        }
+        val decayState: Option[Int] = params.lift(readPosition) match {
+          case None if paramCountFeel == 0 =>
+            //unflagged skipped cycle
+            Some(15)
+          case Some(rate) if rate.toIntOption.nonEmpty =>
+            //flagged skipped cycle included
+            Some(rate.toInt)
+          case Some(rate) =>
+            //error; not enough string data or string data does not resolve into integer value
+            errorHint = errorHint.appended(s"incorrect format in decay field (rate=$rate)")
+            None
+          case rate =>
+            //error; not enough string data or string data does not resolve into integer value
+            errorHint = errorHint.appended(s"missing decay field (rate=$rate)")
+            None
+        }
+        (developState, activeState, decayState) match {
+          case (Some((growth, startRadius, startIntensity)), Some((time, maxRadius, lowIntensity, highIntensity)), Some(decay)) =>
+            Some(WeatherService.Start(Weather.Clear, session.zone.Number, location, startRadius, startIntensity, maxRadius, lowIntensity, highIntensity, growth, time, decay))
+          case _ =>
+            None
+        }
+      } else if (startState.contains(false)) {
+        Some(WeatherService.Stop(session.zone.Number, location))
+      } else {
+        errorHint = errorHint.appended("no action state selected")
+        None
+      }
+      //weatherPacket.foreach(s => log.info(s.toString))
+      if (errorHint.nonEmpty) {
+        sendResponse(message.copy(messageType = UNK_229, contents = s"bad command params - ${errorHint.head}"))
+        errorHint.tail.foreach {  msg => sendResponse(message.copy(messageType = UNK_227, contents = s"$msg")) }
+      } else {
+        weatherPacket.foreach(ops.customWeather)
+      }
+    }
+    true
+  }
+
+  private def customWeatherFormatError(
+                                        section: String,
+                                        errorHint: List[String],
+                                        possibleErrorSources: List[(String, String)]
+                                      ): List[String] = {
+    val incorrectFields = possibleErrorSources
+      .filter { case (_, value) => value.toIntOption.isEmpty }
+      .map { case (field, value) => s"$field=$value" }
+      .mkString(", ")
+    errorHint
+      .appended(s"incorrect format in $section fields")
+      .appended(s"incorrect - $incorrectFields")
+  }
+
+  private def customWeatherFormatErrorNone(
+                                            section: String,
+                                            errorHint: List[String],
+                                            possibleErrorSources: List[(String, Option[String])]
+                                          ): List[String] = {
+    val incorrectFields = possibleErrorSources
+      .filter { case (_, value) => value.isEmpty }
+      .map { case (field, value) => s"$field=$value" }
+      .mkString(", ")
+    errorHint
+      .appended(s"missing $section fields")
+      .appended(s"missing - $incorrectFields")
   }
 
   private def customCommandOnOffStateOrNone(stateOpt: Option[String]): Option[Boolean] = {

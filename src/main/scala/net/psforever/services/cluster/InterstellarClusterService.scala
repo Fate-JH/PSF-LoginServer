@@ -89,6 +89,8 @@ object InterstellarClusterService {
 
   final case class CavernRotation(msg: CavernRotationService.Command) extends Command
 
+  final case class Weather(report: WeatherService.Command) extends Command
+
   trait DroppodLaunchExchange
 
   final case class DroppodLaunchConfirmation(destination: Zone, position: Vector3) extends DroppodLaunchExchange
@@ -106,6 +108,7 @@ class InterstellarClusterService(context: ActorContext[InterstellarClusterServic
   private[this] val log = org.log4s.getLogger
   private var intercontinentalSetup: Boolean = false
   private var cavernRotation: Option[ActorRef[CavernRotationService.Command]] = None
+  private var weatherControl: Option[ActorRef[WeatherService.Command]] = None
 
   val zoneActors: mutable.Map[String, (ActorRef[ZoneActor.Command], Zone)] = {
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -146,6 +149,17 @@ class InterstellarClusterService(context: ActorContext[InterstellarClusterServic
           case None =>
             context.system.receptionist ! Receptionist.Find(
               CavernRotationService.CavernRotationServiceKey,
+              context.messageAdapter[Receptionist.Listing](ReceptionistListing)
+            )
+        }
+      case ReceptionistListing(WeatherService.WeatherServiceKey.Listing(listings)) =>
+        listings.headOption match {
+          case Some(ref) =>
+            weatherControl = Some(ref)
+            ref ! WeatherService.RandomStart(8)
+          case None =>
+            context.system.receptionist ! Receptionist.Find(
+              WeatherService.WeatherServiceKey,
               context.messageAdapter[Receptionist.Listing](ReceptionistListing)
             )
         }
@@ -293,6 +307,9 @@ class InterstellarClusterService(context: ActorContext[InterstellarClusterServic
           rotation => rotation ! rotationMsg
         }
 
+      case Weather(order) =>
+        weatherControl.foreach(_ ! order)
+
       case _ => ()
     }
     this
@@ -392,6 +409,7 @@ class InterstellarClusterService(context: ActorContext[InterstellarClusterServic
         }
         //manage
         receptionist ! Receptionist.Find(CavernRotationService.CavernRotationServiceKey, adapter)
+        receptionist ! Receptionist.Find(WeatherService.WeatherServiceKey, adapter)
       }
     }
   }
