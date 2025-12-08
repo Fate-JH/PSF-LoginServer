@@ -14,6 +14,7 @@ import net.psforever.objects.equipment.Equipment
 import net.psforever.objects.inventory.Container
 import net.psforever.objects.serverobject.{CommonMessages, ServerObject}
 import net.psforever.objects.serverobject.containable.Containable
+import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.llu.CaptureFlag
@@ -26,11 +27,14 @@ import net.psforever.objects.serverobject.terminals.{ProximityUnit, Terminal}
 import net.psforever.objects.serverobject.terminals.implant.ImplantTerminalMech
 import net.psforever.objects.serverobject.tube.SpawnTube
 import net.psforever.objects.serverobject.turret.FacilityTurret
+import net.psforever.objects.sourcing.{PlayerSource, SourceEntry}
 import net.psforever.objects.vehicles.Utility
 import net.psforever.objects.vital.Vitality
+import net.psforever.objects.vital.etc.ForceDomeExposure
+import net.psforever.objects.vital.interaction.DamageInteraction
 import net.psforever.objects.zones.{ZoneProjectile, Zoning}
 import net.psforever.packet.PlanetSideGamePacket
-import net.psforever.packet.game.OutfitEventAction.{OutfitInfo, OutfitRankNames, Initial, Unk1}
+import net.psforever.packet.game.OutfitEventAction.{Initial, OutfitInfo, OutfitRankNames, Unk1}
 import net.psforever.packet.game.{ActionCancelMessage, AvatarFirstTimeEventMessage, AvatarImplantMessage, AvatarJumpMessage, BattleplanMessage, BindPlayerMessage, BugReportMessage, ChangeFireModeMessage, ChangeShortcutBankMessage, CharacterCreateRequestMessage, CharacterRequestMessage, ChatMsg, CollisionIs, ConnectToWorldRequestMessage, CreateShortcutMessage, DeadState, DeployObjectMessage, DisplayedAwardMessage, DropItemMessage, EmoteMsg, FacilityBenefitShieldChargeRequestMessage, FriendsRequest, GenericAction, GenericActionMessage, GenericCollisionMsg, GenericObjectActionAtPositionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HitHint, InvalidTerrainMessage, LootItemMessage, MoveItemMessage, ObjectDetectedMessage, ObjectHeldMessage, OutfitEvent, OutfitMemberEvent, OutfitMembershipRequest, OutfitMembershipResponse, OutfitRequest, OutfitRequestAction, PickupItemMessage, PlanetsideAttributeMessage, PlayerStateMessageUpstream, RequestDestroyMessage, TargetingImplantRequest, TerrainCondition, TradeMessage, UnuseItemMessage, UseItemMessage, VoiceHostInfo, VoiceHostRequest, ZipLineMessage}
 import net.psforever.services.RemoverActor
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
@@ -538,7 +542,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
 
   def handleGenericCollision(pkt: GenericCollisionMsg): Unit = {
     player.BailProtection = false
-    val GenericCollisionMsg(ctype, p, _, _, pv, _, _, _, _, _, _, _) = pkt
+    val GenericCollisionMsg(ctype, p, _, _, pv, t, _, _, _, _, _, _) = pkt
     if (pv.z * pv.z >= (pv.x * pv.x + pv.y * pv.y) * 0.5f) {
       if (ops.heightTrend) {
         ops.heightHistory = ops.heightLast
@@ -555,8 +559,22 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
         v.BailProtection = false
       case (CollisionIs.OfAircraft, Some(v: Vehicle))
         if v.Definition.CanFly && v.Seats(0).occupant.contains(player) => ()
+      case (CollisionIs.BetweenThings, Some(field: ForceDomePhysics)) /*if field.Energized*/ =>
+        val target = sessionLogic
+          .vehicles
+          .findLocalVehicle
+          .getOrElse(player)
+        target.Actor ! Vitality.Damage(
+          DamageInteraction(
+            PlayerSource(player),
+            ForceDomeExposure(SourceEntry(field)),
+            player.Position
+          ).calculate()
+        )
+        target.BailProtection = false
+        player.BailProtection = false
       case (CollisionIs.BetweenThings, _) =>
-        log.warn("GenericCollision: CollisionIs.BetweenThings detected - no handling case")
+        log.warn(s"GenericCollision: CollisionIs.BetweenThings detected - no handling case for obj id:${t.guid}")
       case _ => ()
     }
   }
