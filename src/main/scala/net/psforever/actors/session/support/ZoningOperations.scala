@@ -1060,7 +1060,7 @@ class ZoningOperations(
           case _ => ()
         }
         // capitol force dome state
-        if (building.IsCapitol && building.ForceDomeActive) {
+        if (building.IsCapitol && building.ForceDome.exists(_.Energized)) {
           sendResponse(GenericObjectActionMessage(guid, 13))
         }
         // amenities

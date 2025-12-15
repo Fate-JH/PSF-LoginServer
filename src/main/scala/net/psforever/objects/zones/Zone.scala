@@ -40,6 +40,7 @@ import net.psforever.objects.geometry.d3.VolumetricGeometry
 import net.psforever.objects.guid.pool.NumberPool
 import net.psforever.objects.serverobject.PlanetSideServerObject
 import net.psforever.objects.serverobject.affinity.FactionAffinity
+import net.psforever.objects.serverobject.dome.{ForceDomeDefinition, ForceDomePhysics}
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.environment.EnvironmentAttribute
 import net.psforever.objects.serverobject.interior.{InteriorAware, Sidedness}
@@ -1637,6 +1638,13 @@ object Zone {
         .collect {
           case painbox: Painbox =>
             painbox.Actor ! Service.Startup()
+        }
+      //capitol facilities have force domes
+      buildings.values
+        .flatMap(_.Amenities.filter(_.Definition.isInstanceOf[ForceDomeDefinition]))
+        .collect {
+          case obj: ForceDomePhysics =>
+            obj.Actor ! Service.Startup()
         }
       //the orbital_buildings in sanctuary zones have to establish their shuttle routes
       map.shuttleBays

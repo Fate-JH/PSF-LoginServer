@@ -11,7 +11,7 @@ import io.circe.parser._
 import net.psforever.objects.{GlobalDefinitions, LocalLockerItem, LocalProjectile}
 import net.psforever.objects.definition.BasicDefinition
 import net.psforever.objects.guid.selector.{NumberSelector, RandomSelector, SpecificSelector}
-import net.psforever.objects.serverobject.dome.ForceDomePhysics
+import net.psforever.objects.serverobject.dome.{ForceDomeDefinition, ForceDomePhysics}
 import net.psforever.objects.serverobject.doors.{Door, DoorDefinition, SpawnTubeDoor}
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.llu.{CaptureFlagSocket, CaptureFlagSocketDefinition}
@@ -385,7 +385,7 @@ object Zones {
             None,
             turretWeaponGuid
           )
-          //force dome physics object are not owned
+          //force dome physics objects have no owner
           //for our benefit, we can attach them as amenities to the zone's capitol facility
           zoneObjects
             .find { obj => forceDomeTypes.contains(obj.objectType) }
@@ -393,12 +393,12 @@ object Zones {
               structures
                 .find { structure => Building.Capitols.contains(structure.objectName) }
                 .foreach { capitol =>
-                  zoneMap
-                    .addLocalObject(
-                      forceDome.guid,
-                      ForceDomePhysics.Constructor(forceDome.position),
-                      owningBuildingGuid = capitol.guid
-                    )
+                  val definition = DefinitionUtil.fromString(forceDome.objectType).asInstanceOf[ForceDomeDefinition]
+                  zoneMap.addLocalObject(
+                    forceDome.guid,
+                    ForceDomePhysics.Constructor(forceDome.position, definition),
+                    owningBuildingGuid = capitol.guid
+                  )
                 }
             }
 
