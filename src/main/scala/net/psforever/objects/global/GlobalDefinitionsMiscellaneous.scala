@@ -956,5 +956,20 @@ object GlobalDefinitionsMiscellaneous {
 
     zipline.Name = "zipline"
     zipline.interference = InterferenceRange(deployables = 5.5f)
+
+    force_dome_amp_physics.Name = "force_dome_amp_physics"
+    force_dome_amp_physics.UseRadius = 142.26f
+
+    force_dome_comm_physics.Name = "force_dome_comm_physics"
+    force_dome_comm_physics.UseRadius = 121.8149f
+
+    force_dome_cryo_physics.Name = "force_dome_cryo_physics"
+    force_dome_cryo_physics.UseRadius = 127.9241f //127.7963f
+
+    force_dome_dsp_physics.Name = "force_dome_dsp_physics"
+    force_dome_dsp_physics.UseRadius = 175.8838f //175.7081f
+
+    force_dome_tech_physics.Name = "force_dome_tech_physics"
+    force_dome_tech_physics.UseRadius = 150.1284f
   }
 }

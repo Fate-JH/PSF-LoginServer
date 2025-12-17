@@ -6,7 +6,9 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import net.psforever.actors.commands.NtuCommand
 import net.psforever.actors.zone.{BuildingActor, BuildingControlDetails, ZoneActor}
+import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.generator.{Generator, GeneratorControl}
+import net.psforever.objects.serverobject.resourcesilo.ResourceSiloControl
 import net.psforever.objects.serverobject.structures.{Amenity, Building}
 import net.psforever.objects.serverobject.terminals.capture.{CaptureTerminal, CaptureTerminalAware, CaptureTerminalAwareBehavior}
 import net.psforever.objects.sourcing.PlayerSource
@@ -104,6 +106,10 @@ case object MajorFacilityLogic
           )
         }
       // No map update needed - will be sent by `HackCaptureActor` when required
+      case dome: ForceDomePhysics =>
+        // The force dome being expanded modifies the NTU drain rate
+        val multiplier: Float = calculateNtuDrainMultiplierFrom(details.building, domeOpt = Some(dome))
+        details.building.NtuSource.foreach(_.Actor ! ResourceSiloControl.DrainMultiplier(multiplier))
       case _ =>
         details.galaxyService ! GalaxyServiceMessage(GalaxyAction.MapUpdate(details.building.infoUpdateMessage()))
     }
@@ -344,5 +350,33 @@ case object MajorFacilityLogic
       case _ =>
     }
     Behaviors.same
+  }
+
+  private def calculateNtuDrainMultiplierFrom(
+                                               building: Building,
+                                               domeOpt: Option[ForceDomePhysics] = None,
+                                               mainTerminalOpt: Option[Any] = None
+                                             ): Float = {
+    val domeParam = domeOpt.orElse {
+      building.Amenities.find(_.isInstanceOf[ForceDomePhysics]) match {
+        case Some(d: ForceDomePhysics) => Some(d)
+        case _ => None
+      }
+    }
+    val mainTerminalParam = mainTerminalOpt.orElse(None) //todo main terminal and viruses
+    getNtuDrainMultiplierFromAmenities(domeParam, mainTerminalParam)
+  }
+
+  private def getNtuDrainMultiplierFromAmenities(
+                                                  dome: Option[ForceDomePhysics],
+                                                  mainTerminal: Option[Any]
+                                                ): Float = {
+    // The force dome being expanded means all repairs are essentially for free
+    dome
+      .map { case d if d.Energized => 0f }
+      .orElse {
+        mainTerminal.flatMap { _ => Some(2f) } //todo main terminal and viruses
+      }
+      .getOrElse(1f)
   }
 }

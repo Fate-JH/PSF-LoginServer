@@ -40,7 +40,6 @@ import net.psforever.objects.geometry.d3.VolumetricGeometry
 import net.psforever.objects.guid.pool.NumberPool
 import net.psforever.objects.serverobject.PlanetSideServerObject
 import net.psforever.objects.serverobject.affinity.FactionAffinity
-import net.psforever.objects.serverobject.dome.{ForceDomeDefinition, ForceDomePhysics}
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.environment.EnvironmentAttribute
 import net.psforever.objects.serverobject.interior.{InteriorAware, Sidedness}
@@ -1639,13 +1638,6 @@ object Zone {
           case painbox: Painbox =>
             painbox.Actor ! Service.Startup()
         }
-      //capitol facilities have force domes
-      buildings.values
-        .flatMap(_.Amenities.filter(_.Definition.isInstanceOf[ForceDomeDefinition]))
-        .collect {
-          case obj: ForceDomePhysics =>
-            obj.Actor ! Service.Startup()
-        }
       //the orbital_buildings in sanctuary zones have to establish their shuttle routes
       map.shuttleBays
         .map {
@@ -1818,14 +1810,39 @@ object Zone {
   /* explosions */
 
   /**
+   * Allocates `Damageable` targets within the vicinity of server-prepared damage dealing
+   * and informs those entities that they have affected by the aforementioned damage.
+   * Usually, this is considered an "explosion;" but, the application can be utilized for a variety of unbound damage.
+   * @param zone the zone in which the damage should occur
+   * @param source the entity that embodies the damage (information)
+   * @param createInteraction how the interaction for this damage is to prepared
+   * @return a list of affected entities;
+   *         only mostly complete due to the exclusion of objects whose damage resolution is different than usual
+   */
+  def serverSideDamage(
+                        zone: Zone,
+                        source: PlanetSideGameObject with FactionAffinity with Vitality,
+                        createInteraction: (PlanetSideGameObject with FactionAffinity with Vitality, PlanetSideGameObject with FactionAffinity with Vitality) => DamageInteraction
+                      ): List[PlanetSideServerObject] = {
+    source.Definition.innateDamage match {
+      case Some(damage) =>
+        serverSideDamage(zone, source, damage, createInteraction, distanceCheck, findAllTargets)
+      case None =>
+        Nil
+    }
+  }
+
+  /**
     * Allocates `Damageable` targets within the vicinity of server-prepared damage dealing
     * and informs those entities that they have affected by the aforementioned damage.
     * Usually, this is considered an "explosion;" but, the application can be utilized for a variety of unbound damage.
     * @param zone the zone in which the damage should occur
     * @param source the entity that embodies the damage (information)
     * @param createInteraction how the interaction for this damage is to prepared
-    * @param testTargetsFromZone a custom test for determining whether the allocated targets are affected by the damage
-    * @param acquireTargetsFromZone the main target-collecting algorithm
+    * @param testTargetsFromZone a custom test for determining whether the allocated targets are affected by the damage;
+    *                            filters targets from the existing selection
+    * @param acquireTargetsFromZone the main target-collecting algorithm;
+    *                               collects targets from sector information
     * @return a list of affected entities;
     *         only mostly complete due to the exclusion of objects whose damage resolution is different than usual
     */
@@ -1833,8 +1850,8 @@ object Zone {
                         zone: Zone,
                         source: PlanetSideGameObject with FactionAffinity with Vitality,
                         createInteraction: (PlanetSideGameObject with FactionAffinity with Vitality, PlanetSideGameObject with FactionAffinity with Vitality) => DamageInteraction,
-                        testTargetsFromZone: (PlanetSideGameObject, PlanetSideGameObject, Float) => Boolean = distanceCheck,
-                        acquireTargetsFromZone: (Zone, PlanetSideGameObject with FactionAffinity with Vitality, DamageWithPosition) => List[PlanetSideServerObject with Vitality] = findAllTargets
+                        testTargetsFromZone: (PlanetSideGameObject, PlanetSideGameObject, Float) => Boolean,
+                        acquireTargetsFromZone: (Zone, PlanetSideGameObject with FactionAffinity with Vitality, DamageWithPosition) => List[PlanetSideServerObject with Vitality]
                     ): List[PlanetSideServerObject] = {
     source.Definition.innateDamage match {
       case Some(damage) =>
@@ -1859,8 +1876,10 @@ object Zone {
     * @param zone the zone in which the damage should occur
     * @param source the entity that embodies the damage (information)
     * @param createInteraction how the interaction for this damage is to prepared
-    * @param testTargetsFromZone a custom test for determining whether the allocated targets are affected by the damage
-    * @param acquireTargetsFromZone the main target-collecting algorithm
+    * @param testTargetsFromZone a custom test for determining whether the allocated targets are affected by the damage;
+    *                            filters targets from the existing selection
+    * @param acquireTargetsFromZone the main target-collecting algorithm;
+    *                               collects targets from sector information
     * @return a list of affected entities;
     *         only mostly complete due to the exclusion of objects whose damage resolution is different than usual
     */
