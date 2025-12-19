@@ -6,6 +6,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import net.psforever.actors.commands.NtuCommand
 import net.psforever.actors.zone.{BuildingActor, BuildingControlDetails, ZoneActor}
+import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.generator.{Generator, GeneratorControl}
 import net.psforever.objects.serverobject.resourcesilo.ResourceSiloControl
@@ -107,9 +108,12 @@ case object MajorFacilityLogic
         }
       // No map update needed - will be sent by `HackCaptureActor` when required
       case dome: ForceDomePhysics =>
+        val building = details.building
         // The force dome being expanded modifies the NTU drain rate
         val multiplier: Float = calculateNtuDrainMultiplierFrom(details.building, domeOpt = Some(dome))
-        details.building.NtuSource.foreach(_.Actor ! ResourceSiloControl.DrainMultiplier(multiplier))
+        building.NtuSource.foreach(_.Actor ! ResourceSiloControl.DrainMultiplier(multiplier))
+        // The force dome being expanded marks the generator as being invulnerable; it can be damaged otherwise
+        building.Generator.foreach { _.Actor ! Damageable.Vulnerability(dome.Energized) }
       case _ =>
         details.galaxyService ! GalaxyServiceMessage(GalaxyAction.MapUpdate(details.building.infoUpdateMessage()))
     }
@@ -373,7 +377,10 @@ case object MajorFacilityLogic
                                                 ): Float = {
     // The force dome being expanded means all repairs are essentially for free
     dome
-      .map { case d if d.Energized => 0f }
+      .flatMap {
+        case d if d.Energized => Some(0f)
+        case _ => None
+      }
       .orElse {
         mainTerminal.flatMap { _ => Some(2f) } //todo main terminal and viruses
       }
