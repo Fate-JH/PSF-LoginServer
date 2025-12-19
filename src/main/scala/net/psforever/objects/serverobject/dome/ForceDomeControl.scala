@@ -7,7 +7,6 @@ import net.psforever.objects.PlanetSideGameObject
 import net.psforever.objects.serverobject.affinity.{FactionAffinity, FactionAffinityBehavior}
 import net.psforever.objects.serverobject.structures.{Amenity, Building, PoweredAmenityControl}
 import net.psforever.objects.serverobject.terminals.capture.{CaptureTerminal, CaptureTerminalAware, CaptureTerminalAwareBehavior}
-import net.psforever.objects.serverobject.turret.FacilityTurret
 import net.psforever.objects.sourcing.SourceEntry
 import net.psforever.objects.vital.Vitality
 import net.psforever.objects.vital.etc.ForceDomeExposure
@@ -18,6 +17,8 @@ import net.psforever.packet.game.ChatMsg
 import net.psforever.services.Service
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.types.{ChatMessageType, PlanetSideEmpire, PlanetSideGeneratorState, Vector3}
+
+import scala.annotation.unused
 
 object ForceDomeControl {
   trait Command
@@ -30,7 +31,7 @@ object ForceDomeControl {
 
   /**
    * Dispatch a message to update the state of the clients with the server state of the capitol force dome.
-   * @param dome force dome
+   * @param dome            force dome
    * @param activationState new force dome status
    */
   def ChangeDomeEnergizedState(dome: ForceDomePhysics, activationState: Boolean): Unit = {
@@ -49,7 +50,7 @@ object ForceDomeControl {
    * use the faction affinity, the generator status, and the resource silo's capacitance level
    * to determine if the capitol force dome should be active.
    * @param building building being evaluated
-   * @param dome force dome
+   * @param dome     force dome
    * @return the condition of the capitol force dome;
    *         `None`, if the facility is not a capitol building;
    *         `Some(true|false)` to indicate the state of the force dome
@@ -78,7 +79,7 @@ object ForceDomeControl {
    * for capitol force dome expansion.
    * @param building target building
    * @return `true`, if the conditions for capitol force dome are not met;
-   *        `false`, otherwise
+   *         `false`, otherwise
    */
   def InvalidBuildingCapitolForceDomeConditions(building: Building): Boolean = {
     building.Faction == PlanetSideEmpire.NEUTRAL ||
@@ -87,59 +88,30 @@ object ForceDomeControl {
   }
 
   /**
-   * na
+   * Apply a fixed point and a rotation value to a series of vertex offsets,
+   * then daisy-chain the resulting vertices in such a way that
+   * it creates a perimeter around the (building) owner of the capitol force dome.
+   * The resulting capitol force dome barrier is a blocky pyramoid shape.
    * @param dome force dome
-   * @return na
+   * @return perimeter of the force dome barrier
    */
-  def GeneralFacilityPerimeter(dome: ForceDomePhysics): List[(Vector3, Vector3)] = {
-    val generatorTowerCenter = dome.Position.xy
-    val turretPoints = dome.Owner.Amenities.filter(_.isInstanceOf[FacilityTurret]).map(_.Position.xy)
-    val pointsOfForceDomePerimeter = turretPoints.map { p =>
-      val segmentFromTowerToTurret = p - generatorTowerCenter
-      Vector3.Unit(segmentFromTowerToTurret) * (Vector3.Magnitude(segmentFromTowerToTurret) + 20) //todo get correct distance offset
+  def SetupForceDomePerimeter(dome: ForceDomePhysics): List[(Vector3, Vector3)] = {
+    val center = dome.Position.xy
+    val rotation = math.toRadians(dome.Owner.Orientation.z).toFloat
+    val perimeterOffsets = dome.Definition.PerimeterOffsets
+    val perimeterPoints = perimeterOffsets.map {
+      center + Vector3.PlanarRotateAroundPoint(_, Vector3(0, 0, 1), rotation)
     }
-    pointsOfForceDomePerimeter
-      .flatMap { point =>
-        pointsOfForceDomePerimeter
-          .sortBy(p => Vector3.DistanceSquared(p, point))
-          .slice(1, 3)
-          .map { otherPoint =>
-            if (point.y > otherPoint.y || point.x < otherPoint.x) {
-              (point, otherPoint)
-            } else {
-              (otherPoint, point)
-            }
-          }
-      }
-      .distinct
-  }
-
-  import scala.annotation.unused
-  def TechPlantFacilityPerimeter(@unused dome: ForceDomePhysics): List[(Vector3, Vector3)] = {
-//    val generatorTowerCenter = dome.Position.xy
-//    val turretPoints = dome.Owner.Amenities.filter(_.isInstanceOf[FacilityTurret]).map(_.Position.xy)
-//    val organizedByClosestToGarage = dome
-//      .Owner
-//      .Amenities
-//      .find(_.Definition.Name.equals("gr_door_garage_ext"))
-//      .map { garage =>
-//        val doorPosition = garage.Position.xy
-//        turretPoints.sortBy(point => Vector3.DistanceSquared(doorPosition, point))
-//      }
-//      .getOrElse(List[Vector3]())
-//
-//    //val turretPoints = dome.Owner.Amenities.filter(_.isInstanceOf[FacilityTurret]).map(_.Position.xy)
-//    val pointsOfForceDomePerimeter = turretPoints.map { p =>
-//      val segmentFromTowerToTurret = p - generatorTowerCenter
-//      Vector3.Unit(segmentFromTowerToTurret) * (Vector3.Magnitude(segmentFromTowerToTurret) + 20) //todo get correct distance offset
-//    }
-    Nil
+    ((0 until perimeterPoints.size - 1).map { index =>
+      (perimeterPoints(index), perimeterPoints(index + 1))
+    } :+ (perimeterPoints.last, perimeterPoints.head)).toList
   }
 
   /**
-   * na
+   * The capitol force dome should have changed states but it will not!
+   * Make certain everyone knows!
    * @param building target building
-   * @param state na
+   * @param state whether the force dome is energized or not
    */
   def CustomDomeStateEnforcedMessage(
                                       building: Building,
@@ -156,7 +128,8 @@ object ForceDomeControl {
   }
 
   /**
-   * na
+   * The capitol force dome will start changing states normally.
+   * Make certain everyone knows.
    * @param building facility
    */
   def NormalDomeStateMessage(building: Building): Unit = {
@@ -179,19 +152,19 @@ object ForceDomeControl {
    * pass a message onto that facility that it should check its own state alignment.
    * @param building facility with `dome`
    */
-  def AlignForceDomeStatusAndUpdate(building: Building, dome: ForceDomePhysics): Unit = {
-    CheckForceDomeStatus(building, dome).foreach {
-      case true =>
-        if (!dome.Energized) {
-          ChangeDomeEnergizedState(dome, activationState = true)
-          ForceDomeKills(dome)
-          dome.Owner.Actor ! BuildingActor.MapUpdate()
-        }
-      case false =>
-        if (dome.Energized) {
-          ChangeDomeEnergizedState(dome, activationState = false)
-          dome.Owner.Actor ! BuildingActor.MapUpdate()
-        }
+  def AlignForceDomeStatusAndUpdate(building: Building, dome: ForceDomePhysics): Boolean = {
+    val energizedState = dome.Energized
+    CheckForceDomeStatus(building, dome).exists {
+      case true if !energizedState =>
+        dome.Owner.Actor ! BuildingActor.MapUpdate()
+        ChangeDomeEnergizedState(dome, activationState = true)
+        true
+      case false if energizedState =>
+        ChangeDomeEnergizedState(dome, activationState = false)
+        dome.Owner.Actor ! BuildingActor.MapUpdate()
+        false
+      case _ =>
+        energizedState
     }
   }
 
@@ -204,44 +177,44 @@ object ForceDomeControl {
    * pass a message onto that facility that it should check its own state alignment.
    * @param building facility with `dome`
    */
-  private def AlignForceDomeStatus(building: Building, dome: ForceDomePhysics): Unit = {
-    CheckForceDomeStatus(building, dome).foreach {
-      case true =>
-        if (!dome.Energized) {
-          ChangeDomeEnergizedState(dome, activationState = true)
-          ForceDomeKills(dome)
-        }
-      case false =>
-        if (dome.Energized) {
-          ChangeDomeEnergizedState(dome, activationState = false)
-        }
+  private def AlignForceDomeStatus(building: Building, dome: ForceDomePhysics): Boolean = {
+    val energizedState = dome.Energized
+    CheckForceDomeStatus(building, dome).exists {
+      case true if !energizedState =>
+        ChangeDomeEnergizedState(dome, activationState = true)
+        true
+      case false if energizedState =>
+        ChangeDomeEnergizedState(dome, activationState = false)
+        false
+      case _ =>
+        energizedState
     }
   }
 
   /**
    * Being too close to the force dome can destroy targets if they do not match the faction alignment of the dome.
-   * This is the usual fate of opponents upon it being expanded (energeized).
+   * This is the usual fate of opponents upon it being expanded (energized).
    * @see `Zone.serverSideDamage`
    * @param dome force dome
    * @return a list of affected entities
    */
-  def ForceDomeKills(dome: ForceDomePhysics): List[PlanetSideServerObject] = {
+  def ForceDomeKills(dome: ForceDomePhysics, perimeter: List[(Vector3, Vector3)]): List[PlanetSideServerObject] = {
     Zone.serverSideDamage(
       dome.Zone,
       dome,
-      contactWithForceDome,
-      Zone.distanceCheck,
+      makesContactWithForceDome,
+      targetUnderForceDome(perimeter),
       forceDomeTargets(dome.Definition.UseRadius, dome.Faction)
     )
   }
 
   /**
-   * na
+   * Prepare damage information related to being caugt underneath the capitol force dome when it expands.
    * @param source a game object that represents the source of the explosion
    * @param target a game object that is affected by the explosion
    * @return a `DamageInteraction` object
    */
-  private def contactWithForceDome(
+  private def makesContactWithForceDome(
                                     source: PlanetSideGameObject with FactionAffinity with Vitality,
                                     target: PlanetSideGameObject with FactionAffinity with Vitality
                                   ): DamageInteraction = {
@@ -254,6 +227,84 @@ object ForceDomeControl {
 
   /**
    * na
+   * @see `Zone.distanceCheck`
+   * @param segments ground-level perimeter of the force dome is defined by these segments (as vertex pairs)
+   * @param obj1 a game entity, should be the force dome
+   * @param obj2 a game entity, should be a damageable target of the force dome's wrath
+   * @param maxDistance ot applicable
+   * @return `true`, if target is detected within the force dome kill region
+   *        `false`, otherwise
+   */
+  private def targetUnderForceDome(
+                                    segments: List[(Vector3, Vector3)]
+                                  )
+                                  (
+                                    obj1: PlanetSideGameObject,
+                                    obj2: PlanetSideGameObject,
+                                    @unused maxDistance: Float
+                                  ): Boolean = {
+    val centerPos @ Vector3(centerX, centerY, centerZ) = obj1.Position
+    val Vector3(targetX, targetY, targetZ) = obj2.Position - centerPos //deltas of segment of target to dome
+    val checkForIntersection = segments.exists { case (point1, point2) =>
+      //want targets within the perimeter; if there's an intersection, target is outside of the perimeter
+      segmentIntersectionTestPerSegment(centerX, centerY, targetX, targetY, point1.x, point1.y, point2.x, point2.y)
+    }
+    !checkForIntersection && (targetZ < centerZ || Zone.distanceCheck(obj1, obj2, math.pow(obj1.Definition.UseRadius, 2).toFloat))
+  }
+
+  /**
+   * A function to assist line segment intersection tests.
+   * The important frame of reference is checking whether a hypothetical segment between a point and a target
+   * intersects with an established line segment between two other points.
+   * For our purposes, the resulting line segments will never be collinear, so there is no reason to test that.
+   * @param pointX x-coordinate used to create a test segment
+   * @param pointY y-coordinate used to create a test segment
+   * @param targetX x-coordinate of an important point for a test segment
+   * @param targetY y-coordinate of an important point for a test segment
+   * @param segmentPoint1x x-coordinate of one point from a segment
+   * @param segmentPoint1y y-coordinate of one point from a segment
+   * @param segmentPoint2x x-coordinate of a different point from a segment
+   * @param segmentPoint2y y-coordinate of a different point from a segment
+   * @return `true`, if the points form into two segments that intersect;
+   *         `false`, otherwise
+   */
+  private def segmentIntersectionTestPerSegment(
+                                                 pointX: Float,
+                                                 pointY: Float,
+                                                 targetX: Float,
+                                                 targetY: Float,
+                                                 segmentPoint1x: Float,
+                                                 segmentPoint1y: Float,
+                                                 segmentPoint2x: Float,
+                                                 segmentPoint2y: Float
+                                               ): Boolean = {
+    //based on Franklin Antonio's "Faster Line Segment Intersection" topic "in Graphics Gems III" book (http://www.graphicsgems.org/)
+    //compare, java.awt.geom.Line2D.linesIntersect
+    val bx = segmentPoint1x - segmentPoint2x //delta-x of segment
+    val by = segmentPoint1y - segmentPoint2y //delta-y of segment
+    val cx = pointX - segmentPoint1x //delta-x of hypotenuse of triangle formed by center, segment endpoint, and intersection point
+    val cy = pointY - segmentPoint1y //delta-y of hypotenuse of triangle formed by center, segment endpoint, and intersection point
+    val alphaNumerator = by * cx - bx * cy
+    val commonDenominator = targetY * bx - targetX * by
+    val betaNumerator = targetX * cy - targetY * cx
+    if (
+      commonDenominator > 0 &&
+        (alphaNumerator < 0 || alphaNumerator > commonDenominator || betaNumerator < 0 || betaNumerator > commonDenominator)
+    ) {
+      false
+    } else if (
+      commonDenominator < 0 &&
+        (alphaNumerator > 0 || alphaNumerator < commonDenominator || betaNumerator > 0 || betaNumerator < commonDenominator)
+    ) {
+      false
+    } else {
+      //a collinear line test could go here, but we don't need it
+      true
+    }
+  }
+
+  /**
+   * Collect all enemy players, vehicles, and combat engineering deployables in a sector.
    * @see `DamageWithPosition`
    * @see `Zone.blockMap.sector`
    * @param zone   the zone in which the explosion should occur
@@ -292,8 +343,13 @@ class ForceDomeControl(dome: ForceDomePhysics)
   def CaptureTerminalAwareObject: Amenity with CaptureTerminalAware = dome
   def FactionObject: FactionAffinity = dome
 
+  /** a capitol force dome's owner should always be a facility, preferably the capitol facility of the continent;
+   * to save time, casted this entity and cache it for repeated use once;
+   * force dome is not immediately owned (by correct facility) so delay determination */
   private lazy val domeOwnerAsABuilding = dome.Owner.asInstanceOf[Building]
-
+  /** ground-level perimeter of the force dome is defined by these segments (as vertex pairs) */
+  private val perimeterSegments: List[(Vector3, Vector3)] = ForceDomeControl.SetupForceDomePerimeter(dome)
+  /** force the dome into a certain state regardless of what conditions would normally transition it into that state */
   private var customState: Option[Boolean] = None
 
   def commonBehavior: Receive = checkBehavior
@@ -325,6 +381,7 @@ class ForceDomeControl(dome: ForceDomePhysics)
         customState = None
         ForceDomeControl.NormalDomeStateMessage(domeOwnerAsABuilding)
         ForceDomeControl.AlignForceDomeStatusAndUpdate(domeOwnerAsABuilding, dome)
+        ForceDomeControl.ForceDomeKills(dome, perimeterSegments)
     }
 
   def poweredStateLogic: Receive = {
@@ -363,6 +420,10 @@ class ForceDomeControl(dome: ForceDomePhysics)
     deenergizeUnlessSuppressedDueToCustomState()
   }
 
+  /**
+   * Power down the force dome if it was previously being powered and
+   * as long as a custom state of being energized is not being enforced.
+   */
   private def deenergizeUnlessSuppressedDueToCustomState(): Unit = {
     if (dome.Energized) {
       if (customState.isEmpty) {
@@ -374,25 +435,22 @@ class ForceDomeControl(dome: ForceDomePhysics)
   }
 
   /**
-   * na
+   * Yield to a custom value enforcing a certain force dome state - energized or powered down.
+   * If the custom state is not declared, run the function and analyze any change in the force dome's natural state.
    * @param func function to run if not blocked
-   * @return next behavior for an actor state
+   * @return current energized state of the dome
    */
-  private def blockedByCustomStateOr(func: (Building, ForceDomePhysics) => Unit): Unit = {
-    blockedByCustomStateOr(func, domeOwnerAsABuilding, dome)
-  }
-  /**
-   * na
-   * @param func function to run if not blocked
-   * @param building facility to operate upon (parameter to `func`)
-   * @return next behavior for an actor state
-   */
-  private def blockedByCustomStateOr(func: (Building, ForceDomePhysics) => Unit, building: Building, dome: ForceDomePhysics): Unit = {
+  private def blockedByCustomStateOr(func: (Building, ForceDomePhysics) => Boolean): Boolean = {
     customState match {
       case None =>
-        func(building, dome)
+        val newState = func(domeOwnerAsABuilding, dome)
+        if (!dome.Energized && newState) {
+          ForceDomeControl.ForceDomeKills(dome, perimeterSegments)
+        }
+        newState
       case Some(state) =>
-        ForceDomeControl.CustomDomeStateEnforcedMessage(building, state)
+        ForceDomeControl.CustomDomeStateEnforcedMessage(domeOwnerAsABuilding, state)
+        state
     }
   }
 }
