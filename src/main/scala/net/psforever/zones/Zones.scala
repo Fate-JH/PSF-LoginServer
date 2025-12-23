@@ -392,12 +392,12 @@ object Zones {
             .foreach { forceDome =>
               structures
                 .find { structure => Building.Capitols.contains(structure.objectName) }
-                .foreach { capitol =>
+                .foreach { structure =>
                   val definition = DefinitionUtil.fromString(forceDome.objectType).asInstanceOf[ForceDomeDefinition]
                   zoneMap.addLocalObject(
                     forceDome.guid,
-                    ForceDomePhysics.Constructor(forceDome.position, definition),
-                    owningBuildingGuid = capitol.guid
+                    ForceDomePhysics.Constructor(definition),
+                    owningBuildingGuid = structure.guid
                   )
                 }
             }
