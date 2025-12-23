@@ -5,7 +5,7 @@ import net.psforever.objects.sourcing.{AmenitySource, SourceEntry}
 import net.psforever.objects.vital.{NoResistanceSelection, SimpleResolutions}
 import net.psforever.objects.vital.base.{DamageReason, DamageResolution}
 import net.psforever.objects.vital.damage.DamageCalculations
-import net.psforever.objects.vital.prop.DamageProperties
+import net.psforever.objects.vital.prop.{DamageProperties, DamageWithPosition}
 import net.psforever.objects.vital.resolution.{DamageAndResistance, DamageResistanceModel}
 
 /**
@@ -52,7 +52,7 @@ object ForceDomeExposure {
     Model = SimpleResolutions.calculate
   }
 
-  final val damageProperties = new DamageProperties {
+  final val damageProperties = new DamageWithPosition {
     Damage0 = 99999
     DamageToHealthOnly = true
     DamageToVehicleOnly = true

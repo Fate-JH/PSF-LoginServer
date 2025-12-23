@@ -10,11 +10,20 @@ class ForceDomePhysics(private val cfddef: ForceDomeDefinition)
     with CaptureTerminalAware {
   private var energized: Boolean = false
 
+  private var perimeter: List[(Vector3, Vector3)] = List()
+
   def Energized: Boolean = energized
 
   def Energized_=(state: Boolean): Boolean = {
     energized = state
     Energized
+  }
+
+  def Perimeter: List[(Vector3, Vector3)] = perimeter
+
+  def Perimeter_=(list: List[(Vector3, Vector3)]): List[(Vector3, Vector3)] = {
+    perimeter = list
+    Perimeter
   }
 
   def Definition: ForceDomeDefinition = cfddef

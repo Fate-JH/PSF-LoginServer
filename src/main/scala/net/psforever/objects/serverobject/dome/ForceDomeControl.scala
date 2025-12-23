@@ -29,6 +29,12 @@ object ForceDomeControl {
 
   final case object NormalBehavior extends Command
 
+  final case object ApplyProtection extends Command
+
+  final case object RemoveProtection extends Command
+
+  final case object Purge extends Command
+
   /**
    * Dispatch a message to update the state of the clients with the server state of the capitol force dome.
    * @param dome            force dome
@@ -202,8 +208,9 @@ object ForceDomeControl {
     Zone.serverSideDamage(
       dome.Zone,
       dome,
+      ForceDomeExposure.damageProperties,
       makesContactWithForceDome,
-      targetUnderForceDome(perimeter),
+      TargetUnderForceDome(perimeter),
       forceDomeTargets(dome.Definition.UseRadius, dome.Faction)
     )
   }
@@ -235,14 +242,14 @@ object ForceDomeControl {
    * @return `true`, if target is detected within the force dome kill region
    *        `false`, otherwise
    */
-  private def targetUnderForceDome(
-                                    segments: List[(Vector3, Vector3)]
-                                  )
-                                  (
-                                    obj1: PlanetSideGameObject,
-                                    obj2: PlanetSideGameObject,
-                                    @unused maxDistance: Float
-                                  ): Boolean = {
+  def TargetUnderForceDome(
+                            segments: List[(Vector3, Vector3)]
+                          )
+                          (
+                            obj1: PlanetSideGameObject,
+                            obj2: PlanetSideGameObject,
+                            @unused maxDistance: Float
+                          ): Boolean = {
     val centerPos @ Vector3(centerX, centerY, centerZ) = obj1.Position
     val Vector3(targetX, targetY, targetZ) = obj2.Position - centerPos //deltas of segment of target to dome
     val checkForIntersection = segments.exists { case (point1, point2) =>
@@ -343,12 +350,12 @@ class ForceDomeControl(dome: ForceDomePhysics)
   def CaptureTerminalAwareObject: Amenity with CaptureTerminalAware = dome
   def FactionObject: FactionAffinity = dome
 
-  /** a capitol force dome's owner should always be a facility, preferably the capitol facility of the continent;
-   * to save time, casted this entity and cache it for repeated use once;
-   * force dome is not immediately owned (by correct facility) so delay determination */
+  /** a capitol force dome's owner should always be a facility;
+   * to save time, cast this entity and cache it for repeated use once;
+   * force dome is not immediately owned by its correct facility so delay determination */
   private lazy val domeOwnerAsABuilding = dome.Owner.asInstanceOf[Building]
   /** ground-level perimeter of the force dome is defined by these segments (as vertex pairs) */
-  private val perimeterSegments: List[(Vector3, Vector3)] = ForceDomeControl.SetupForceDomePerimeter(dome)
+  private lazy val perimeterSegments: List[(Vector3, Vector3)] = ForceDomeControl.SetupForceDomePerimeter(dome)
   /** force the dome into a certain state regardless of what conditions would normally transition it into that state */
   private var customState: Option[Boolean] = None
 
@@ -381,6 +388,16 @@ class ForceDomeControl(dome: ForceDomePhysics)
         customState = None
         ForceDomeControl.NormalDomeStateMessage(domeOwnerAsABuilding)
         ForceDomeControl.AlignForceDomeStatusAndUpdate(domeOwnerAsABuilding, dome)
+        ForceDomeControl.ForceDomeKills(dome, perimeterSegments)
+
+      case ForceDomeControl.ApplyProtection
+        if dome.Energized =>
+        dome.Perimeter = perimeterSegments
+
+      case ForceDomeControl.RemoveProtection =>
+        dome.Perimeter = List.empty
+
+      case ForceDomeControl.Purge =>
         ForceDomeControl.ForceDomeKills(dome, perimeterSegments)
     }
 
@@ -437,15 +454,25 @@ class ForceDomeControl(dome: ForceDomePhysics)
   /**
    * Yield to a custom value enforcing a certain force dome state - energized or powered down.
    * If the custom state is not declared, run the function and analyze any change in the force dome's natural state.
+   * Apply changes to region represented as "bound" by the perimeter as indicated by a state change.
    * @param func function to run if not blocked
    * @return current energized state of the dome
    */
   private def blockedByCustomStateOr(func: (Building, ForceDomePhysics) => Boolean): Boolean = {
+    import scala.concurrent.duration._
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     customState match {
       case None =>
+        val oldState = dome.Energized
         val newState = func(domeOwnerAsABuilding, dome)
-        if (!dome.Energized && newState) {
-          ForceDomeControl.ForceDomeKills(dome, perimeterSegments)
+        if (!oldState && newState) {
+          //dome activating
+          context.system.scheduler.scheduleOnce(delay = 1500 milliseconds, self, ForceDomeControl.Purge)
+          context.system.scheduler.scheduleOnce(delay = 4000 milliseconds, self, ForceDomeControl.ApplyProtection)
+        } else if (oldState && !newState) {
+          //dome de-activating
+          dome.Zone.blockMap.removeFrom(dome)
         }
         newState
       case Some(state) =>
