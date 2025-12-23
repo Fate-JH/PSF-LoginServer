@@ -157,6 +157,8 @@ object ForceDomeControl {
    * and has the capitol force dome has a dependency upon it,
    * pass a message onto that facility that it should check its own state alignment.
    * @param building facility with `dome`
+   * @param dome force dome
+   * @return current state of the capitol force dome
    */
   def AlignForceDomeStatusAndUpdate(building: Building, dome: ForceDomePhysics): Boolean = {
     val energizedState = dome.Energized
@@ -182,6 +184,8 @@ object ForceDomeControl {
    * and has the capitol force dome has a dependency upon it,
    * pass a message onto that facility that it should check its own state alignment.
    * @param building facility with `dome`
+   * @param dome force dome
+   * @return current state of the capitol force dome
    */
   private def AlignForceDomeStatus(building: Building, dome: ForceDomePhysics): Boolean = {
     val energizedState = dome.Energized
@@ -202,7 +206,8 @@ object ForceDomeControl {
    * This is the usual fate of opponents upon it being expanded (energized).
    * @see `Zone.serverSideDamage`
    * @param dome force dome
-   * @return a list of affected entities
+   * @param perimeter ground-level perimeter of the force dome is defined by these segments (as vertex pairs)
+   * @return list of affected entities
    */
   def ForceDomeKills(dome: ForceDomePhysics, perimeter: List[(Vector3, Vector3)]): List[PlanetSideServerObject] = {
     Zone.serverSideDamage(
@@ -222,9 +227,9 @@ object ForceDomeControl {
    * @return a `DamageInteraction` object
    */
   private def makesContactWithForceDome(
-                                    source: PlanetSideGameObject with FactionAffinity with Vitality,
-                                    target: PlanetSideGameObject with FactionAffinity with Vitality
-                                  ): DamageInteraction = {
+                                         source: PlanetSideGameObject with FactionAffinity with Vitality,
+                                         target: PlanetSideGameObject with FactionAffinity with Vitality
+                                       ): DamageInteraction = {
     DamageInteraction(
       SourceEntry(target),
       ForceDomeExposure(SourceEntry(source)),
@@ -233,7 +238,11 @@ object ForceDomeControl {
   }
 
   /**
-   * na
+   * To be considered within a force dome, a target entity must satisfy two orientations
+   * where the second condition is one of two qualifications:
+   * 1. within an angular perimeter boundary, and
+   * 2a. below the base coordinate of the force dome or
+   * 2b. within a region above the base of the force dome represented by a literal "dome" (half of a sphere).
    * @see `Zone.distanceCheck`
    * @param segments ground-level perimeter of the force dome is defined by these segments (as vertex pairs)
    * @param obj1 a game entity, should be the force dome
@@ -470,9 +479,6 @@ class ForceDomeControl(dome: ForceDomePhysics)
           //dome activating
           context.system.scheduler.scheduleOnce(delay = 1500 milliseconds, self, ForceDomeControl.Purge)
           context.system.scheduler.scheduleOnce(delay = 4000 milliseconds, self, ForceDomeControl.ApplyProtection)
-        } else if (oldState && !newState) {
-          //dome de-activating
-          dome.Zone.blockMap.removeFrom(dome)
         }
         newState
       case Some(state) =>

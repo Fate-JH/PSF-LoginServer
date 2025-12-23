@@ -26,19 +26,16 @@ class ForceDomeDefinition(objectId: Int)
 
 object ForceDomeDefinition {
   /**
-   * na
-   * @param o na
-   * @return na
+   * Transform a capitol force dome into a bounded geometric representation.
+   * @param o any entity from which to produce a geometric representation
+   * @return geometric representation
    */
   def representBy(o: Any): VolumetricGeometry = {
-    import net.psforever.objects.geometry.GeometryForm.invalidPoint
     o match {
       case fdp: ForceDomePhysics =>
         Sphere(fdp.Position, fdp.Definition.UseRadius)
-      case s: SourceEntry =>
-        Sphere(s.Position, s.Definition.UseRadius)
       case _ =>
-        Sphere(invalidPoint, 1f)
+        net.psforever.objects.geometry.GeometryForm.invalidPoint
     }
   }
 }

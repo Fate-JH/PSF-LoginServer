@@ -24,7 +24,9 @@ class InteractWithForceDomeProtection
   private var protectedBy: Option[ForceDomePhysics] = None
 
   /**
-   * na
+   * If the target is protected, do conditions allow it to remain protected?
+   * If the target was vulnerable, can it be protected?
+   * Five second pause between evaluations (0-3, wait; 4, test).
    * @see `ForceDomeControl.TargetUnderForceDome`
    * @param sector the portion of the block map being tested
    * @param target the fixed element in this test
@@ -70,19 +72,24 @@ class InteractWithForceDomeProtection
         ForceDomeControl.TargetUnderForceDome(dome.Perimeter)(target, dome, maxDistance = 0f)
       }
       .map { dome =>
-        protectedBy = Some(dome)
-        target.Actor ! Damageable.MakeInvulnerable
+        applyProtection(target, dome)
         dome
       }
   }
 
+  protected def applyProtection(target: InteractsWithZone, dome: ForceDomePhysics): Unit = {
+    protectedBy = Some(dome)
+    target.Actor ! Damageable.MakeInvulnerable
+  }
+
   /**
-   * na
+   * No longer invulnerable (if ever).
+   * Set the counter to force a reevaluation of the vulnerability state next turn.
    * @see `Damageable.MakeVulnerable`
    * @param target the fixed element in this test
    */
   def resetInteraction(target: InteractsWithZone): Unit = {
-    protectSkipCounter = 0
+    protectSkipCounter = 5
     protectedBy = None
     target.Actor ! Damageable.MakeVulnerable
   }

@@ -39,6 +39,7 @@ class Player(var avatar: Avatar)
     with InteriorAwareFromInteraction
     with AuraContainer
     with MountableEntity {
+  interaction(new InteractWithForceDomeProtection())
   interaction(environment.interaction.InteractWithEnvironment(Seq(
     new WithEntrance(),
     new WithWater(avatar.name),
@@ -50,7 +51,6 @@ class Player(var avatar: Avatar)
   interaction(new InteractWithMines(range = 10, TriggerOnPlayerRule))
   interaction(new InteractWithTurrets())
   interaction(new InteractWithRadiationClouds(range = 10f, Some(this)))
-  interaction(new InteractWithForceDomeProtection())
 
   private var backpack: Boolean = false
   private var released: Boolean = false

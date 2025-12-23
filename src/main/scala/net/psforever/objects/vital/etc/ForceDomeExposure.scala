@@ -22,25 +22,19 @@ final case class ForceDomeExposure(field: SourceEntry)
   }
 
   /**
-   * Want to blame the capitol facility that is being protected.
+   * Blame the capitol facility that is being protected.
    */
   override def attribution: Int = field match {
     case a: AmenitySource => a.installation.Definition.ObjectId
     case _ => field.Definition.ObjectId
   }
 
-  /**
-   * A direct connection to the damage information, numbers and properties.
-   */
   override def source: DamageProperties = ForceDomeExposure.damageProperties
 
-  /**
-   * The functionality that is necessary for interaction of a vital game object with the rest of the hostile game world.
-   */
   override def damageModel: DamageAndResistance = ForceDomeExposure.drm
 
   /**
-   * The person to be blamed for this.
+   * No one person will be blamed for this.
    */
   override def adversary: Option[SourceEntry] = None
 }
