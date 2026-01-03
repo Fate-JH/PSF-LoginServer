@@ -77,7 +77,7 @@ class InteractWithForceDomeProtection
       }
   }
 
-  protected def applyProtection(target: InteractsWithZone, dome: ForceDomePhysics): Unit = {
+  def applyProtection(target: InteractsWithZone, dome: ForceDomePhysics): Unit = {
     protectedBy = Some(dome)
     target.Actor ! Damageable.MakeInvulnerable
   }

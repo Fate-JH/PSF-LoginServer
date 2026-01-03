@@ -965,6 +965,7 @@ object GlobalDefinitionsMiscellaneous {
       Vector3(-90.328125f, -106.90625f, 0f),
       Vector3(83.05469f, -106.90625f, 0f)
     )
+    force_dome_amp_physics.ApplyProtectionTo = List(generator, manned_turret)
 
     force_dome_comm_physics.Name = "force_dome_comm_physics"
     force_dome_comm_physics.UseRadius = 121.8149f
@@ -976,6 +977,7 @@ object GlobalDefinitionsMiscellaneous {
       Vector3(-83.640625f, 45.601562f, 0f),
       Vector3(-83.640625f, -89.859375f, 0f)
     )
+    force_dome_comm_physics.ApplyProtectionTo = List(generator, manned_turret)
 
     force_dome_cryo_physics.Name = "force_dome_cryo_physics"
     force_dome_cryo_physics.UseRadius = 127.9241f //127.7963f
@@ -986,6 +988,7 @@ object GlobalDefinitionsMiscellaneous {
       Vector3(-74.73426f, -103.47f, 0),
       Vector3(72.75476f, -103.47f, 0)
     )
+    force_dome_cryo_physics.ApplyProtectionTo = List(generator, implant_terminal_mech, manned_turret)
 
     force_dome_dsp_physics.Name = "force_dome_dsp_physics"
     force_dome_dsp_physics.UseRadius = 175.8838f //175.7081f
@@ -997,10 +1000,11 @@ object GlobalDefinitionsMiscellaneous {
       Vector3(130.44531f, 188.26562f, 0f),
       Vector3(130.44531f, -93.28125f, 0f)
     )
+    force_dome_dsp_physics.ApplyProtectionTo = List(generator, manned_turret)
 
     force_dome_tech_physics.Name = "force_dome_tech_physics"
     force_dome_tech_physics.UseRadius = 150.1284f
-    force_dome_tech_physics.PerimeterOffsets = List( //todo double-check eisa, esamir
+    force_dome_tech_physics.PerimeterOffsets = List( //todo double-check, e.g., eisa, esamir
       Vector3(130.14636f, -95.20665f, 0f),
       Vector3(130.14636f, 34.441734f, 0f),
       Vector3(103.98575f, 52.58408f, 0f),
@@ -1011,5 +1015,6 @@ object GlobalDefinitionsMiscellaneous {
       Vector3(-73.64424f, -114.65837f, 0f),
       Vector3(102.12191f, -114.65837f, 0f)
     )
+    force_dome_tech_physics.ApplyProtectionTo = List(generator, manned_turret)
   }
 }

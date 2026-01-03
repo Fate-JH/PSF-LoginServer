@@ -3,7 +3,6 @@ package net.psforever.objects.serverobject.dome
 
 import net.psforever.objects.geometry.d3.{Sphere, VolumetricGeometry}
 import net.psforever.objects.serverobject.structures.AmenityDefinition
-import net.psforever.objects.sourcing.SourceEntry
 import net.psforever.types.Vector3
 
 class ForceDomeDefinition(objectId: Int)
@@ -21,6 +20,19 @@ class ForceDomeDefinition(objectId: Int)
   def PerimeterOffsets_=(points: List[Vector3]): List[Vector3] = {
     perimeter = points
     PerimeterOffsets
+  }
+
+  private var protects: List[AmenityDefinition] = List()
+
+  def ApplyProtectionTo: List[AmenityDefinition] = protects
+
+  def ApplyProtectionTo_=(protect: AmenityDefinition): List[AmenityDefinition] = {
+    ApplyProtectionTo_=(List(protect))
+  }
+
+  def ApplyProtectionTo_=(protect: List[AmenityDefinition]): List[AmenityDefinition] = {
+    protects = protect
+    ApplyProtectionTo
   }
 }
 

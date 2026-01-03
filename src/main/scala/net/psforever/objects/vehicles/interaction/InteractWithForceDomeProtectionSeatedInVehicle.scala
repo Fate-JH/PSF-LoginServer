@@ -9,7 +9,7 @@ import net.psforever.objects.zones.InteractsWithZone
 
 class InteractWithForceDomeProtectionSeatedInVehicle
   extends InteractWithForceDomeProtectionSeatedInEntity {
-  override protected def applyProtection(target: InteractsWithZone, dome: ForceDomePhysics): Unit = {
+  override def applyProtection(target: InteractsWithZone, dome: ForceDomePhysics): Unit = {
     super.applyProtection(target, dome)
     target
       .asInstanceOf[Vehicle]

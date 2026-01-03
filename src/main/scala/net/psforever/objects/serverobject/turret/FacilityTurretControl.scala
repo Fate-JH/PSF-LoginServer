@@ -100,7 +100,7 @@ class FacilityTurretControl(turret: FacilityTurret)
                                     seatNumber: Int,
                                     player: Player): Boolean = {
     super.mountTest(obj, seatNumber, player) &&
-      (!TurretObject.isUpgrading || System.currentTimeMillis() - GenericHackables.getTurretUpgradeTime >= 1500L)
+      (!TurretObject.isUpgrading || System.currentTimeMillis() - TurretObject.CheckTurretUpgradeTime >= 1500L)
   }
 
   override protected def tryMount(obj: PlanetSideServerObject with Mountable, seatNumber: Int, player: Player): Boolean = {

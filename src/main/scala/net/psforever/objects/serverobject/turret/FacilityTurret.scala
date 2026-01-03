@@ -23,6 +23,28 @@ class FacilityTurret(tDef: FacilityTurretDefinition)
   WeaponTurret.LoadDefinition(turret = this)
   WhichSide = Sidedness.OutsideOf
 
+  private var turretUpgradeTime: Long = System.currentTimeMillis()
+  private var turretUpgradeTimeSet: Boolean = false
+
+  def UpdateTurretUpgradeTime(): Long = {
+    turretUpgradeTime = System.currentTimeMillis()
+    turretUpgradeTimeSet = true
+    turretUpgradeTime
+  }
+
+  // Used for checking the time without updating it
+  def CheckTurretUpgradeTime: Long = {
+    if (!turretUpgradeTimeSet) {
+      turretUpgradeTime = System.currentTimeMillis()
+      turretUpgradeTimeSet = true
+    }
+    turretUpgradeTime
+  }
+
+  def FinishedTurretUpgradeReset(): Unit = {
+    turretUpgradeTimeSet = false
+  }
+
   def TurretOwner: SourceEntry = {
     Seats
       .headOption

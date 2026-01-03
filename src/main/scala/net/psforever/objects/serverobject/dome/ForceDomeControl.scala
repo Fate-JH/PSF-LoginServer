@@ -164,8 +164,8 @@ object ForceDomeControl {
     val energizedState = dome.Energized
     CheckForceDomeStatus(building, dome).exists {
       case true if !energizedState =>
-        dome.Owner.Actor ! BuildingActor.MapUpdate()
         ChangeDomeEnergizedState(dome, activationState = true)
+        dome.Owner.Actor ! BuildingActor.MapUpdate()
         true
       case false if energizedState =>
         ChangeDomeEnergizedState(dome, activationState = false)
@@ -247,7 +247,7 @@ object ForceDomeControl {
    * @param segments ground-level perimeter of the force dome is defined by these segments (as vertex pairs)
    * @param obj1 a game entity, should be the force dome
    * @param obj2 a game entity, should be a damageable target of the force dome's wrath
-   * @param maxDistance ot applicable
+   * @param maxDistance not applicable
    * @return `true`, if target is detected within the force dome kill region
    *        `false`, otherwise
    */
@@ -260,12 +260,12 @@ object ForceDomeControl {
                             @unused maxDistance: Float
                           ): Boolean = {
     val centerPos @ Vector3(centerX, centerY, centerZ) = obj1.Position
-    val Vector3(targetX, targetY, targetZ) = obj2.Position - centerPos //deltas of segment of target to dome
-    val checkForIntersection = segments.exists { case (point1, point2) =>
+    val Vector3(targetX, targetY, _) = obj2.Position.xy - centerPos.xy //deltas of segment of target to dome
+    lazy val checkForIntersection = segments.exists { case (point1, point2) =>
       //want targets within the perimeter; if there's an intersection, target is outside of the perimeter
       segmentIntersectionTestPerSegment(centerX, centerY, targetX, targetY, point1.x, point1.y, point2.x, point2.y)
     }
-    !checkForIntersection && (targetZ < centerZ || Zone.distanceCheck(obj1, obj2, math.pow(obj1.Definition.UseRadius, 2).toFloat))
+    segments.nonEmpty && !checkForIntersection && (obj2.Position.z <= centerZ || Zone.distanceCheck(obj1, obj2, math.pow(obj1.Definition.UseRadius, 2).toFloat))
   }
 
   /**
@@ -402,9 +402,11 @@ class ForceDomeControl(dome: ForceDomePhysics)
       case ForceDomeControl.ApplyProtection
         if dome.Energized =>
         dome.Perimeter = perimeterSegments
+        dome.Owner.Actor ! BuildingActor.AmenityStateChange(dome)
 
       case ForceDomeControl.RemoveProtection =>
         dome.Perimeter = List.empty
+        dome.Owner.Actor ! BuildingActor.AmenityStateChange(dome)
 
       case ForceDomeControl.Purge =>
         ForceDomeControl.ForceDomeKills(dome, perimeterSegments)

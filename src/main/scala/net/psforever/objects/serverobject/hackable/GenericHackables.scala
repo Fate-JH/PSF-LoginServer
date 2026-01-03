@@ -2,11 +2,13 @@
 package net.psforever.objects.serverobject.hackable
 
 import net.psforever.actors.zone.BuildingActor
-import net.psforever.objects.serverobject.structures.{Building, StructureType, WarpGate}
+import net.psforever.objects.serverobject.dome.ForceDomeControl
+import net.psforever.objects.serverobject.structures.{Amenity, Building, StructureType, WarpGate}
 import net.psforever.objects.serverobject.terminals.Terminal
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
 import net.psforever.objects.{GlobalDefinitions, Player, Vehicle}
 import net.psforever.objects.serverobject.{CommonMessages, PlanetSideServerObject}
+import net.psforever.objects.zones.blockmap.BlockMapEntity
 import net.psforever.packet.game.{GenericObjectActionMessage, HackMessage, HackState, HackState1, HackState7, TriggeredSound}
 import net.psforever.types.{PlanetSideEmpire, PlanetSideGUID}
 import net.psforever.services.Service
@@ -17,23 +19,7 @@ import scala.util.{Failure, Success}
 
 object GenericHackables {
   private val log = org.log4s.getLogger("HackableBehavior")
-  private var turretUpgradeTime: Long = System.currentTimeMillis()
-  private var turretUpgradeTimeSet: Boolean = false
 
-  def updateTurretUpgradeTime(): Long = {
-    turretUpgradeTime = System.currentTimeMillis()
-    turretUpgradeTimeSet = true
-    turretUpgradeTime
-  }
-
-  // Used for checking the time without updating it
-  def getTurretUpgradeTime: Long = {
-    if (!turretUpgradeTimeSet) {
-      turretUpgradeTime = System.currentTimeMillis()
-      turretUpgradeTimeSet = true
-    }
-    turretUpgradeTime
-  }
   /**
    * na
    *
@@ -79,7 +65,13 @@ object GenericHackables {
    * @return `true`, if the next cycle of progress should occur;
    *         `false`, otherwise
    */
-  def HackingTickAction(progressType: HackState1, hacker: Player, target: PlanetSideServerObject, tool_guid: PlanetSideGUID)(
+  def HackingTickAction(
+                         progressType: HackState1,
+                         hacker: Player,
+                         target: PlanetSideServerObject,
+                         tool_guid: PlanetSideGUID,
+                         additionalCancellationTests: (PlanetSideServerObject, Player) => Boolean = ForceDomeProtectsFromHacking
+                       )(
     progress: Float
   ): Boolean = {
     //hack state for progress bar visibility
@@ -87,9 +79,7 @@ object GenericHackables {
       (HackState.Start, 0)
     } else if (progress >= 100L) {
       (HackState.Finished, 100)
-    } else if (target.isMoving(test = 1f) || target.Destroyed || !target.HasGUID) {
-      (HackState.Cancelled, 0)
-    } else if (target.isInstanceOf[CaptureTerminal] && EndHackProgress(target, hacker)) {
+    } else if (target.isMoving(test = 1f) || target.Destroyed || !target.HasGUID || additionalCancellationTests(target, hacker)) {
       (HackState.Cancelled, 0)
     } else {
       (HackState.Ongoing, progress.toInt)
@@ -102,6 +92,31 @@ object GenericHackables {
       )
     )
     progressState != HackState.Cancelled
+  }
+
+  /**
+   * The force dome prevents hacking if its protection has been declared over a capitol.
+   * Under normal circumstances, the dome will be visible in the sky at his point,
+   * blocking enemy encounter within its boundaries,
+   * so anything that can be hacked is on that boundary perimeter,
+   * or an alternate method of entry (Router) has been compromised.
+   * @see `ForceDomeControl.TargetUnderForceDome`
+   * @see `Sector`
+   * @param target the `Hackable` object that has been hacked
+   * @param hacker the player performing the action
+   * @return `true`, if the target is within boundary of a working force dome and thus protected;
+   *         `false`, otherwise
+   */
+  def ForceDomeProtectsFromHacking(target: PlanetSideServerObject, hacker: Player): Boolean = {
+    //explicitly allow friendly hacking which is typically clearing a hack
+    target.Faction != hacker.Faction &&
+      (target match {
+        case obj: Amenity => obj.Owner.asInstanceOf[Building].ForceDome.toList
+        case obj: BlockMapEntity => target.Zone.blockMap.sector(obj).buildingList.flatMap(_.ForceDome)
+        case _ => List()
+      })
+        .filter(_.Perimeter.nonEmpty)
+        .exists(dome => ForceDomeControl.TargetUnderForceDome(dome.Perimeter)(dome, target, maxDistance = 0f))
   }
 
   /**

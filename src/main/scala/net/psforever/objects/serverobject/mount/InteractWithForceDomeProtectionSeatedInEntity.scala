@@ -10,7 +10,7 @@ class InteractWithForceDomeProtectionSeatedInEntity
 extends InteractWithForceDomeProtection {
   override def range: Float = 30f
 
-  override protected def applyProtection(target: InteractsWithZone, dome: ForceDomePhysics): Unit = {
+  override def applyProtection(target: InteractsWithZone, dome: ForceDomePhysics): Unit = {
     super.applyProtection(target, dome)
     target
       .asInstanceOf[Mountable]

@@ -109,11 +109,16 @@ case object MajorFacilityLogic
       // No map update needed - will be sent by `HackCaptureActor` when required
       case dome: ForceDomePhysics =>
         val building = details.building
-        // The force dome being expanded modifies the NTU drain rate
+        // The protection of the force dome modifies the NTU drain rate
         val multiplier: Float = calculateNtuDrainMultiplierFrom(details.building, domeOpt = Some(dome))
         building.NtuSource.foreach(_.Actor ! ResourceSiloControl.DrainMultiplier(multiplier))
-        // The force dome being expanded marks the generator as being invulnerable; it can be damaged otherwise
-        building.Generator.foreach { _.Actor ! Damageable.Vulnerability(dome.Energized) }
+        // The protection of the force dome marks the generator (and some other amenities) as being invulnerable
+        val msg = Damageable.Vulnerability(dome.Perimeter.nonEmpty)
+        val applicable = dome.Definition.ApplyProtectionTo
+        building
+          .Amenities
+          .filter(amenity => applicable.contains(amenity.Definition))
+          .foreach { _.Actor ! msg }
       case _ =>
         details.galaxyService ! GalaxyServiceMessage(GalaxyAction.MapUpdate(details.building.infoUpdateMessage()))
     }
