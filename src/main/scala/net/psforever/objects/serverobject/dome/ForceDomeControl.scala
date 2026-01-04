@@ -396,8 +396,9 @@ class ForceDomeControl(dome: ForceDomePhysics)
         if customState.nonEmpty =>
         customState = None
         ForceDomeControl.NormalDomeStateMessage(domeOwnerAsABuilding)
-        ForceDomeControl.AlignForceDomeStatusAndUpdate(domeOwnerAsABuilding, dome)
-        ForceDomeControl.ForceDomeKills(dome, perimeterSegments)
+        if (!blockedByCustomStateOr(ForceDomeControl.AlignForceDomeStatusAndUpdate)) {
+          ForceDomeControl.ForceDomeKills(dome, perimeterSegments)
+        }
 
       case ForceDomeControl.ApplyProtection
         if dome.Energized =>
