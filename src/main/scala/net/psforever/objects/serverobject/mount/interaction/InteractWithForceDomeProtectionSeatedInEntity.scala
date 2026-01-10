@@ -1,10 +1,11 @@
 // Copyright (c) 2025 PSForever
-package net.psforever.objects.serverobject.mount
+package net.psforever.objects.serverobject.mount.interaction
 
 import net.psforever.objects.avatar.interaction.InteractWithForceDomeProtection
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
-import net.psforever.objects.zones.InteractsWithZone
+import net.psforever.objects.serverobject.mount.Mountable
+import net.psforever.objects.zones.interaction.InteractsWithZone
 
 class InteractWithForceDomeProtectionSeatedInEntity
 extends InteractWithForceDomeProtection {

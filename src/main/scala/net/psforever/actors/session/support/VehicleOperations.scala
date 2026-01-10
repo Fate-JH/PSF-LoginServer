@@ -7,6 +7,7 @@ import net.psforever.objects.serverobject.deploy.Deployment
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.zones.Zone
 import net.psforever.objects._
+import net.psforever.objects.zones.interaction.InteractsWithZone
 import net.psforever.packet.game.{ChildObjectStateMessage, DeployRequestMessage, VehicleSubStateMessage, _}
 import net.psforever.types.DriveState
 
@@ -193,5 +194,58 @@ class VehicleOperations(
     serverVehicleControlVelocity = None
     vehicle.DeploymentState = DriveState.Mobile
     sendResponse(pkt)
+  }
+}
+
+object VehicleOperations {
+  def updateMountableZoneInteractionFromEarliestSeat(obj: PlanetSideGameObject, passenger: Player): Unit = {
+    obj match {
+      case obj: Vehicle =>
+        updateVehicleZoneInteractionFromEarliestSeat(obj, passenger)
+      case obj: Mountable with InteractsWithZone =>
+        updateEntityZoneInteractionFromEarliestSeat(obj, passenger, obj)
+      case _ => ()
+    }
+  }
+
+  private def updateVehicleZoneInteractionFromEarliestSeat(obj: Vehicle, passenger: Player): Unit = {
+    //vehicle being ferried; check if the ferry has occupants that might have speaking rights before us
+    var targetVehicle = obj
+    val carrierSeatVacancy: Boolean = obj match {
+      case v if v.MountedIn.nonEmpty =>
+        obj.Zone.GUID(v.MountedIn) match {
+          case Some(carrier: Vehicle) =>
+            targetVehicle = carrier
+            !carrier.Seats.values.exists(_.isOccupied)
+          case _ =>
+            true
+        }
+      case  _ => true
+    }
+    if (carrierSeatVacancy) {
+      updateEntityZoneInteractionFromEarliestSeat(obj, passenger, targetVehicle)
+    }
+  }
+
+  private def updateEntityZoneInteractionFromEarliestSeat(
+                                                           obj: Mountable with InteractsWithZone,
+                                                           passenger: Player,
+                                                           updateTarget: InteractsWithZone
+                                                         ): Unit = {
+    val inSeatNumberOpt = obj.PassengerInSeat(passenger)
+    if (inSeatNumberOpt.contains(0)) {
+      //we're responsible as the primary operator
+      updateTarget.zoneInteractions()
+    } else if (!obj.Seat(seatNumber = 0).exists(_.isOccupied)) {
+      //there is no primary operator; are we responsible?
+      //determine if we are the player in the seat closest to the "front"
+      val noPlayersInEarlierSeats = inSeatNumberOpt
+        .exists { seatIndex =>
+          !(1 until seatIndex).exists { i => obj.Seat(i).exists(_.isOccupied) }
+        }
+      if (noPlayersInEarlierSeats) {
+        updateTarget.zoneInteractions()
+      }
+    }
   }
 }

@@ -20,7 +20,7 @@ import net.psforever.objects.serverobject.environment._
 import net.psforever.objects.serverobject.environment.interaction.common.Watery
 import net.psforever.objects.serverobject.environment.interaction.{InteractWithEnvironment, RespondsToZoneEnvironment}
 import net.psforever.objects.serverobject.hackable.GenericHackables
-import net.psforever.objects.serverobject.mount.{Mountable, MountableBehavior, RadiationInMountableInteraction}
+import net.psforever.objects.serverobject.mount.{Mountable, MountableBehavior}
 import net.psforever.objects.serverobject.repair.RepairableVehicle
 import net.psforever.objects.serverobject.structures.WarpGate
 import net.psforever.objects.serverobject.terminals.Terminal
@@ -31,6 +31,7 @@ import net.psforever.objects.vehicles.interaction.WithWater
 import net.psforever.objects.vital.interaction.DamageResult
 import net.psforever.objects.vital.{DamagingActivity, InGameActivity, ShieldCharge, SpawningActivity, VehicleDismountActivity, VehicleMountActivity}
 import net.psforever.objects.zones._
+import net.psforever.objects.zones.interaction.IndependentZoneInteraction
 import net.psforever.packet.PlanetSideGamePacket
 import net.psforever.packet.game._
 import net.psforever.packet.game.objectcreate.ObjectCreateMessageParent
@@ -63,7 +64,8 @@ class VehicleControl(vehicle: Vehicle)
     with AggravatedBehavior
     with RespondsToZoneEnvironment
     with CargoBehavior
-    with AffectedByAutomaticTurretFire {
+    with AffectedByAutomaticTurretFire
+    with IndependentZoneInteraction {
   //make control actors belonging to utilities when making control actor belonging to vehicle
   vehicle.Utilities.foreach { case (_, util) => util.Setup }
 
@@ -77,6 +79,7 @@ class VehicleControl(vehicle: Vehicle)
   def InteractiveObject: Vehicle = vehicle
   def CargoObject: Vehicle = vehicle
   def AffectedObject: Vehicle = vehicle
+  def ZoneInteractionObject: Vehicle = vehicle
 
   /** cheap flag for whether the vehicle is decaying */
   var decaying : Boolean = false
@@ -84,8 +87,6 @@ class VehicleControl(vehicle: Vehicle)
   var decayTimer : Cancellable = Default.Cancellable
   /** becoming waterlogged, or drying out? */
   var submergedCondition : Option[OxygenState] = None
-  /** ... */
-  var passengerRadiationCloudTimer: Cancellable = Default.Cancellable
 
   def receive : Receive = Enabled
 
@@ -94,7 +95,7 @@ class VehicleControl(vehicle: Vehicle)
     damageableVehiclePostStop()
     decaying = false
     decayTimer.cancel()
-    passengerRadiationCloudTimer.cancel()
+    StopInteractionSelfReporting()
     vehicle.Utilities.values.foreach { util =>
       context.stop(util().Actor)
       util().Actor = Default.Actor
@@ -113,6 +114,7 @@ class VehicleControl(vehicle: Vehicle)
     .orElse(environmentBehavior)
     .orElse(cargoBehavior)
     .orElse(takeAutomatedDamage)
+    .orElse(zoneInteractionBehavior)
     .orElse {
       case Vehicle.Ownership(None) =>
         LoseOwnership()
@@ -288,11 +290,6 @@ class VehicleControl(vehicle: Vehicle)
   final def Enabled: Receive =
     commonEnabledBehavior
       .orElse {
-        case VehicleControl.RadiationTick if !passengerRadiationCloudTimer.isCancelled =>
-          vehicle
-            .interaction()
-            .find(_.Type == RadiationInMountableInteraction)
-            .foreach(_.interaction(vehicle.getInteractionSector, vehicle))
         case _ => ()
       }
 
@@ -373,7 +370,7 @@ class VehicleControl(vehicle: Vehicle)
           decaying = false
           decayTimer.cancel()
         }
-        passengerRadiationCloudTimer.cancel()
+        TryStopInteractionSelfReporting()
         updateZoneInteractionProgressUI(user)
 
       case Some(seatNumber) => //literally any other seat
@@ -381,9 +378,7 @@ class VehicleControl(vehicle: Vehicle)
         user.LogActivity(VehicleMountActivity(vsrc, PlayerSource.inSeat(user, vsrc, seatNumber), vehicle.Zone.Number))
         decaying = false
         decayTimer.cancel()
-        if (!vehicle.Seats(0).isOccupied && passengerRadiationCloudTimer.isCancelled) {
-          StartRadiationSelfReporting()
-        }
+        StopInteractionSelfReporting()
         updateZoneInteractionProgressUI(user)
 
       case None => ()
@@ -400,15 +395,14 @@ class VehicleControl(vehicle: Vehicle)
 
   def dismountCleanup(seatBeingDismounted: Int, user: Player): Unit = {
     val obj = MountableObject
-    val allSeatsUnoccupied = !obj.Seats.values.exists(_.isOccupied)
     // Reset velocity to zero when driver dismounts, to allow jacking/repair if vehicle was moving slightly before dismount
     if (!obj.Seats(0).isOccupied) {
       obj.Velocity = Some(Vector3.Zero)
     }
-    if (allSeatsUnoccupied) {
-      passengerRadiationCloudTimer.cancel()
-    } else if (seatBeingDismounted == 0) {
-      StartRadiationSelfReporting()
+    val allSeatsUnoccupied = !vehicle.Seats.values.exists(_.isOccupied)
+    val otherTests = TestToStartSelfReporting()
+    if (allSeatsUnoccupied && otherTests) {
+      StartInteractionSelfReporting()
     }
     if (!obj.Seats(seatBeingDismounted).isOccupied) { //this seat really was vacated
       user.LogActivity(VehicleDismountActivity(VehicleSource(vehicle), PlayerSource(user), vehicle.Zone.Number))
@@ -432,14 +426,18 @@ class VehicleControl(vehicle: Vehicle)
     }
   }
 
-  private def StartRadiationSelfReporting(): Unit = {
-    passengerRadiationCloudTimer.cancel()
-    passengerRadiationCloudTimer = context.system.scheduler.scheduleWithFixedDelay(
-      250.milliseconds,
-      250.milliseconds,
-      self,
-      VehicleControl.RadiationTick
-    )
+  def TestToStartSelfReporting(): Boolean = {
+    vehicle.MountedIn.isEmpty
+  }
+
+  def PerformSelfReportRunCheck(): Unit = {
+    val noOccupancy = !vehicle.Seats.values.exists(_.isOccupied)
+    val otherTests = TestToStartSelfReporting()
+    if (noOccupancy && otherTests) {
+      StartInteractionSelfReporting()
+    } else {
+      StopInteractionSelfReporting()
+    }
   }
 
   def PrepareForDisabled(kickPassengers: Boolean) : Unit = {
@@ -767,8 +765,30 @@ class VehicleControl(vehicle: Vehicle)
   }
 
   override protected def DestructionAwareness(target: Target, cause: DamageResult): Unit = {
-    passengerRadiationCloudTimer.cancel()
+    StopInteractionSelfReportingNoReset()
     super.DestructionAwareness(target, cause)
+  }
+
+  override def endCargoMounting(carrierGuid: PlanetSideGUID): Unit = {
+    super.endCargoMounting(carrierGuid)
+    StopInteractionSelfReporting()
+    vehicle.Zone.GUID(carrierGuid) match {
+      case Some(v: Vehicle) => v.Actor ! IndependentZoneInteraction.SelfReportRunCheck
+      case _ => ()
+    }
+  }
+
+  override def endCargoDismounting(carrierGuid: PlanetSideGUID): Unit = {
+    super.endCargoDismounting(carrierGuid)
+    val allSeatsUnoccupied = !vehicle.Seats.values.exists(_.isOccupied)
+    val otherTests = TestToStartSelfReporting()
+    if (allSeatsUnoccupied && otherTests) {
+      StartInteractionSelfReporting()
+    }
+    vehicle.Zone.GUID(carrierGuid) match {
+      case Some(v: Vehicle) => v.Actor ! IndependentZoneInteraction.SelfReportRunCheck
+      case _ => ()
+    }
   }
 }
 
@@ -778,8 +798,6 @@ object VehicleControl {
   final case class Disable(kickPassengers: Boolean = false)
 
   private case class Deletion()
-
-  private case object RadiationTick
 
   final case class AssignOwnership(player: Option[Player])
 }

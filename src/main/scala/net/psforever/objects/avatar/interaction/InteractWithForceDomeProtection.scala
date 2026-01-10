@@ -4,7 +4,7 @@ package net.psforever.objects.avatar.interaction
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.{ForceDomeControl, ForceDomePhysics}
 import net.psforever.objects.zones.blockmap.SectorPopulation
-import net.psforever.objects.zones.{InteractsWithZone, ZoneInteraction, ZoneInteractionType}
+import net.psforever.objects.zones.interaction.{InteractsWithZone, ZoneInteraction, ZoneInteractionType}
 
 case object ForceZoneProtection extends ZoneInteractionType
 

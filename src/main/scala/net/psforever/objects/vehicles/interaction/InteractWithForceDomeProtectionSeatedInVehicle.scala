@@ -4,8 +4,8 @@ package net.psforever.objects.vehicles.interaction
 import net.psforever.objects.Vehicle
 import net.psforever.objects.avatar.interaction.{ForceZoneProtection, InteractWithForceDomeProtection}
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
-import net.psforever.objects.serverobject.mount.InteractWithForceDomeProtectionSeatedInEntity
-import net.psforever.objects.zones.InteractsWithZone
+import net.psforever.objects.serverobject.mount.interaction.InteractWithForceDomeProtectionSeatedInEntity
+import net.psforever.objects.zones.interaction.InteractsWithZone
 
 class InteractWithForceDomeProtectionSeatedInVehicle
   extends InteractWithForceDomeProtectionSeatedInEntity {

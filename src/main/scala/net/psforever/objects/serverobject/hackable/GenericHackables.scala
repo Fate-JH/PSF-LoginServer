@@ -15,6 +15,7 @@ import net.psforever.services.Service
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 
+import scala.annotation.unused
 import scala.util.{Failure, Success}
 
 object GenericHackables {
@@ -49,6 +50,8 @@ object GenericHackables {
     }
   }
 
+  private def DontStopHackAttempt(@unused target: PlanetSideServerObject, @unused hacker: Player): Boolean = false
+
   /**
    * Evaluate the progress of the user applying a tool to modify some server object.
    * This action is using the remote electronics kit to convert an enemy unit into an allied unit, primarily.
@@ -62,6 +65,7 @@ object GenericHackables {
    * @param target the object being affected
    * @param tool_guid the tool being used to affest the object
    * @param progress the current progress value
+   * @param additionalCancellationTests context-specific tests for hack continuation
    * @return `true`, if the next cycle of progress should occur;
    *         `false`, otherwise
    */
@@ -70,7 +74,7 @@ object GenericHackables {
                          hacker: Player,
                          target: PlanetSideServerObject,
                          tool_guid: PlanetSideGUID,
-                         additionalCancellationTests: (PlanetSideServerObject, Player) => Boolean = ForceDomeProtectsFromHacking
+                         additionalCancellationTests: (PlanetSideServerObject, Player) => Boolean
                        )(
     progress: Float
   ): Boolean = {
@@ -92,6 +96,30 @@ object GenericHackables {
       )
     )
     progressState != HackState.Cancelled
+  }
+  /**
+   * Evaluate the progress of the user applying a tool to modify some server object.
+   * This action is using the remote electronics kit to convert an enemy unit into an allied unit, primarily.
+   * The act of transforming allied units of one kind into allied units of another kind (facility turret upgrades)
+   * is also governed by this action per tick of progress.
+   * @param progressType 1 - remote electronics kit hack (various ...);
+   *                     2 - nano dispenser (upgrade canister) turret upgrade
+   * @param hacker the player performing the action
+   * @param target the object being affected
+   * @param tool_guid the tool being used to affest the object
+   * @param progress the current progress value
+   * @return `true`, if the next cycle of progress should occur;
+   *         `false`, otherwise
+   */
+  def HackingTickAction(
+                         progressType: HackState1,
+                         hacker: Player,
+                         target: PlanetSideServerObject,
+                         tool_guid: PlanetSideGUID
+                       )(
+                         progress: Float
+                       ): Boolean = {
+    HackingTickAction(progressType, hacker, target, tool_guid, DontStopHackAttempt)(progress)
   }
 
   /**

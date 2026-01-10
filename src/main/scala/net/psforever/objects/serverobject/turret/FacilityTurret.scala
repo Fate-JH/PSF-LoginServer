@@ -3,7 +3,7 @@ package net.psforever.objects.serverobject.turret
 
 import net.psforever.objects.equipment.JammableUnit
 import net.psforever.objects.serverobject.interior.Sidedness
-import net.psforever.objects.serverobject.mount.InteractWithRadiationCloudsSeatedInEntity
+import net.psforever.objects.serverobject.mount.interaction.InteractWithRadiationCloudsSeatedInEntity
 import net.psforever.objects.serverobject.structures.{Amenity, AmenityOwner, Building}
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminalAware
 import net.psforever.objects.serverobject.turret.auto.AutomatedTurret

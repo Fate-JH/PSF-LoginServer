@@ -10,7 +10,7 @@ import net.psforever.objects.guid.{GUIDTask, TaskWorkflow}
 import net.psforever.objects.serverobject.affinity.FactionAffinityBehavior
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.hackable.Hackable
-import net.psforever.objects.serverobject.mount.{InteractWithForceDomeProtectionSeatedInEntity, InteractWithRadiationCloudsSeatedInEntity}
+import net.psforever.objects.serverobject.mount.interaction.{InteractWithForceDomeProtectionSeatedInEntity, InteractWithRadiationCloudsSeatedInEntity}
 import net.psforever.objects.serverobject.turret.auto.{AffectedByAutomaticTurretFire, AutomatedTurret}
 import net.psforever.objects.serverobject.turret.{TurretControl, TurretDefinition, WeaponTurret}
 import net.psforever.objects.sourcing.{PlayerSource, SourceEntry}

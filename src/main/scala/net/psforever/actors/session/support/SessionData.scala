@@ -467,6 +467,11 @@ class SessionData(
     persist()
     if (player.HasGUID) {
       turnCounterFunc(player.GUID)
+      continent
+        .GUID(player.VehicleSeated)
+        .foreach {
+          VehicleOperations.updateMountableZoneInteractionFromEarliestSeat(_, player)
+        }
     } else {
       turnCounterFunc(PlanetSideGUID(0))
     }

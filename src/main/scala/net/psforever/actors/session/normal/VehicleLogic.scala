@@ -5,11 +5,12 @@ import akka.actor.{ActorContext, typed}
 import net.psforever.actors.session.AvatarActor
 import net.psforever.actors.session.support.{SessionData, VehicleFunctions, VehicleOperations}
 import net.psforever.objects.serverobject.PlanetSideServerObject
-import net.psforever.objects.{Vehicle, Vehicles}
+import net.psforever.objects.{PlanetSideGameObject, Vehicle, Vehicles}
 import net.psforever.objects.serverobject.deploy.Deployment
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.vehicles.control.BfrFlight
 import net.psforever.objects.zones.Zone
+import net.psforever.objects.zones.interaction.InteractsWithZone
 import net.psforever.packet.game.{ChatMsg, ChildObjectStateMessage, DeployRequestMessage, FrameVehicleStateMessage, VehicleStateMessage, VehicleSubStateMessage}
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
 import net.psforever.types.{ChatMessageType, DriveState, Vector3}
@@ -94,7 +95,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
           )
         )
         sessionLogic.squad.updateSquad()
-        obj.zoneInteractions()
+        VehicleOperations.updateMountableZoneInteractionFromEarliestSeat(obj, player)
       case (None, _) =>
       //log.error(s"VehicleState: no vehicle $vehicle_guid found in zone")
       //TODO placing a "not driving" warning here may trigger as we are disembarking the vehicle
@@ -168,7 +169,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
             obj.Velocity = None
             obj.Flying = None
           }
-          obj.zoneInteractions()
+          VehicleOperations.updateMountableZoneInteractionFromEarliestSeat(obj, player)
         } else {
           obj.Velocity = None
           obj.Flying = None
@@ -216,9 +217,16 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       case Some(mount: Mountable) => (o, mount.PassengerInSeat(player))
       case _                      => (None, None)
     }) match {
-      case (None, None) | (_, None) | (Some(_: Vehicle), Some(0)) =>
+      case (None, _) | (_, None) => //error - we do not recognize being mounted or controlling anything, but what can we do about it?
         ()
-      case _ =>
+      case (Some(_: Vehicle), Some(0)) => //no (see: VSM or FVSM for valid cases)
+        ()
+      case (Some(entity: PlanetSideGameObject with InteractsWithZone), Some(_)) => //yes
+        sessionLogic.zoning.spawn.tryQueuedActivity() //todo conditionals?
+        sessionLogic.persist()
+        sessionLogic.turnCounterFunc(player.GUID)
+        VehicleOperations.updateMountableZoneInteractionFromEarliestSeat(entity, player)
+      case _ => //yes
         sessionLogic.zoning.spawn.tryQueuedActivity() //todo conditionals?
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)

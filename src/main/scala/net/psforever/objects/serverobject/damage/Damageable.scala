@@ -32,10 +32,10 @@ trait Damageable {
     * cite the `originalTakesDamage` protocol during inheritance overrides */
   val takesDamage: Receive = {
     case Damageable.MakeVulnerable =>
-      isVulnerable = false
+      isVulnerable = true
 
     case Damageable.MakeInvulnerable =>
-      isVulnerable = true
+      isVulnerable = false
 
     case Vitality.Damage(damage_func) =>
       val obj = DamageableObject
@@ -47,14 +47,14 @@ trait Damageable {
   /** a duplicate of the core implementation for the default mixin hook, for use in overriding */
   final val originalTakesDamage: Receive = {
     case Damageable.MakeVulnerable =>
-      isVulnerable = false
+      isVulnerable = true
 
     case Damageable.MakeInvulnerable =>
-      isVulnerable = true
+      isVulnerable = false
 
     case Vitality.Damage(damage_func) =>
       val obj = DamageableObject
-      if (obj.CanDamage) {
+      if (isVulnerable && obj.CanDamage) {
         PerformDamage(obj, damage_func)
       }
   }
