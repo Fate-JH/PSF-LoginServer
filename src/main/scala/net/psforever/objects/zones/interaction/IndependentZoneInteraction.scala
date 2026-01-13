@@ -39,10 +39,15 @@ trait IndependentZoneInteraction {
     }
   }
 
-  def PerformSelfReportRunCheck(): Unit
+  def PerformSelfReportRunCheck(): Unit = {
+    if (TestToStartSelfReporting()) {
+      StartInteractionSelfReporting()
+    } else {
+      StopInteractionSelfReporting()
+    }
+  }
 
   final def StartInteractionSelfReporting(): Unit = {
-    org.log4s.getLogger("ZIT").info("starting timer")
     zoneInteractionTimer.cancel()
     zoneInteractionTimer = context.system.scheduler.scheduleWithFixedDelay(
       0.seconds,
@@ -53,7 +58,6 @@ trait IndependentZoneInteraction {
   }
 
   final def StartInteractionSelfReporting(initialDelay: FiniteDuration): Unit = {
-    org.log4s.getLogger("ZIT").info("starting timer")
     zoneInteractionTimer.cancel()
     zoneInteractionTimer = context.system.scheduler.scheduleWithFixedDelay(
       initialDelay,

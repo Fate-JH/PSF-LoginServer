@@ -5,7 +5,6 @@ import net.psforever.objects.{GlobalDefinitions, Player, Tool}
 import net.psforever.objects.equipment.Ammo
 import net.psforever.objects.serverobject.{CommonMessages, PlanetSideServerObject}
 import net.psforever.objects.serverobject.damage.Damageable
-import net.psforever.objects.serverobject.hackable.GenericHackables
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.repair.AmenityAutoRepair
 import net.psforever.objects.serverobject.structures.{Building, PoweredAmenityControl}
