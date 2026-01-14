@@ -11,6 +11,7 @@ import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.vehicles.control.BfrFlight
 import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.Zone
+import net.psforever.objects.zones.interaction.InteractsWithZone
 import net.psforever.packet.game.{ChildObjectStateMessage, DeployRequestMessage, FrameVehicleStateMessage, PlanetsideAttributeMessage, VehicleStateMessage, VehicleSubStateMessage}
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
@@ -30,6 +31,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
   /* packets */
 
   def handleVehicleState(pkt: VehicleStateMessage): Unit = {
+    player.allowInteraction = false
     val VehicleStateMessage(
     vehicle_guid,
     unk1,
@@ -46,23 +48,21 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
     ops.GetVehicleAndSeat() match {
       case (Some(obj), Some(0)) =>
         //we're driving the vehicle
+        sessionLogic.zoning.spawn.tryQueuedActivity(vel)
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
-        sessionLogic.general.fallHeightTracker(pos.z)
-        if (obj.MountedIn.isEmpty) {
-          sessionLogic.updateBlockMap(obj, pos)
-        }
         topOffHealthOfPlayer()
         topOffHealth(obj)
-        player.Position = pos //convenient
-        if (obj.WeaponControlledFromSeat(0).isEmpty) {
-          player.Orientation = Vector3.z(ang.z) //convenient
+        val (position, angle, velocity, notMountedState) = continent.GUID(obj.MountedIn) match {
+          case Some(v: Vehicle) =>
+            (pos, v.Orientation - Vector3.z(value = 90f) * Vehicles.CargoOrientation(obj).toFloat, v.Velocity, false)
+          case _ =>
+            (pos, ang, vel, true)
         }
-        obj.Position = pos
-        obj.Orientation = ang
-        if (obj.MountedIn.isEmpty) {
+        if (notMountedState) {
+          sessionLogic.updateBlockMap(obj, position)
           if (obj.DeploymentState != DriveState.Deployed) {
-            obj.Velocity = vel
+            obj.Velocity = velocity
           } else {
             obj.Velocity = Some(Vector3.Zero)
           }
@@ -74,20 +74,20 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
           obj.Velocity = None
           obj.Flying = None
         }
+        player.Position = position //convenient
+        obj.Position = position
+        obj.Orientation = angle
+        //
         continent.VehicleEvents ! VehicleServiceMessage(
           continent.id,
           VehicleAction.VehicleState(
             player.GUID,
             vehicle_guid,
             unk1,
-            obj.Position,
-            ang,
-            obj.Velocity,
-            if (obj.isFlying) {
-              is_flying
-            } else {
-              None
-            },
+            position,
+            angle,
+            velocity,
+            obj.Flying,
             unk6,
             unk7,
             wheels,
@@ -96,8 +96,6 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
           )
         )
         sessionLogic.squad.updateSquad()
-        player.allowInteraction = false
-        obj.zoneInteractions()
       case (None, _) =>
       //log.error(s"VehicleState: no vehicle $vehicle_guid found in zone")
       //TODO placing a "not driving" warning here may trigger as we are disembarking the vehicle
@@ -113,6 +111,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
   }
 
   def handleFrameVehicleState(pkt: FrameVehicleStateMessage): Unit = {
+    player.allowInteraction = false
     val FrameVehicleStateMessage(
     vehicle_guid,
     unk1,
@@ -132,34 +131,21 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
     ops.GetVehicleAndSeat() match {
       case (Some(obj), Some(0)) =>
         //we're driving the vehicle
+        sessionLogic.zoning.spawn.tryQueuedActivity(vel)
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
         topOffHealthOfPlayer()
         topOffHealth(obj)
         val (position, angle, velocity, notMountedState) = continent.GUID(obj.MountedIn) match {
           case Some(v: Vehicle) =>
-            sessionLogic.updateBlockMap(obj, pos)
             (pos, v.Orientation - Vector3.z(value = 90f) * Vehicles.CargoOrientation(obj).toFloat, v.Velocity, false)
           case _ =>
             (pos, ang, vel, true)
         }
-        player.Position = position //convenient
-        if (obj.WeaponControlledFromSeat(seatNumber = 0).isEmpty) {
-          player.Orientation = Vector3.z(ang.z) //convenient
-        }
-        obj.Position = position
-        obj.Orientation = angle
-        obj.Velocity = velocity
-        //            if (is_crouched && obj.DeploymentState != DriveState.Kneeling) {
-        //              //dev stuff goes here
-        //            }
-        //            else
-        //            if (!is_crouched && obj.DeploymentState == DriveState.Kneeling) {
-        //              //dev stuff goes here
-        //            }
-        obj.DeploymentState = if (is_crouched || !notMountedState) DriveState.Kneeling else DriveState.Mobile
         if (notMountedState) {
+          sessionLogic.updateBlockMap(obj, position)
           if (obj.DeploymentState != DriveState.Kneeling) {
+            obj.Velocity = velocity
             if (is_airborne) {
               val flight = if (ascending_flight) flight_time else -flight_time
               obj.Flying = Some(flight)
@@ -172,12 +158,14 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
             obj.Velocity = None
             obj.Flying = None
           }
-          player.allowInteraction = false
-          obj.zoneInteractions()
         } else {
           obj.Velocity = None
           obj.Flying = None
         }
+        player.Position = position //convenient
+        obj.Position = position
+        obj.Orientation = angle
+        obj.DeploymentState = if (is_crouched || !notMountedState) DriveState.Kneeling else DriveState.Mobile
         continent.VehicleEvents ! VehicleServiceMessage(
           continent.id,
           VehicleAction.FrameVehicleState(
@@ -214,34 +202,40 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
   }
 
   def handleChildObjectState(pkt: ChildObjectStateMessage): Unit = {
+    player.allowInteraction = false
     val ChildObjectStateMessage(object_guid, pitch, yaw) = pkt
     val (o, tools) = sessionLogic.shooting.FindContainedWeapon
-    //is COSM our primary upstream packet?
     (o match {
-      case Some(mount: Mountable) => (o, mount.PassengerInSeat(player))
+      case Some(mount: Mountable) => (mount, mount.PassengerInSeat(player))
       case _                      => (None, None)
     }) match {
-      case (None, None) | (_, None) | (Some(_: Vehicle), Some(0)) =>
+      case (None, _) | (_, None) => //error - we do not recognize being mounted or controlling anything, but what can we do about it?
         ()
-      case (Some(obj: PlanetSideGameObject with Vitality), _) =>
+      case (Some(_: Vehicle), Some(0)) => //see VSM or FVSM for valid cases
+        ()
+      case (Some(entity: PlanetSideGameObject with Mountable with InteractsWithZone), Some(_)) => //COSM is our primary upstream packet
+        sessionLogic.zoning.spawn.tryQueuedActivity(player.Velocity)
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
         topOffHealthOfPlayer()
-        topOffHealth(obj)
-      case _ =>
+        topOffHealth(entity)
+        sessionLogic.squad.updateSquad()
+      case _ => //we can't disprove that COSM is our primary upstream packet, it's just that we may be missing some details
+        sessionLogic.zoning.spawn.tryQueuedActivity(player.Velocity)
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
     }
-    //the majority of the following check retrieves information to determine if we are in control of the child
-    tools.find { _.GUID == object_guid } match {
+    //in the following condition we are in control of the child
+    tools.find(_.GUID == object_guid) match {
       case None =>
-      //todo: old warning; this state is problematic, but can trigger in otherwise valid instances
+      //old warning; this state is problematic, but can trigger in otherwise valid instances
       //log.warn(
       //  s"ChildObjectState: ${player.Name} is using a different controllable agent than entity ${object_guid.guid}"
       //)
-      case Some(_) =>
-        //TODO set tool orientation?
-        player.Orientation = Vector3(0f, pitch, yaw)
+      case Some(tool) =>
+        val angle = Vector3(0f, pitch, yaw)
+        tool.Orientation = angle
+        player.Orientation = angle
         continent.VehicleEvents ! VehicleServiceMessage(
           continent.id,
           VehicleAction.ChildObjectState(player.GUID, object_guid, pitch, yaw)

@@ -8,7 +8,6 @@ import net.psforever.objects.serverobject.ServerObject
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.Zone
-import net.psforever.objects.zones.blockmap.BlockMapEntity
 import net.psforever.packet.game.{ChatMsg, ObjectCreateDetailedMessage, PlanetsideAttributeMessage}
 import net.psforever.packet.game.objectcreate.RibbonBars
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
@@ -110,20 +109,22 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
 
   private def keepAlivePersistanceCSR(): Unit = {
     val player = data.player
-    data.keepAlivePersistence()
-    topOffHealthOfPlayer(player)
     player.allowInteraction = false
     topOffHealthOfPlayer(player)
-    data.continent.GUID(data.player.VehicleSeated)
-      .collect {
-        case obj: PlanetSideGameObject with Vitality with BlockMapEntity =>
+    data.zoning.spawn.interimUngunnedVehicle = None
+    data.keepAlivePersistence()
+    if (player.HasGUID) {
+      data.zoning.spawn.tryQueuedActivity()
+      data.turnCounterFunc(player.GUID)
+      data.continent
+        .GUID(player.VehicleSeated)
+        .collect { case obj: PlanetSideGameObject with Vitality =>
           topOffHealth(obj)
-          data.updateBlockMap(obj, obj.Position)
-          obj
-      }
-      .getOrElse {
-        data.updateBlockMap(player, player.Position)
-      }
+        }
+      data.squad.updateSquad()
+    } else {
+      data.turnCounterFunc(PlanetSideGUID(0))
+    }
   }
 
   private def topOffHealth(obj: PlanetSideGameObject with Vitality): Unit = {

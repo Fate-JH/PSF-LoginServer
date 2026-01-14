@@ -198,17 +198,23 @@ class VehicleOperations(
 }
 
 object VehicleOperations {
-  def updateMountableZoneInteractionFromEarliestSeat(obj: PlanetSideGameObject, passenger: Player): Unit = {
+  def updateMountableZoneInteractionFromEarliestSeat(obj: PlanetSideGameObject with Mountable, passenger: Player): Unit = {
+    obj.PassengerInSeat(passenger).foreach { seatNumber =>
+      updateMountableZoneInteractionFromEarliestSeat(obj, seatNumber)
+    }
+  }
+
+  def updateMountableZoneInteractionFromEarliestSeat(obj: PlanetSideGameObject with Mountable, seatNumber: Int): Unit = {
     obj match {
       case obj: Vehicle =>
-        updateVehicleZoneInteractionFromEarliestSeat(obj, passenger)
+        updateVehicleZoneInteractionFromEarliestSeat(obj, seatNumber)
       case obj: Mountable with InteractsWithZone =>
-        updateEntityZoneInteractionFromEarliestSeat(obj, passenger, obj)
+        updateEntityZoneInteractionFromEarliestSeat(obj, seatNumber, obj)
       case _ => ()
     }
   }
 
-  private def updateVehicleZoneInteractionFromEarliestSeat(obj: Vehicle, passenger: Player): Unit = {
+  private def updateVehicleZoneInteractionFromEarliestSeat(obj: Vehicle, seatNumber: Int): Unit = {
     //vehicle being ferried; check if the ferry has occupants that might have speaking rights before us
     var targetVehicle = obj
     val carrierSeatVacancy: Boolean = obj match {
@@ -223,29 +229,22 @@ object VehicleOperations {
       case  _ => true
     }
     if (carrierSeatVacancy) {
-      updateEntityZoneInteractionFromEarliestSeat(obj, passenger, targetVehicle)
+      updateEntityZoneInteractionFromEarliestSeat(obj, seatNumber, targetVehicle)
     }
   }
 
   private def updateEntityZoneInteractionFromEarliestSeat(
                                                            obj: Mountable with InteractsWithZone,
-                                                           passenger: Player,
+                                                           seatNumber: Int,
                                                            updateTarget: InteractsWithZone
                                                          ): Unit = {
-    val inSeatNumberOpt = obj.PassengerInSeat(passenger)
-    if (inSeatNumberOpt.contains(0)) {
+    if (seatNumber == 0) {
       //we're responsible as the primary operator
       updateTarget.zoneInteractions()
-    } else if (!obj.Seat(seatNumber = 0).exists(_.isOccupied)) {
-      //there is no primary operator; are we responsible?
-      //determine if we are the player in the seat closest to the "front"
-      val noPlayersInEarlierSeats = inSeatNumberOpt
-        .exists { seatIndex =>
-          !(1 until seatIndex).exists { i => obj.Seat(i).exists(_.isOccupied) }
-        }
-      if (noPlayersInEarlierSeats) {
-        updateTarget.zoneInteractions()
-      }
+    } else if(!obj.Seat(seatNumber = 0).exists(_.isOccupied) && obj.OccupiedSeats().headOption.contains(seatNumber)) {
+      //there is no primary operator
+      //we are responsible as the player in the seat closest to the "front"
+      updateTarget.zoneInteractions()
     }
   }
 }
