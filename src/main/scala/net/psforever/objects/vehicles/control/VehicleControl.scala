@@ -119,7 +119,7 @@ class VehicleControl(vehicle: Vehicle)
       sender() ! Mountable.MountMessages(user, Mountable.CanNotMount(vehicle, mountPoint))
   }
 
-  private val disountingFailureReasons: Receive = {
+  private val dismountingFailureReasons: Receive = {
     case Mountable.TryDismount(user, seat_num, bailType)
       if vehicle.DeploymentState == DriveState.AutoPilot =>
       sender() ! Mountable.MountMessages(user, Mountable.CanNotDismount(vehicle, seat_num, bailType))
@@ -142,7 +142,7 @@ class VehicleControl(vehicle: Vehicle)
     case Mountable.TryDismount(user, seat_num, bailType)
       if vehicle.Health <= (vehicle.Definition.MaxHealth * .1).round && bailType == BailType.Bailed
         && GlobalDefinitions.isFlightVehicle(vehicle.Definition)
-        && (seat_num == 0 || vehicle.SeatPermissionGroup(seat_num).getOrElse(0) == AccessPermissionGroup.Gunner)
+        && (seat_num == 0 || vehicle.SeatPermissionGroup(seat_num).contains(AccessPermissionGroup.Gunner))
         && (vehicle.History.findLast { entry => entry.isInstanceOf[DamagingActivity] } match {
         case Some(entry) if System.currentTimeMillis() - entry.time < 4000L => true
         case _ if Random.nextInt(10) == 1 => false
@@ -152,7 +152,7 @@ class VehicleControl(vehicle: Vehicle)
     case Mountable.TryDismount(user, seat_num, bailType)
       if vehicle.Health <= (vehicle.Definition.MaxHealth * .2).round && bailType == BailType.Bailed
         && GlobalDefinitions.isFlightVehicle(vehicle.Definition)
-        && (seat_num == 0 || vehicle.SeatPermissionGroup(seat_num).getOrElse(0) == AccessPermissionGroup.Gunner)
+        && (seat_num == 0 || vehicle.SeatPermissionGroup(seat_num).contains(AccessPermissionGroup.Gunner))
         && (vehicle.History.findLast { entry => entry.isInstanceOf[DamagingActivity] } match {
         case Some(entry) if System.currentTimeMillis() - entry.time < 3500L => true
         case _ if Random.nextInt(5) == 1 => false
@@ -162,7 +162,7 @@ class VehicleControl(vehicle: Vehicle)
     case Mountable.TryDismount(user, seat_num, bailType)
       if vehicle.Health <= (vehicle.Definition.MaxHealth * .35).round && bailType == BailType.Bailed
         && GlobalDefinitions.isFlightVehicle(vehicle.Definition)
-        && (seat_num == 0 || vehicle.SeatPermissionGroup(seat_num).getOrElse(0) == AccessPermissionGroup.Gunner)
+        && (seat_num == 0 || vehicle.SeatPermissionGroup(seat_num).contains(AccessPermissionGroup.Gunner))
         && (vehicle.History.findLast { entry => entry.isInstanceOf[DamagingActivity] } match {
         case Some(entry) if System.currentTimeMillis() - entry.time < 3000L => true
         case _ if Random.nextInt(4) == 1 => false
@@ -177,7 +177,7 @@ class VehicleControl(vehicle: Vehicle)
   def commonEnabledBehavior: Receive = checkBehavior
     .orElse(mountingFailureReasons)
     .orElse(mountBehavior)
-    .orElse(disountingFailureReasons)
+    .orElse(dismountingFailureReasons)
     .orElse(dismountBehavior)
     .orElse(attributeBehavior)
     .orElse(jammableBehavior)

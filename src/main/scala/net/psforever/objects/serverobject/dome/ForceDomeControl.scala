@@ -123,14 +123,12 @@ object ForceDomeControl {
                                       building: Building,
                                       state: Boolean
                                     ): Unit = {
-    val events = building.Zone.LocalEvents
+    val zone = building.Zone
     val message = LocalAction.SendResponse(ChatMsg(
-      ChatMessageType.UNK_227,
-      s"Capitol force dome state change was suppressed.  ${building.Name} will remain ${if (state) "enveloped" else "exposed"}."
+      ChatMessageType.UNK_229,
+      s"The Capitol force dome at ${building.Name} will remain ${if (state) "activated" else "deactivated"}."
     ))
-    building.PlayersInSOI.foreach { player =>
-      events ! LocalServiceMessage(player.Name, message)
-    }
+    zone.LocalEvents ! LocalServiceMessage(zone.id, message)
   }
 
   /**
@@ -473,7 +471,6 @@ class ForceDomeControl(dome: ForceDomePhysics)
   private def blockedByCustomStateOr(func: (Building, ForceDomePhysics) => Boolean): Boolean = {
     import scala.concurrent.duration._
     import scala.concurrent.ExecutionContext.Implicits.global
-
     customState match {
       case None =>
         val oldState = dome.Energized
@@ -484,8 +481,11 @@ class ForceDomeControl(dome: ForceDomePhysics)
           context.system.scheduler.scheduleOnce(delay = 4000 milliseconds, self, ForceDomeControl.ApplyProtection)
         }
         newState
-      case Some(state) =>
+      case Some(state)
+        if !ForceDomeControl.CheckForceDomeStatus(domeOwnerAsABuilding, dome).contains(state) =>
         ForceDomeControl.CustomDomeStateEnforcedMessage(domeOwnerAsABuilding, state)
+        state
+      case Some(state) =>
         state
     }
   }
