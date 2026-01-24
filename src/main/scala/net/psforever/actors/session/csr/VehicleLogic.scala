@@ -359,7 +359,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       player.Health = maxHealthOfPlayer.toInt
       player.LogActivity(player.ClearHistory().head)
       sendResponse(PlanetsideAttributeMessage(player.GUID, 0, maxHealthOfPlayer))
-      continent.AvatarEvents ! AvatarServiceMessage(sessionLogic.zoning.zoneChannel, AvatarAction.PlanetsideAttribute(player.GUID, 0, maxHealthOfPlayer))
+      continent.AvatarEvents ! AvatarServiceMessage(sessionLogic.zoning.zoneChannel, player.GUID, AvatarAction.PlanetsideAttribute(0, maxHealthOfPlayer))
     }
   }
 

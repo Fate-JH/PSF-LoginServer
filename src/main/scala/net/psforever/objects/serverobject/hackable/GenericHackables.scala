@@ -97,7 +97,6 @@ object GenericHackables {
     target.Zone.AvatarEvents ! AvatarServiceMessage(
       hacker.Name,
       AvatarAction.SendResponse(
-        Service.defaultPlayerGUID,
         HackMessage(progressType, target.GUID, hacker.GUID, progressGrade, 0L, progressState, HackState7.Unk8)
       )
     )

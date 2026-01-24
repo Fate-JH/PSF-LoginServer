@@ -142,7 +142,7 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
       player.Health = maxHealthOfPlayer.toInt
       player.LogActivity(player.ClearHistory().head)
       data.sendResponse(PlanetsideAttributeMessage(player.GUID, 0, maxHealthOfPlayer))
-      data.continent.AvatarEvents ! AvatarServiceMessage(data.zoning.zoneChannel, AvatarAction.PlanetsideAttribute(player.GUID, 0, maxHealthOfPlayer))
+      data.continent.AvatarEvents ! AvatarServiceMessage(data.zoning.zoneChannel, player.GUID, AvatarAction.PlanetsideAttribute(0, maxHealthOfPlayer))
     }
   }
 
@@ -193,12 +193,15 @@ case object CustomerServiceRepresentativeMode extends PlayerMode {
       packet.DetailedConstructorData(player).get
     ))
     data.zoning.spawn.HandleSetCurrentAvatar(player)
-    zone.AvatarEvents ! AvatarServiceMessage(zone.id, AvatarAction.LoadPlayer(
+    zone.AvatarEvents ! AvatarServiceMessage(
+      zone.id,
       pguid,
-      objectClass,
-      pguid,
-      packet.ConstructorData(player).get,
-      None
-    ))
+      AvatarAction.LoadPlayer(
+        objectClass,
+        pguid,
+        packet.ConstructorData(player).get,
+        None
+      )
+    )
   }
 }

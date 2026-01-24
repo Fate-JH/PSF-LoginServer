@@ -30,13 +30,11 @@ import net.psforever.objects.vehicles.Utility
 import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.{ZoneProjectile, Zoning}
 import net.psforever.packet.PlanetSideGamePacket
-import net.psforever.packet.game.OutfitEventAction.{OutfitInfo, OutfitRankNames, Initial, Unk1}
-import net.psforever.packet.game.{ActionCancelMessage, AvatarFirstTimeEventMessage, AvatarImplantMessage, AvatarJumpMessage, BattleplanMessage, BindPlayerMessage, BugReportMessage, ChangeFireModeMessage, ChangeShortcutBankMessage, CharacterCreateRequestMessage, CharacterRequestMessage, ChatMsg, CollisionIs, ConnectToWorldRequestMessage, CreateShortcutMessage, DeadState, DeployObjectMessage, DisplayedAwardMessage, DropItemMessage, EmoteMsg, FacilityBenefitShieldChargeRequestMessage, FriendsRequest, GenericAction, GenericActionMessage, GenericCollisionMsg, GenericObjectActionAtPositionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HitHint, InvalidTerrainMessage, LootItemMessage, MoveItemMessage, ObjectDetectedMessage, ObjectHeldMessage, OutfitEvent, OutfitMemberEvent, OutfitMembershipRequest, OutfitMembershipResponse, OutfitRequest, OutfitRequestAction, PickupItemMessage, PlanetsideAttributeMessage, PlayerStateMessageUpstream, RequestDestroyMessage, TargetingImplantRequest, TerrainCondition, TradeMessage, UnuseItemMessage, UseItemMessage, VoiceHostInfo, VoiceHostRequest, ZipLineMessage}
+import net.psforever.packet.game.{ActionCancelMessage, AvatarFirstTimeEventMessage, AvatarImplantMessage, AvatarJumpMessage, BattleplanMessage, BindPlayerMessage, BugReportMessage, ChangeFireModeMessage, ChangeShortcutBankMessage, CharacterCreateRequestMessage, CharacterRequestMessage, ChatMsg, CollisionIs, ConnectToWorldRequestMessage, CreateShortcutMessage, DeadState, DeployObjectMessage, DisplayedAwardMessage, DropItemMessage, EmoteMsg, FacilityBenefitShieldChargeRequestMessage, FriendsRequest, GenericAction, GenericActionMessage, GenericCollisionMsg, GenericObjectActionAtPositionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HitHint, InvalidTerrainMessage, LootItemMessage, MoveItemMessage, ObjectDetectedMessage, ObjectHeldMessage, OutfitMembershipRequest, OutfitMembershipResponse, OutfitRequest, OutfitRequestAction, PickupItemMessage, PlanetsideAttributeMessage, PlayerStateMessageUpstream, RequestDestroyMessage, TargetingImplantRequest, TerrainCondition, TradeMessage, UnuseItemMessage, UseItemMessage, VoiceHostInfo, VoiceHostRequest, ZipLineMessage}
 import net.psforever.services.RemoverActor
-import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
+import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage, CorpseEnvelope}
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.types.{CapacitorStateType, ChatMessageType, Cosmetic, ExoSuitType, PlanetSideEmpire, PlanetSideGUID, Vector3}
-import scodec.bits.ByteVector
 
 import scala.util.Success
 
@@ -83,7 +81,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       player.Health = maxHealth.toInt
       player.LogActivity(player.ClearHistory().head)
       sendResponse(PlanetsideAttributeMessage(avatarGuid, 0, maxHealth))
-      continent.AvatarEvents ! AvatarServiceMessage(continent.id, AvatarAction.PlanetsideAttribute(avatarGuid, 0, maxHealth))
+      continent.AvatarEvents ! AvatarServiceMessage(continent.id, avatarGuid, AvatarAction.PlanetsideAttribute(0, maxHealth))
     }
     //below half stamina, full stamina
     val avatar = player.avatar
@@ -97,7 +95,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     if (player.Armor < maxArmor) {
       player.Armor = maxArmor.toInt
       sendResponse(PlanetsideAttributeMessage(avatarGuid, 4, maxArmor))
-      continent.AvatarEvents ! AvatarServiceMessage(continent.id, AvatarAction.PlanetsideAttribute(avatarGuid, 4, maxArmor))
+      continent.AvatarEvents ! AvatarServiceMessage(continent.id, avatarGuid, AvatarAction.PlanetsideAttribute(4, maxArmor))
     }
     //expected
     val isMoving     = WorldEntity.isMoving(vel)
@@ -154,8 +152,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       (player.isAlive && sessionLogic.zoning.spawn.deadState == DeadState.RespawnTime)
     continent.AvatarEvents ! AvatarServiceMessage(
       channel,
+      avatarGuid,
       AvatarAction.PlayerState(
-        avatarGuid,
         player.Position,
         player.Velocity,
         yaw,
@@ -259,7 +257,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
 
       case Some(obj: Player) if obj.isBackpack =>
         obj.Position = Vector3.Zero
-        continent.AvatarEvents ! AvatarServiceMessage.Corpse(RemoverActor.ClearSpecific(List(obj), continent))
+        continent.AvatarEvents ! CorpseEnvelope(RemoverActor.ClearSpecific(List(obj), continent))
 
       case Some(obj: Player) =>
         sessionLogic.general.suicide(obj)
@@ -459,7 +457,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
           player.UsingSpecial = SpecialExoSuitDefinition.Mode.Anchored
           continent.AvatarEvents ! AvatarServiceMessage(
             continent.id,
-            AvatarAction.PlanetsideAttribute(player.GUID, 19, 1)
+            player.GUID,
+            AvatarAction.PlanetsideAttribute(19, 1)
           )
           definition match {
             case GlobalDefinitions.trhev_dualcycler | GlobalDefinitions.trhev_burster =>
@@ -479,7 +478,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
           player.UsingSpecial = SpecialExoSuitDefinition.Mode.Normal
           continent.AvatarEvents ! AvatarServiceMessage(
             continent.id,
-            AvatarAction.PlanetsideAttribute(player.GUID, 19, 0)
+            player.GUID,
+            AvatarAction.PlanetsideAttribute(19, 0)
           )
           definition match {
             case GlobalDefinitions.trhev_dualcycler | GlobalDefinitions.trhev_burster =>

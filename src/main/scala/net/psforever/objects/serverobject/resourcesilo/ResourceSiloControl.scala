@@ -99,7 +99,8 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
     val zone     = building.Zone
     building.Zone.AvatarEvents ! AvatarServiceMessage(
       zone.id,
-      AvatarAction.PlanetsideAttribute(building.GUID, 47, if (resourceSilo.LowNtuWarningOn) 1 else 0)
+      building.GUID,
+      AvatarAction.PlanetsideAttribute(47, if (resourceSilo.LowNtuWarningOn) 1 else 0)
     )
   }
 
@@ -122,7 +123,8 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
       )
       zone.AvatarEvents ! AvatarServiceMessage(
         zone.id,
-        AvatarAction.PlanetsideAttribute(resourceSilo.GUID, 45, resourceSilo.CapacitorDisplay)
+        resourceSilo.GUID,
+        AvatarAction.PlanetsideAttribute(45, resourceSilo.CapacitorDisplay)
       )
       building.Actor ! BuildingActor.MapUpdate()
     }

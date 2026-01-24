@@ -73,8 +73,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     player.Cloaked = player.ExoSuit == ExoSuitType.Infiltration && isCloaking
     continent.AvatarEvents ! AvatarServiceMessage(
       "spectator",
+      avatarGuid,
       AvatarAction.PlayerState(
-        avatarGuid,
         player.Position,
         player.Velocity,
         yaw,
@@ -227,7 +227,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
         player.UsingSpecial = SpecialExoSuitDefinition.Mode.Anchored
         continent.AvatarEvents ! AvatarServiceMessage(
           continent.id,
-          AvatarAction.PlanetsideAttribute(player.GUID, 19, 1)
+          player.GUID,
+          AvatarAction.PlanetsideAttribute(19, 1)
         )
         definition match {
           case GlobalDefinitions.trhev_dualcycler | GlobalDefinitions.trhev_burster =>
@@ -248,7 +249,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
         player.UsingSpecial = SpecialExoSuitDefinition.Mode.Normal
         continent.AvatarEvents ! AvatarServiceMessage(
           continent.id,
-          AvatarAction.PlanetsideAttribute(player.GUID, 19, 0)
+          player.GUID,
+          AvatarAction.PlanetsideAttribute(19, 0)
         )
         definition match {
           case GlobalDefinitions.trhev_dualcycler | GlobalDefinitions.trhev_burster =>
