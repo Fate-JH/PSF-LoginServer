@@ -479,6 +479,8 @@ class ForceDomeControl(dome: ForceDomePhysics)
           //dome activating
           context.system.scheduler.scheduleOnce(delay = 1500 milliseconds, self, ForceDomeControl.Purge)
           context.system.scheduler.scheduleOnce(delay = 4000 milliseconds, self, ForceDomeControl.ApplyProtection)
+        } else if (oldState && !newState) {
+          context.system.scheduler.scheduleOnce(delay = 1500 milliseconds, self, ForceDomeControl.RemoveProtection)
         }
         newState
       case Some(state)

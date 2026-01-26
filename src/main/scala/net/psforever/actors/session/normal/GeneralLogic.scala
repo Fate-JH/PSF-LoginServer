@@ -16,6 +16,7 @@ import net.psforever.objects.inventory.Container
 import net.psforever.objects.serverobject.{PlanetSideServerObject, ServerObject}
 import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.serverobject.containable.Containable
+import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.generator.Generator
@@ -23,6 +24,7 @@ import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
 import net.psforever.objects.serverobject.llu.CaptureFlag
 import net.psforever.objects.serverobject.locks.IFFLock
 import net.psforever.objects.serverobject.mblocker.Locker
+import net.psforever.objects.serverobject.mount.MountableEntity
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
 import net.psforever.objects.serverobject.structures.WarpGate
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
@@ -637,25 +639,15 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       case (CollisionIs.OfAircraft, out @ Some(v: Vehicle))
         if v.Definition.CanFly && v.Seats(0).occupant.contains(player) =>
         (out, sessionLogic.validObject(t, decorator = "GenericCollision/Aircraft"), false, pv)
-      case (CollisionIs.BetweenThings, Some(field: ForceDomePhysics)) /*if field.Energized*/ =>
-        val target = sessionLogic
-          .vehicles
-          .findLocalVehicle
-          .getOrElse(player)
-        target.Actor ! Vitality.Damage(
-          DamageInteraction(
-            PlayerSource(player),
-            ForceDomeExposure(SourceEntry(field)),
-            player.Position
-          ).calculate()
-        )
+      case (CollisionIs.BetweenThings, out @ Some(target: PlanetSideServerObject with MountableEntity)) =>
         target.BailProtection = false
         player.BailProtection = false
+        (out, sessionLogic.validObject(t, decorator = "GenericCollision/Surface"), false, pv)
+      case (_, Some(obj)) =>
+        log.error(s"GenericCollision: $ctype detected: no handling case for ${obj.Definition.Name}")
         (None, None, false, Vector3.Zero)
-      case (CollisionIs.BetweenThings, _) =>
-        log.warn("GenericCollision: CollisionIs.BetweenThings detected - no handling case")
-        (None, None, false, Vector3.Zero)
-      case _ =>
+      case (_, None) =>
+        log.error(s"GenericCollision: $ctype detected: no entity detected as 'Primary'")
         (None, None, false, Vector3.Zero)
     }
     val curr = System.currentTimeMillis()
@@ -676,6 +668,16 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
             )
           }
         }
+
+      case (Some(us: PlanetSideServerObject with Vitality with FactionAffinity), _, Some(field: ForceDomePhysics)) =>
+        us.Actor ! Damageable.MakeVulnerable
+        us.Actor ! Vitality.Damage(
+          DamageInteraction(
+            PlayerSource(player),
+            ForceDomeExposure(SourceEntry(field)),
+            player.Position
+          ).calculate()
+        )
 
       case (Some(us: Vehicle), _, Some(victim: SensorDeployable)) =>
         collisionBetweenVehicleAndFragileDeployable(us, ppos, victim, tpos, velocity - tv, fallHeight, curr)

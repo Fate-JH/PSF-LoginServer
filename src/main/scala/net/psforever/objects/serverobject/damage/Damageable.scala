@@ -38,10 +38,7 @@ trait Damageable {
       isVulnerable = false
 
     case Vitality.Damage(damage_func) =>
-      val obj = DamageableObject
-      if (isVulnerable && obj.CanDamage) {
-        PerformDamage(obj, damage_func)
-      }
+      PerformDamageIfVulnerable(DamageableObject, damage_func)
   }
 
   /** a duplicate of the core implementation for the default mixin hook, for use in overriding */
@@ -53,10 +50,20 @@ trait Damageable {
       isVulnerable = false
 
     case Vitality.Damage(damage_func) =>
-      val obj = DamageableObject
-      if (isVulnerable && obj.CanDamage) {
-        PerformDamage(obj, damage_func)
-      }
+      PerformDamageIfVulnerable(DamageableObject, damage_func)
+  }
+
+  /**
+   * Assess if the target is vulnerable to damage.
+   * If so, attempt damage calculations.
+   * @see `ResolutionCalculations.Output`
+   * @param obj the entity to be damaged
+   * @param applyDamageTo the function that applies the damage to the target in a target-tailored fashion
+   */
+  def PerformDamageIfVulnerable(obj: Damageable.Target, applyDamageTo: ResolutionCalculations.Output): Unit = {
+    if (isVulnerable && obj.CanDamage) {
+      PerformDamage(obj, applyDamageTo)
+    }
   }
 
   /**

@@ -40,7 +40,7 @@ class InteractWithForceDomeProtection
         case Some(dome)
           if dome.Perimeter.isEmpty ||
             target.Zone != dome.Zone ||
-            !ForceDomeControl.TargetUnderForceDome(dome.Perimeter)(target, dome, maxDistance = 0f) =>
+            !ForceDomeControl.TargetUnderForceDome(dome.Perimeter)(dome, target, maxDistance = 0f) =>
           resetInteraction(target)
         case Some(_) =>
           () //no action
@@ -69,7 +69,7 @@ class InteractWithForceDomeProtection
         case _ => None
       }
       .find { dome =>
-        ForceDomeControl.TargetUnderForceDome(dome.Perimeter)(target, dome, maxDistance = 0f)
+        ForceDomeControl.TargetUnderForceDome(dome.Perimeter)(dome, target, maxDistance = 0f)
       }
       .map { dome =>
         applyProtection(target, dome)

@@ -5,17 +5,15 @@ import akka.actor.{ActorContext, typed}
 import net.psforever.actors.session.AvatarActor
 import net.psforever.actors.session.support.{SessionData, VehicleFunctions, VehicleOperations}
 import net.psforever.objects.serverobject.PlanetSideServerObject
-import net.psforever.objects.{PlanetSideGameObject, Player, Vehicle, Vehicles}
+import net.psforever.objects.{PlanetSideGameObject, Vehicle, Vehicles}
 import net.psforever.objects.serverobject.deploy.Deployment
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.vehicles.control.BfrFlight
-import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.Zone
 import net.psforever.objects.zones.interaction.InteractsWithZone
-import net.psforever.packet.game.{ChildObjectStateMessage, DeployRequestMessage, FrameVehicleStateMessage, PlanetsideAttributeMessage, VehicleStateMessage, VehicleSubStateMessage}
-import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
+import net.psforever.packet.game.{ChildObjectStateMessage, DeployRequestMessage, FrameVehicleStateMessage, VehicleStateMessage, VehicleSubStateMessage}
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
-import net.psforever.types.{DriveState, PlanetSideGUID, Vector3}
+import net.psforever.types.{DriveState, Vector3}
 
 object VehicleLogic {
   def apply(ops: VehicleOperations): VehicleLogic = {
@@ -51,8 +49,8 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
         sessionLogic.zoning.spawn.tryQueuedActivity(vel)
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
-        topOffHealthOfPlayer()
-        topOffHealth(obj)
+        CustomerServiceRepresentativeMode.topOffHealthOfPlayer(sessionLogic, player)
+        CustomerServiceRepresentativeMode.topOffHealth(sessionLogic, obj)
         val (position, angle, velocity, notMountedState) = continent.GUID(obj.MountedIn) match {
           case Some(v: Vehicle) =>
             (pos, v.Orientation - Vector3.z(value = 90f) * Vehicles.CargoOrientation(obj).toFloat, v.Velocity, false)
@@ -134,8 +132,8 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
         sessionLogic.zoning.spawn.tryQueuedActivity(vel)
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
-        topOffHealthOfPlayer()
-        topOffHealth(obj)
+        CustomerServiceRepresentativeMode.topOffHealthOfPlayer(sessionLogic, player)
+        CustomerServiceRepresentativeMode.topOffHealth(sessionLogic, obj)
         val (position, angle, velocity, notMountedState) = continent.GUID(obj.MountedIn) match {
           case Some(v: Vehicle) =>
             (pos, v.Orientation - Vector3.z(value = 90f) * Vehicles.CargoOrientation(obj).toFloat, v.Velocity, false)
@@ -217,8 +215,8 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
         sessionLogic.zoning.spawn.tryQueuedActivity(player.Velocity)
         sessionLogic.persist()
         sessionLogic.turnCounterFunc(player.GUID)
-        topOffHealthOfPlayer()
-        topOffHealth(entity)
+        CustomerServiceRepresentativeMode.topOffHealthOfPlayer(sessionLogic, player)
+        CustomerServiceRepresentativeMode.topOffHealth(sessionLogic, entity)
         sessionLogic.squad.updateSquad()
       case _ => //we can't disprove that COSM is our primary upstream packet, it's just that we may be missing some details
         sessionLogic.zoning.spawn.tryQueuedActivity(player.Velocity)
@@ -333,58 +331,6 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       continent.VehicleEvents ! VehicleServiceMessage(
         continent.id,
         VehicleAction.DeployRequest(player.GUID, obj.GUID, DriveState.Mobile, 0, unk2=false, Vector3.Zero)
-      )
-    }
-  }
-
-  private def topOffHealth(obj: PlanetSideGameObject with Vitality): Unit = {
-    obj match {
-      case _: Player => topOffHealthOfPlayer()
-      case v: Vehicle => topOffHealthOfVehicle(v)
-      case o: PlanetSideGameObject with Vitality => topOffHealthOfGeneric(o)
-      case _ => ()
-    }
-  }
-
-  private def topOffHealthOfPlayer(): Unit = {
-    //driver below half health, full heal
-    val maxHealthOfPlayer = player.MaxHealth.toLong
-    if (player.Health < maxHealthOfPlayer * 0.5f) {
-      player.Health = maxHealthOfPlayer.toInt
-      player.LogActivity(player.ClearHistory().head)
-      sendResponse(PlanetsideAttributeMessage(player.GUID, 0, maxHealthOfPlayer))
-      continent.AvatarEvents ! AvatarServiceMessage(sessionLogic.zoning.zoneChannel, AvatarAction.PlanetsideAttribute(player.GUID, 0, maxHealthOfPlayer))
-    }
-  }
-
-  private def topOffHealthOfVehicle(vehicle: Vehicle): Unit = {
-    topOffHealthOfPlayer()
-    topOffHealthOfGeneric(vehicle)
-    //vehicle shields below half, full shields
-    val maxShieldsOfVehicle = vehicle.MaxShields.toLong
-    val shieldsUi = vehicle.Definition.shieldUiAttribute
-    if (vehicle.Shields < maxShieldsOfVehicle) {
-      val guid = vehicle.GUID
-      vehicle.Shields = maxShieldsOfVehicle.toInt
-      sendResponse(PlanetsideAttributeMessage(guid, shieldsUi, maxShieldsOfVehicle))
-      continent.VehicleEvents ! VehicleServiceMessage(
-        continent.id,
-        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, shieldsUi, maxShieldsOfVehicle)
-      )
-    }
-  }
-
-  private def topOffHealthOfGeneric(obj: PlanetSideGameObject with Vitality): Unit = {
-    topOffHealthOfPlayer()
-    //vehicle below half health, full heal
-    val guid = obj.GUID
-    val maxHealthOf = obj.MaxHealth.toLong
-    if (obj.Health < maxHealthOf) {
-      obj.Health = maxHealthOf.toInt
-      sendResponse(PlanetsideAttributeMessage(guid, 0, maxHealthOf))
-      continent.VehicleEvents ! VehicleServiceMessage(
-        continent.id,
-        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, 0, maxHealthOf)
       )
     }
   }

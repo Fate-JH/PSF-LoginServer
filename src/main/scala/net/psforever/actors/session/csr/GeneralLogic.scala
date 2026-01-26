@@ -27,11 +27,8 @@ import net.psforever.objects.serverobject.terminals.{ProximityUnit, Terminal}
 import net.psforever.objects.serverobject.terminals.implant.ImplantTerminalMech
 import net.psforever.objects.serverobject.tube.SpawnTube
 import net.psforever.objects.serverobject.turret.FacilityTurret
-import net.psforever.objects.sourcing.{PlayerSource, SourceEntry}
 import net.psforever.objects.vehicles.Utility
 import net.psforever.objects.vital.Vitality
-import net.psforever.objects.vital.etc.ForceDomeExposure
-import net.psforever.objects.vital.interaction.DamageInteraction
 import net.psforever.objects.zones.{ZoneProjectile, Zoning}
 import net.psforever.packet.PlanetSideGamePacket
 import net.psforever.packet.game.OutfitEventAction.{Initial, OutfitInfo, OutfitRankNames, Unk1}
@@ -40,8 +37,8 @@ import net.psforever.services.RemoverActor
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.types.{CapacitorStateType, ChatMessageType, Cosmetic, ExoSuitType, PlanetSideEmpire, PlanetSideGUID, Vector3}
-import scodec.bits.ByteVector
 
+import scala.concurrent.duration._
 import scala.util.Success
 
 object GeneralLogic {
@@ -81,28 +78,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     sessionLogic.persist()
     sessionLogic.turnCounterFunc(avatarGuid)
     sessionLogic.updateBlockMap(player, pos)
-    //below half health, full heal
-    val maxHealth = player.MaxHealth.toLong
-    if (player.Health < maxHealth) {
-      player.Health = maxHealth.toInt
-      player.LogActivity(player.ClearHistory().head)
-      sendResponse(PlanetsideAttributeMessage(avatarGuid, 0, maxHealth))
-      continent.AvatarEvents ! AvatarServiceMessage(continent.id, AvatarAction.PlanetsideAttribute(avatarGuid, 0, maxHealth))
-    }
-    //below half stamina, full stamina
-    val avatar = player.avatar
-    val maxStamina = avatar.maxStamina
-    if (avatar.stamina < maxStamina) {
-      avatarActor ! AvatarActor.RestoreStamina(maxStamina)
-      sendResponse(PlanetsideAttributeMessage(player.GUID, 2, maxStamina.toLong))
-    }
-    //below half armor, full armor
-    val maxArmor = player.MaxArmor.toLong
-    if (player.Armor < maxArmor) {
-      player.Armor = maxArmor.toInt
-      sendResponse(PlanetsideAttributeMessage(avatarGuid, 4, maxArmor))
-      continent.AvatarEvents ! AvatarServiceMessage(continent.id, AvatarAction.PlanetsideAttribute(avatarGuid, 4, maxArmor))
-    }
+    topOffHealthOfPlayer()
     //expected
     val isMoving     = WorldEntity.isMoving(vel)
     val isMovingPlus = isMoving || isJumping || jumpThrust
@@ -559,20 +535,19 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
         v.BailProtection = false
       case (CollisionIs.OfAircraft, Some(v: Vehicle))
         if v.Definition.CanFly && v.Seats(0).occupant.contains(player) => ()
-      case (CollisionIs.BetweenThings, Some(field: ForceDomePhysics)) /*if field.Energized*/ =>
-        val target = sessionLogic
-          .vehicles
-          .findLocalVehicle
-          .getOrElse(player)
-        target.Actor ! Vitality.Damage(
-          DamageInteraction(
-            PlayerSource(player),
-            ForceDomeExposure(SourceEntry(field)),
-            player.Position
-          ).calculate()
-        )
-        target.BailProtection = false
-        player.BailProtection = false
+      case (CollisionIs.BetweenThings, Some(v: Vehicle)) =>
+        v.Actor ! Vehicle.Deconstruct(Some(1 millisecond))
+        continent.GUID(t) match {
+          case Some(_: ForceDomePhysics) =>
+            player.Actor ! Player.Die()
+          case _ => ()
+        }
+      case (CollisionIs.BetweenThings, Some(_: Player)) =>
+        continent.GUID(t) match {
+          case Some(_: ForceDomePhysics) =>
+            player.Actor ! Player.Die()
+          case _ => ()
+        }
       case (CollisionIs.BetweenThings, _) =>
         log.warn(s"GenericCollision: CollisionIs.BetweenThings detected - no handling case for obj id:${t.guid}")
       case _ => ()
@@ -821,6 +796,18 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       sendResponse(PlanetsideAttributeMessage(player.GUID, 7, maxCapacitor))
     } else {
       player.CapacitorState = CapacitorStateType.Idle
+    }
+  }
+
+  def topOffHealthOfPlayer(): Unit = {
+    //below half health, full heal
+    CustomerServiceRepresentativeMode.topOffHealthOfPlayer(sessionLogic, player)
+    //below half stamina, full stamina
+    val avatar = player.avatar
+    val maxStamina = avatar.maxStamina
+    if (avatar.stamina < maxStamina) {
+      avatarActor ! AvatarActor.RestoreStamina(maxStamina)
+      sendResponse(PlanetsideAttributeMessage(player.GUID, 2, maxStamina.toLong))
     }
   }
 }
