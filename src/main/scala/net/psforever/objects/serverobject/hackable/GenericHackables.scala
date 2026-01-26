@@ -9,9 +9,9 @@ import net.psforever.objects.{GlobalDefinitions, Player, Vehicle}
 import net.psforever.objects.serverobject.{CommonMessages, PlanetSideServerObject}
 import net.psforever.packet.game.{GenericObjectActionMessage, HackMessage, HackState, HackState1, HackState7, TriggeredSound}
 import net.psforever.types.{PlanetSideEmpire, PlanetSideGUID}
-import net.psforever.services.Service
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
-import net.psforever.services.local.{LocalAction, LocalServiceMessage}
+import net.psforever.services.local.support.HackClearActor
+import net.psforever.services.local.{ClearMessage, HackEntityMessage, LocalAction, LocalServiceMessage}
 
 import scala.util.{Failure, Success}
 
@@ -129,12 +129,15 @@ object GenericHackables {
           log.info(s"${user.Name} hacked a ${target.Definition.Name}")
           zone.LocalEvents ! LocalServiceMessage(
             zoneId,
-            LocalAction.TriggerSound(pguid, target.HackSound, tplayer.Position, 30, 0.49803925f)
+            pguid,
+            LocalAction.TriggerSound(target.HackSound, tplayer.Position, 30, 0.49803925f)
           )
-          zone.LocalEvents ! LocalServiceMessage(
+          val duration = target.HackEffectDuration(user.avatar.hackingSkillLevel())
+          zone.LocalEvents ! HackEntityMessage(
             zoneId,
-            LocalAction
-              .HackTemporarily(pguid, zone, target, hackValue, hackClearValue, target.HackEffectDuration(user.avatar.hackingSkillLevel()))
+            pguid,
+            LocalAction.HackTemporarily(zone, target, hackValue, hackClearValue, duration),
+            HackClearActor.ObjectIsHacked(target, zone, hackClearValue, HackState7.Unk8, duration)
           )
         case Failure(_) =>
           log.warn(s"Hack message failed on target: ${target.Definition.Name}@${target.GUID.guid}")
@@ -159,11 +162,7 @@ object GenericHackables {
             val currVirus = building.virusId
             building.virusId = 8
             building.virusInstalledBy = None
-            zone.LocalEvents ! LocalServiceMessage(
-              zoneId,
-              LocalAction
-                .ClearTemporaryHack(pguid, target)
-            )
+            zone.LocalEvents ! ClearMessage(HackClearActor.ObjectIsResecured(target))
             zone.LocalEvents ! LocalServiceMessage(
               zone.id,
               LocalAction.SendResponse(GenericObjectActionMessage(target.GUID, 60))
@@ -171,17 +170,11 @@ object GenericHackables {
             currVirus match {
               case 0L =>
                 building.HackableAmenities.filter(d => d.Definition == GlobalDefinitions.lock_external).foreach { iff =>
-                  zone.LocalEvents ! LocalServiceMessage(
-                    zoneId,
-                    LocalAction.ClearTemporaryHack(PlanetSideGUID(0), iff)
-                  )
+                  zone.LocalEvents ! ClearMessage(HackClearActor.ObjectIsResecured(iff))
                 }
               case 4L =>
                 building.HackableAmenities.filter(d => d.Definition == GlobalDefinitions.order_terminal).foreach { term =>
-                  zone.LocalEvents ! LocalServiceMessage(
-                    zoneId,
-                    LocalAction.ClearTemporaryHack(PlanetSideGUID(0), term)
-                  )
+                  zone.LocalEvents ! ClearMessage(HackClearActor.ObjectIsResecured(term))
                 }
               case _ => ()
             }
@@ -195,19 +188,13 @@ object GenericHackables {
               case 0L =>
                 if (virus != 0) {
                   building.HackableAmenities.filter(d => d.Definition == GlobalDefinitions.lock_external).foreach { iff =>
-                    zone.LocalEvents ! LocalServiceMessage(
-                      zoneId,
-                      LocalAction.ClearTemporaryHack(PlanetSideGUID(0), iff)
-                    )
+                    zone.LocalEvents ! ClearMessage(HackClearActor.ObjectIsResecured(iff))
                   }
                 }
               case 4L =>
                 if (virus != 4) {
                   building.HackableAmenities.filter(d => d.Definition == GlobalDefinitions.order_terminal).foreach { term =>
-                    zone.LocalEvents ! LocalServiceMessage(
-                      zoneId,
-                      LocalAction.ClearTemporaryHack(PlanetSideGUID(0), term)
-                    )
+                    zone.LocalEvents ! ClearMessage(HackClearActor.ObjectIsResecured(term))
                   }
                 }
               case _ => ()
@@ -232,12 +219,14 @@ object GenericHackables {
             building.virusInstalledBy = Some(tplayer.Faction.id)
             zone.LocalEvents ! LocalServiceMessage(
               zoneId,
-              LocalAction.TriggerSound(pguid, TriggeredSound.TREKSuccessful, tplayer.Position, 30, 0.49803925f)
+              pguid,
+              LocalAction.TriggerSound(TriggeredSound.TREKSuccessful, tplayer.Position, 30, 0.49803925f)
             )
-            zone.LocalEvents ! LocalServiceMessage(
+            zone.LocalEvents ! HackEntityMessage(
               zoneId,
-              LocalAction
-                .HackTemporarily(pguid, zone, target, installedVirusDuration, hackClearValue, installedVirusDuration, unk2=hackState)
+              pguid,
+              LocalAction.HackTemporarily(zone, target, installedVirusDuration, hackClearValue, installedVirusDuration, unk2=hackState),
+              HackClearActor.ObjectIsHacked(target, zone, hackClearValue, hackState, installedVirusDuration)
             )
             zone.LocalEvents ! LocalServiceMessage(
               zone.id,
@@ -251,21 +240,23 @@ object GenericHackables {
             virus match {
               case 0L =>
                 building.HackableAmenities.filter(d => d.Definition == GlobalDefinitions.lock_external).foreach{ iff =>
-                  var setHacked = iff.asInstanceOf[PlanetSideServerObject with Hackable]
-                  setHacked.HackedBy = tplayer
-                    zone.LocalEvents ! LocalServiceMessage(
-                      zoneId,
-                      LocalAction.HackTemporarily(pguid, zone, iff, hackValue, hackClearValue, installedVirusDuration)
-                    )
+                  iff.HackedBy = tplayer
+                  zone.LocalEvents ! HackEntityMessage(
+                    zoneId,
+                    pguid,
+                    LocalAction.HackTemporarily(zone, iff, hackValue, hackClearValue, installedVirusDuration),
+                    HackClearActor.ObjectIsHacked(target, zone, hackClearValue, HackState7.Unk8, installedVirusDuration)
+                  )
                 }
               case 4L =>
                 building.HackableAmenities.filter(d => d.Definition == GlobalDefinitions.order_terminal).foreach{ term =>
-                  var setHacked = term.asInstanceOf[PlanetSideServerObject with Hackable]
-                  setHacked.HackedBy = tplayer
-                    zone.LocalEvents ! LocalServiceMessage(
-                      zoneId,
-                      LocalAction.HackTemporarily(pguid, zone, term, hackValue, hackClearValue, installedVirusDuration)
-                    )
+                  term.HackedBy = tplayer
+                  zone.LocalEvents ! HackEntityMessage(
+                    zoneId,
+                    pguid,
+                    LocalAction.HackTemporarily(zone, term, hackValue, hackClearValue, installedVirusDuration),
+                    HackClearActor.ObjectIsHacked(target, zone, hackClearValue, HackState7.Unk8, installedVirusDuration)
+                  )
                 }
               case _ => ()
             }

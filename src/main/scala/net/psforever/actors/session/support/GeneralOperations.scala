@@ -18,7 +18,8 @@ import net.psforever.objects.zones.blockmap.BlockMapEntity
 import net.psforever.objects.zones.exp.ToDatabase
 import net.psforever.services.RemoverActor
 import net.psforever.services.avatar.GroundEnvelope
-import net.psforever.services.local.{LocalAction, LocalServiceMessage}
+import net.psforever.services.local.support.HackCaptureActor
+import net.psforever.services.local.{CaptureMessage, LocalAction, LocalServiceMessage}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -1218,7 +1219,7 @@ class GeneralOperations(
         continent.GUID(specialItemSlotGuid) match {
           case Some(llu: CaptureFlag) =>
             if (llu.Target.GUID == captureTerminal.Owner.GUID) {
-              continent.LocalEvents ! LocalServiceMessage(continent.id, LocalAction.LluCaptured(llu))
+              continent.LocalEvents ! CaptureMessage(HackCaptureActor.FlagCaptured(llu))
             } else {
               log.info(
                 s"LLU target is not this base. Target GUID: ${llu.Target.GUID} This base: ${captureTerminal.Owner.GUID}"
@@ -1405,7 +1406,8 @@ class GeneralOperations(
       useRouterTelepadEffect(pguid, sguid, dguid)
       continent.LocalEvents ! LocalServiceMessage(
         continent.id,
-        LocalAction.RouterTelepadTransport(pguid, pguid, sguid, dguid)
+        pguid,
+        LocalAction.RouterTelepadTransport(pguid, sguid, dguid)
       )
       player.Position = dest.Position
       player.LogActivity(TelepadUseActivity(VehicleSource(router), DeployableSource(remoteTelepad), PlayerSource(player)))

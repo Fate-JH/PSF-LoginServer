@@ -6,7 +6,6 @@ import net.psforever.objects.ce.Deployable
 import net.psforever.objects.serverobject.hackable.GenericHackables.updateTurretUpgradeTime
 import net.psforever.objects.{Player, Tool, TurretDeployable}
 import net.psforever.packet.game.{HackMessage, HackState, HackState1, HackState7, InventoryStateMessage}
-import net.psforever.services.Service
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
@@ -122,7 +121,8 @@ object WeaponTurrets {
       )
       zone.LocalEvents ! LocalServiceMessage(
         zone.id,
-        LocalAction.TriggerSound(hacker.GUID, target.HackSound, target.Position, 30, 0.49803925f)
+        hacker.GUID,
+        LocalAction.TriggerSound(target.HackSound, target.Position, 30, 0.49803925f)
       )
     } else {
       //deconstruct
