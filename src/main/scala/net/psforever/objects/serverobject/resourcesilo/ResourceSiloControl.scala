@@ -224,7 +224,7 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
       val zone = resourceSilo.Zone
       zone.VehicleEvents ! VehicleServiceMessage(
         zone.id,
-        VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, resourceSilo.GUID, 49, 1)
+        VehicleAction.PlanetsideAttribute(resourceSilo.GUID, 49, 1)
       )
       math.min(resourceSilo.MaxNtuCapacitor - currentlyHas, trigger)
     } else if (trigger < 0) {
@@ -235,7 +235,7 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
       val zone = resourceSilo.Zone
       zone.VehicleEvents ! VehicleServiceMessage(
         zone.id,
-        VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, resourceSilo.GUID, 49, 0)
+        VehicleAction.PlanetsideAttribute(resourceSilo.GUID, 49, 0)
       )
       0
     }) * 0.9f

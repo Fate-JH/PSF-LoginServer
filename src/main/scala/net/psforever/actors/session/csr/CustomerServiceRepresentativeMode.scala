@@ -14,7 +14,7 @@ import net.psforever.packet.game.objectcreate.RibbonBars
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.chat.{CustomerServiceChannel, SpectatorChannel}
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
-import net.psforever.types.{ChatMessageType, MeritCommendation, PlanetSideGUID}
+import net.psforever.types.{ChatMessageType, MeritCommendation}
 
 class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
   val avatarResponse: AvatarHandlerLogic = AvatarHandlerLogic(data.avatarResponse)
@@ -157,7 +157,7 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
       data.sendResponse(PlanetsideAttributeMessage(guid, shieldsUi, maxShieldsOfVehicle))
       data.continent.VehicleEvents ! VehicleServiceMessage(
         data.continent.id,
-        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, shieldsUi, maxShieldsOfVehicle)
+        VehicleAction.PlanetsideAttribute(guid, shieldsUi, maxShieldsOfVehicle)
       )
     }
   }
@@ -171,7 +171,7 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
       data.sendResponse(PlanetsideAttributeMessage(guid, 0, maxHealthOf))
       data.continent.VehicleEvents ! VehicleServiceMessage(
         data.continent.id,
-        VehicleAction.PlanetsideAttribute(PlanetSideGUID(0), guid, 0, maxHealthOf)
+        VehicleAction.PlanetsideAttribute(guid, 0, maxHealthOf)
       )
     }
   }

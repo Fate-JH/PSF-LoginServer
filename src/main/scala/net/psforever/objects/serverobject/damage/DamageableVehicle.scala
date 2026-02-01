@@ -144,21 +144,21 @@ trait DamageableVehicle
       if (damageToShields > 0) {
         events ! VehicleServiceMessage(
           shieldChannel,
-          VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, targetGUID, obj.Definition.shieldUiAttribute, obj.Shields)
+          VehicleAction.PlanetsideAttribute(targetGUID, obj.Definition.shieldUiAttribute, obj.Shields)
         )
         announceConfrontation = true
       }
       if (damageToHealth > 0) {
         events ! VehicleServiceMessage(
           healthChannel,
-          VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, targetGUID, 0, obj.Health)
+          VehicleAction.PlanetsideAttribute(targetGUID, 0, obj.Health)
         )
         announceConfrontation = true
       }
     }
     if (announceConfrontation) {
       if (showAsAggravated) {
-        val msg = VehicleAction.SendResponse(Service.defaultPlayerGUID, DamageWithPositionMessage(totalDamage, Vector3.Zero))
+        val msg = VehicleAction.SendResponse(DamageWithPositionMessage(totalDamage, Vector3.Zero))
         obj.Seats.values
           .collect { case seat if seat.occupant.nonEmpty => seat.occupant.get.Name }
           .foreach { channel =>
@@ -212,7 +212,7 @@ trait DamageableVehicle
           obj.Shields = 0
           zone.VehicleEvents ! VehicleServiceMessage(
             zone.id,
-            VehicleAction.PlanetsideAttribute(Service.defaultPlayerGUID, target.GUID, obj.Definition.shieldUiAttribute, 0)
+            VehicleAction.PlanetsideAttribute(target.GUID, obj.Definition.shieldUiAttribute, 0)
           )
         }
         //database entry
@@ -248,11 +248,11 @@ trait DamageableVehicle
     val events = zone.VehicleEvents
     events ! VehicleServiceMessage(
       zoneid,
-      VehicleAction.PlanetsideAttribute(guid0, guid, 0, 1)
+      VehicleAction.PlanetsideAttribute(guid, 0, 1)
     )
     events ! VehicleServiceMessage(
       zoneid,
-      VehicleAction.PlanetsideAttribute(guid0, guid, obj.Definition.shieldUiAttribute, 0)
+      VehicleAction.PlanetsideAttribute(guid, obj.Definition.shieldUiAttribute, 0)
     )
     //passengers die with us
     DamageableMountable.DestructionAwareness(DamageableObject, cause)
