@@ -12,8 +12,9 @@ import net.psforever.objects.zones.blockmap.BlockMapEntity
 import net.psforever.packet.game.{ChatMsg, ObjectCreateDetailedMessage, PlanetsideAttributeMessage}
 import net.psforever.packet.game.objectcreate.RibbonBars
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
+import net.psforever.services.base.messages.PlanetsideAttribute
 import net.psforever.services.chat.{CustomerServiceChannel, SpectatorChannel}
-import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
+import net.psforever.services.vehicle.VehicleServiceMessage
 import net.psforever.types.{ChatMessageType, MeritCommendation}
 
 class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
@@ -142,7 +143,7 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
       player.Health = maxHealthOfPlayer.toInt
       player.LogActivity(player.ClearHistory().head)
       data.sendResponse(PlanetsideAttributeMessage(player.GUID, 0, maxHealthOfPlayer))
-      data.continent.AvatarEvents ! AvatarServiceMessage(data.zoning.zoneChannel, player.GUID, AvatarAction.PlanetsideAttribute(0, maxHealthOfPlayer))
+      data.continent.AvatarEvents ! AvatarServiceMessage(data.zoning.zoneChannel, player.GUID, PlanetsideAttribute(player.GUID, 0, maxHealthOfPlayer))
     }
   }
 
@@ -157,7 +158,7 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
       data.sendResponse(PlanetsideAttributeMessage(guid, shieldsUi, maxShieldsOfVehicle))
       data.continent.VehicleEvents ! VehicleServiceMessage(
         data.continent.id,
-        VehicleAction.PlanetsideAttribute(guid, shieldsUi, maxShieldsOfVehicle)
+        PlanetsideAttribute(guid, shieldsUi, maxShieldsOfVehicle)
       )
     }
   }
@@ -171,7 +172,7 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
       data.sendResponse(PlanetsideAttributeMessage(guid, 0, maxHealthOf))
       data.continent.VehicleEvents ! VehicleServiceMessage(
         data.continent.id,
-        VehicleAction.PlanetsideAttribute(guid, 0, maxHealthOf)
+        PlanetsideAttribute(guid, 0, maxHealthOf)
       )
     }
   }

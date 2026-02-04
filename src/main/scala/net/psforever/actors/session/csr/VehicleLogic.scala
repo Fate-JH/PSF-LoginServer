@@ -12,7 +12,8 @@ import net.psforever.objects.vehicles.control.BfrFlight
 import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.game.{ChildObjectStateMessage, DeployRequestMessage, FrameVehicleStateMessage, PlanetsideAttributeMessage, VehicleStateMessage, VehicleSubStateMessage}
-import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
+import net.psforever.services.avatar.AvatarServiceMessage
+import net.psforever.services.base.messages.PlanetsideAttribute
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
 import net.psforever.types.{DriveState, Vector3}
 
@@ -322,7 +323,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       player.Health = maxHealthOfPlayer.toInt
       player.LogActivity(player.ClearHistory().head)
       sendResponse(PlanetsideAttributeMessage(player.GUID, 0, maxHealthOfPlayer))
-      continent.AvatarEvents ! AvatarServiceMessage(sessionLogic.zoning.zoneChannel, player.GUID, AvatarAction.PlanetsideAttribute(0, maxHealthOfPlayer))
+      continent.AvatarEvents ! AvatarServiceMessage(sessionLogic.zoning.zoneChannel, player.GUID, PlanetsideAttribute(player.GUID, 0, maxHealthOfPlayer))
     }
   }
 
@@ -338,7 +339,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       sendResponse(PlanetsideAttributeMessage(guid, shieldsUi, maxShieldsOfVehicle))
       continent.VehicleEvents ! VehicleServiceMessage(
         continent.id,
-        VehicleAction.PlanetsideAttribute(guid, shieldsUi, maxShieldsOfVehicle)
+        PlanetsideAttribute(guid, shieldsUi, maxShieldsOfVehicle)
       )
     }
   }
@@ -353,7 +354,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       sendResponse(PlanetsideAttributeMessage(guid, 0, maxHealthOf))
       continent.VehicleEvents ! VehicleServiceMessage(
         continent.id,
-        VehicleAction.PlanetsideAttribute(guid, 0, maxHealthOf)
+        PlanetsideAttribute(guid, 0, maxHealthOf)
       )
     }
   }

@@ -12,7 +12,8 @@ import net.psforever.objects.{GlobalDefinitions, Ntu, NtuContainer, NtuStorageBe
 import net.psforever.types.{ExperienceType, PlanetSideEmpire}
 import net.psforever.services.Service
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
-import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
+import net.psforever.services.base.messages.PlanetsideAttribute
+import net.psforever.services.vehicle.VehicleServiceMessage
 import net.psforever.util.Config
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -100,7 +101,7 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
     building.Zone.AvatarEvents ! AvatarServiceMessage(
       zone.id,
       building.GUID,
-      AvatarAction.PlanetsideAttribute(47, if (resourceSilo.LowNtuWarningOn) 1 else 0)
+      PlanetsideAttribute(building.GUID, 47, if (resourceSilo.LowNtuWarningOn) 1 else 0)
     )
   }
 
@@ -124,7 +125,7 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
       zone.AvatarEvents ! AvatarServiceMessage(
         zone.id,
         resourceSilo.GUID,
-        AvatarAction.PlanetsideAttribute(45, resourceSilo.CapacitorDisplay)
+        PlanetsideAttribute(resourceSilo.GUID, 45, resourceSilo.CapacitorDisplay)
       )
       building.Actor ! BuildingActor.MapUpdate()
     }
@@ -224,7 +225,7 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
       val zone = resourceSilo.Zone
       zone.VehicleEvents ! VehicleServiceMessage(
         zone.id,
-        VehicleAction.PlanetsideAttribute(resourceSilo.GUID, 49, 1)
+        PlanetsideAttribute(resourceSilo.GUID, 49, 1)
       )
       math.min(resourceSilo.MaxNtuCapacitor - currentlyHas, trigger)
     } else if (trigger < 0) {
@@ -235,7 +236,7 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
       val zone = resourceSilo.Zone
       zone.VehicleEvents ! VehicleServiceMessage(
         zone.id,
-        VehicleAction.PlanetsideAttribute(resourceSilo.GUID, 49, 0)
+        PlanetsideAttribute(resourceSilo.GUID, 49, 0)
       )
       0
     }) * 0.9f

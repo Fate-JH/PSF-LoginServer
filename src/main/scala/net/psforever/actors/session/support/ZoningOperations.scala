@@ -23,6 +23,7 @@ import net.psforever.objects.zones.blockmap.BlockMapEntity
 import net.psforever.packet.game.GenericAction.FirstPersonViewWithEffect
 import net.psforever.packet.game.{CampaignStatistic, ChangeFireStateMessage_Start, CloudInfo, GenericActionMessage, GenericObjectActionEnum, HackState7, MailMessage, ObjectDetectedMessage, SessionStatistic, StormInfo, TriggeredSound, WeatherMessage}
 import net.psforever.services.avatar.{CorpseEnvelope, ReleaseMessage}
+import net.psforever.services.base.messages.{GenericObjectAction, ObjectDelete, PlanetsideAttribute, SendResponse}
 import net.psforever.services.chat.DefaultChannel
 
 import scala.concurrent.duration._
@@ -857,7 +858,7 @@ class ZoningOperations(
         case None =>
           spawn.deadState = DeadState.Release // cancel movement updates
           player.Position = position
-          // continent.AvatarEvents ! AvatarServiceMessage(continent.Id, AvatarAction.ObjectDelete(player.GUID, player.GUID))
+          // continent.AvatarEvents ! AvatarServiceMessage(continent.Id, ObjectDelete(player.GUID, player.GUID))
           spawn.LoadZonePhysicalSpawnPoint(zoneId, position, Vector3.Zero, 0 seconds, None)
         case _ => // seated in something that is not a vehicle or the vehicle is cargo, in which case we can't move
       }
@@ -1156,7 +1157,7 @@ class ZoningOperations(
           continent.LocalEvents ! LocalServiceMessage(
             continent.id,
             PlanetSideGUID(-1),
-            LocalAction.SendResponse(ObjectAttachMessage(llu.Carrier.get.GUID, llu.GUID, 252))
+            SendResponse(ObjectAttachMessage(llu.Carrier.get.GUID, llu.GUID, 252))
           )
         }
       case _ => ()
@@ -2795,7 +2796,7 @@ class ZoningOperations(
           if (player.VisibleSlots.contains(index)) {
             events ! AvatarServiceMessage(
               zoneId,
-              AvatarAction.ObjectDelete(obj.GUID)
+              ObjectDelete(obj.GUID)
             )
           } else {
             sendResponse(ObjectDeleteMessage(obj.GUID, 0))
@@ -2829,7 +2830,7 @@ class ZoningOperations(
         val pguid = tplayer.GUID
         zone.Population ! Zone.Population.Release(avatar)
         sendResponse(ObjectDeleteMessage(pguid, 0))
-        zone.AvatarEvents ! AvatarServiceMessage(zone.id, pguid, AvatarAction.ObjectDelete(pguid))
+        zone.AvatarEvents ! AvatarServiceMessage(zone.id, pguid, ObjectDelete(pguid))
         TaskWorkflow.execute(GUIDTask.unregisterPlayer(zone.GUID, tplayer))
       }
     }
@@ -3083,7 +3084,7 @@ class ZoningOperations(
             case _ if player.HasGUID => // player is deconstructing self or instant action
               val player_guid = player.GUID
               sendResponse(ObjectDeleteMessage(player_guid, unk1=1))
-              continent.AvatarEvents ! AvatarServiceMessage(continent.id, player_guid, AvatarAction.ObjectDelete(player_guid, unk=1))
+              continent.AvatarEvents ! AvatarServiceMessage(continent.id, player_guid, ObjectDelete(player_guid, unk=1))
               InGameHistory.SpawnReconstructionActivity(player, toZoneNumber, betterSpawnPoint)
               LoadZoneAsPlayerUsing(player, pos, ori, toSide, zoneId)
 
@@ -3246,7 +3247,7 @@ class ZoningOperations(
       //looking for squad (members)
       if (tplayer.avatar.lookingForSquad) {
         sendResponse(PlanetsideAttributeMessage(guid, 53, 1))
-        continent.AvatarEvents ! AvatarServiceMessage(continent.id, guid, AvatarAction.PlanetsideAttribute(53, 1))
+        continent.AvatarEvents ! AvatarServiceMessage(continent.id, guid, PlanetsideAttribute(guid, 53, 1))
       }
       sendResponse(AvatarSearchCriteriaMessage(guid, List(0, 0, 0, 0, 0, 0)))
       //these are facilities and towers and bunkers in the zone, but not necessarily all of them for some reason
@@ -3904,14 +3905,14 @@ class ZoningOperations(
         pZone.LocalEvents ! LocalServiceMessage(
           t.Name,
           t.GUID,
-          LocalAction.GenericObjectAction(player.GUID, GenericObjectActionEnum.PlayerDeconstructs)
+          GenericObjectAction(player.GUID, GenericObjectActionEnum.PlayerDeconstructs.id)
         )
       }
       pZone.AllPlayers.collect { case t if t.GUID != player.GUID && !t.allowInteraction =>
         pZone.LocalEvents ! LocalServiceMessage(
           t.Name,
           t.GUID,
-          LocalAction.GenericObjectAction(player.GUID, GenericObjectActionEnum.PlayerDeconstructs)
+          GenericObjectAction(player.GUID, GenericObjectActionEnum.PlayerDeconstructs.id)
         )
       }
     }

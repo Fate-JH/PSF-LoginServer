@@ -13,9 +13,10 @@ import net.psforever.objects.sourcing.PlayerSource
 import net.psforever.packet.game.PlanetsideAttributeMessage
 import net.psforever.services.InterstellarClusterService
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
+import net.psforever.services.base.messages.{GenericObjectAction, SendResponse}
 import net.psforever.services.galaxy.{GalaxyAction, GalaxyServiceMessage}
 import net.psforever.services.local.support.{HackCaptureActor, HackClearActor}
-import net.psforever.services.local.{CaptureMessage, ClearMessage, LocalAction, LocalServiceMessage}
+import net.psforever.services.local.{CaptureMessage, HackClearMessage, LocalAction, LocalServiceMessage}
 import net.psforever.types.{PlanetSideEmpire, PlanetSideGeneratorState}
 
 /**
@@ -192,7 +193,7 @@ case object MajorFacilityLogic
             hackedAmenities
         }
         amenitiesToClear.foreach { amenity =>
-          building.Zone.LocalEvents ! ClearMessage(HackClearActor.ObjectIsResecured(amenity))
+          building.Zone.LocalEvents ! HackClearMessage(HackClearActor.ObjectIsResecured(amenity))
         }
       // No map update needed - will be sent by `HackCaptureActor` when required
       case _ =>
@@ -281,7 +282,7 @@ case object MajorFacilityLogic
       case Some(GeneratorControl.Event.UnderAttack) =>
         val events = zone.AvatarEvents
         val guid = building.GUID
-        val msg = AvatarAction.GenericObjectAction(guid, 15)
+        val msg = GenericObjectAction(guid, 15)
         building.PlayersInSOI.foreach { player =>
           events ! AvatarServiceMessage(player.Name, msg)
         }
@@ -297,14 +298,14 @@ case object MajorFacilityLogic
       case Some(GeneratorControl.Event.Destabilized) =>
         val events = zone.AvatarEvents
         val guid = building.GUID
-        val msg = AvatarAction.GenericObjectAction(guid, 16)
+        val msg = GenericObjectAction(guid, 16)
         building.PlayersInSOI.foreach { player =>
           events ! AvatarServiceMessage(player.Name, msg)
         }
         if (building.hasCavernLockBenefit) {
           zone.LocalEvents ! LocalServiceMessage(
             zone.id,
-            LocalAction.SendResponse(PlanetsideAttributeMessage(building.GUID, 67, 0))
+            SendResponse(PlanetsideAttributeMessage(building.GUID, 67, 0))
           )
         }
         false
@@ -328,7 +329,7 @@ case object MajorFacilityLogic
         val events = zone.AvatarEvents
         val guid = building.GUID
         val msg1 = AvatarAction.PlanetsideAttributeToAll(46, 0)
-        val msg2 = AvatarAction.GenericObjectAction(guid, 17)
+        val msg2 = GenericObjectAction(guid, 17)
         building.PlayersInSOI.foreach { player =>
           val name = player.Name
           events ! AvatarServiceMessage(name, guid, msg1) //reset ???; might be global?

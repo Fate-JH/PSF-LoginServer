@@ -17,7 +17,8 @@ import net.psforever.objects.vital.interaction.DamageResult
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.game._
 import net.psforever.services.Service
-import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
+import net.psforever.services.base.messages.{GenericObjectAction, PlanetsideAttribute, SendResponse}
+import net.psforever.services.vehicle.VehicleServiceMessage
 import net.psforever.types._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -60,7 +61,7 @@ class BfrControl(vehicle: Vehicle)
       val events = zone.VehicleEvents
       events ! VehicleServiceMessage(
         zoneid,
-        VehicleAction.GenericObjectAction(guid, 46)
+        GenericObjectAction(guid, 46)
       )
       context.system.scheduler.scheduleOnce(delay = 500 milliseconds, self, BfrControl.VehicleExplosion)
   }
@@ -295,7 +296,7 @@ class BfrControl(vehicle: Vehicle)
     val zone = vehicle.Zone
     zone.VehicleEvents ! VehicleServiceMessage(
       s"${zone.id}",
-      VehicleAction.SendResponse(GenericObjectActionMessage(vehicle.GUID, 45))
+      SendResponse(GenericObjectActionMessage(vehicle.GUID, 45))
     )
   }
 
@@ -309,7 +310,7 @@ class BfrControl(vehicle: Vehicle)
     val zone = vehicle.Zone
     zone.VehicleEvents ! VehicleServiceMessage(
       s"${zone.id}",
-      VehicleAction.SendResponse(GenericObjectActionMessage(vehicle.GUID, 44))
+      SendResponse(GenericObjectActionMessage(vehicle.GUID, 44))
     )
   }
 
@@ -360,7 +361,7 @@ class BfrControl(vehicle: Vehicle)
     val shields = vehicle.Shields
     zone.VehicleEvents ! VehicleServiceMessage(
       zone.id,
-      VehicleAction.PlanetsideAttribute(vguid, vehicle.Definition.shieldUiAttribute, shields)
+      PlanetsideAttribute(vguid, vehicle.Definition.shieldUiAttribute, shields)
     )
   }
 
@@ -425,7 +426,7 @@ class BfrControl(vehicle: Vehicle)
               zone.VehicleEvents ! VehicleServiceMessage(
                 zone.id,
                 doNotSendTo,
-                VehicleAction.GenericObjectAction(useThisGuid, action)
+                GenericObjectAction(useThisGuid, action)
               )
             case _ => ()
           }
@@ -573,7 +574,7 @@ class BfrControl(vehicle: Vehicle)
           //TODO this is the apc emp effect; is there an ntu siphon emp effect?
           events ! VehicleServiceMessage(
             zone.id,
-            VehicleAction.SendResponse(TriggerEffectMessage(
+            SendResponse(TriggerEffectMessage(
                 GUID0,
                 s"apc_explosion_emp_${faction.toString.toLowerCase}",
                 None,
@@ -595,7 +596,7 @@ class BfrControl(vehicle: Vehicle)
           //it does not even dispatch the packet before that, making it rare if this precautionary message is seen
           events ! VehicleServiceMessage(
             obj.Seats(0).occupant.get.Name,
-            VehicleAction.SendResponse(ChatMsg(ChatMessageType.UNK_225, wideContents = false, "", s"@TimeUntilNextUse^${30000 - elapsedWait}", None))
+            SendResponse(ChatMsg(ChatMessageType.UNK_225, wideContents = false, "", s"@TimeUntilNextUse^${30000 - elapsedWait}", None))
           )
         }
       case _ => ()
