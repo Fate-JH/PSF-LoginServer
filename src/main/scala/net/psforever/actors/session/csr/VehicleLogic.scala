@@ -13,6 +13,7 @@ import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.game.{ChildObjectStateMessage, DeployRequestMessage, FrameVehicleStateMessage, PlanetsideAttributeMessage, VehicleStateMessage, VehicleSubStateMessage}
 import net.psforever.services.avatar.AvatarServiceMessage
+import net.psforever.services.base.CachedMessage
 import net.psforever.services.base.messages.PlanetsideAttribute
 import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
 import net.psforever.types.{DriveState, Vector3}
@@ -75,7 +76,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
           obj.Velocity = None
           obj.Flying = None
         }
-        continent.VehicleEvents ! VehicleServiceMessage(
+        continent.VehicleEvents ! CachedMessage(
           continent.id,
           player.GUID,
           VehicleAction.VehicleState(vehicle_guid, unk1, obj.Position, ang, obj.Velocity, if (obj.isFlying) {
@@ -167,7 +168,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
           obj.Velocity = None
           obj.Flying = None
         }
-        continent.VehicleEvents ! VehicleServiceMessage(
+        continent.VehicleEvents ! CachedMessage(
           continent.id,
           player.GUID,
           VehicleAction.FrameVehicleState(vehicle_guid, unk1, position, angle, velocity, unk2, unk3, unk4, is_crouched, is_airborne, ascending_flight, flight_time, unk9, unkA)
@@ -216,7 +217,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       case Some(_) =>
         //TODO set tool orientation?
         player.Orientation = Vector3(0f, pitch, yaw)
-        continent.VehicleEvents ! VehicleServiceMessage(
+        continent.VehicleEvents ! CachedMessage(
           continent.id,
           player.GUID,
           VehicleAction.ChildObjectState(object_guid, pitch, yaw)
@@ -239,7 +240,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
           obj.Velocity = vel
           sessionLogic.updateBlockMap(obj, pos)
           obj.zoneInteractions()
-          continent.VehicleEvents ! VehicleServiceMessage(
+          continent.VehicleEvents ! CachedMessage(
             continent.id,
             player.GUID,
             VehicleAction.VehicleState(vehicle_guid, unk1, pos, ang, obj.Velocity, obj.Flying, 0, 0, 15, unk5 = false, obj.Cloaked)
