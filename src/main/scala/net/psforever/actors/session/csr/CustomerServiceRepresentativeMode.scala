@@ -12,7 +12,7 @@ import net.psforever.objects.zones.blockmap.BlockMapEntity
 import net.psforever.packet.game.{ChatMsg, ObjectCreateDetailedMessage, PlanetsideAttributeMessage}
 import net.psforever.packet.game.objectcreate.RibbonBars
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
-import net.psforever.services.base.messages.PlanetsideAttribute
+import net.psforever.services.base.message.PlanetsideAttribute
 import net.psforever.services.chat.{CustomerServiceChannel, SpectatorChannel}
 import net.psforever.services.vehicle.VehicleServiceMessage
 import net.psforever.types.{ChatMessageType, MeritCommendation}

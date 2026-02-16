@@ -10,7 +10,7 @@ import net.psforever.objects.serverobject.{CommonMessages, PlanetSideServerObjec
 import net.psforever.packet.game.{GenericObjectActionMessage, HackMessage, HackState, HackState1, HackState7, TriggeredSound}
 import net.psforever.types.{PlanetSideEmpire, PlanetSideGUID}
 import net.psforever.services.avatar.AvatarServiceMessage
-import net.psforever.services.base.messages.SendResponse
+import net.psforever.services.base.message.SendResponse
 import net.psforever.services.local.support.HackClearActor
 import net.psforever.services.local.{HackClearMessage, HackEntityMessage, LocalAction, LocalServiceMessage}
 

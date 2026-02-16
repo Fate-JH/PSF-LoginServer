@@ -17,7 +17,7 @@ import net.psforever.packet.game.{ActionCancelMessage, AvatarFirstTimeEventMessa
 import net.psforever.services.account.AccountPersistenceService
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.base.CachedMessage
-import net.psforever.services.base.messages.PlanetsideAttribute
+import net.psforever.services.base.message.PlanetsideAttribute
 import net.psforever.types.{ExoSuitType, Vector3}
 
 object GeneralLogic {

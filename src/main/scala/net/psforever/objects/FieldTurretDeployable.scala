@@ -12,7 +12,7 @@ import net.psforever.objects.serverobject.{CommonMessages, PlanetSideServerObjec
 import net.psforever.objects.sourcing.SourceEntry
 import net.psforever.objects.vital.{InGameActivity, ShieldCharge}
 import net.psforever.packet.game.HackState1
-import net.psforever.services.base.messages.PlanetsideAttribute
+import net.psforever.services.base.message.PlanetsideAttribute
 import net.psforever.services.vehicle.VehicleServiceMessage
 
 /** definition */

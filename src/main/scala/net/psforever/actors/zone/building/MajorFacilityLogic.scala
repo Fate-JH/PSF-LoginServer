@@ -13,7 +13,7 @@ import net.psforever.objects.sourcing.PlayerSource
 import net.psforever.packet.game.PlanetsideAttributeMessage
 import net.psforever.services.InterstellarClusterService
 import net.psforever.services.avatar.AvatarServiceMessage
-import net.psforever.services.base.messages.{GenericObjectAction, PlanetsideAttribute, SendResponse}
+import net.psforever.services.base.message.{GenericObjectAction, PlanetsideAttribute, SendResponse}
 import net.psforever.services.galaxy.{GalaxyAction, GalaxyServiceMessage}
 import net.psforever.services.local.support.{HackCaptureActor, HackClearActor}
 import net.psforever.services.local.{CaptureMessage, HackClearMessage, LocalAction, LocalServiceMessage}
