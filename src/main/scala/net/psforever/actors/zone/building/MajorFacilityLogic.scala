@@ -15,8 +15,8 @@ import net.psforever.services.InterstellarClusterService
 import net.psforever.services.avatar.AvatarServiceMessage
 import net.psforever.services.base.message.{GenericObjectAction, PlanetsideAttribute, SendResponse}
 import net.psforever.services.galaxy.{GalaxyAction, GalaxyServiceMessage}
-import net.psforever.services.local.support.{HackCaptureActor, HackClearActor}
-import net.psforever.services.local.{CaptureMessage, HackClearMessage, LocalAction, LocalServiceMessage}
+import net.psforever.services.local.support.{CaptureEnvelope, HackCaptureActor, HackClearActor, HackClearEnvelope}
+import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.types.{PlanetSideEmpire, PlanetSideGeneratorState}
 
 /**
@@ -193,7 +193,7 @@ case object MajorFacilityLogic
             hackedAmenities
         }
         amenitiesToClear.foreach { amenity =>
-          building.Zone.LocalEvents ! HackClearMessage(HackClearActor.ObjectIsResecured(amenity))
+          building.Zone.LocalEvents ! HackClearEnvelope(HackClearActor.ObjectIsResecured(amenity))
         }
       // No map update needed - will be sent by `HackCaptureActor` when required
       case _ =>
@@ -361,7 +361,7 @@ case object MajorFacilityLogic
     (bldg.GetFlag, bldg.CaptureTerminal) match {
       case (Some(flag), Some(terminal)) if (flag.Target eq building) && flag.Faction != building.Faction =>
         //our hack destination may have been compromised and the hack needs to be cancelled
-        bldg.Zone.LocalEvents ! CaptureMessage(HackCaptureActor.ResecureCaptureTerminal(terminal, terminal.Zone, PlayerSource.Nobody))
+        bldg.Zone.LocalEvents ! CaptureEnvelope(HackCaptureActor.ResecureCaptureTerminal(terminal, terminal.Zone, PlayerSource.Nobody))
       case _ => ()
     }
     Behaviors.same
