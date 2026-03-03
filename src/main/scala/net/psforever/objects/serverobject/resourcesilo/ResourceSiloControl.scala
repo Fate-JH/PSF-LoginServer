@@ -34,7 +34,7 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
   var panelAnimationFunc: (ActorRef, Float) => Unit = PanelAnimation
 
   def receive: Receive = {
-    case Service.Startup() =>
+    case Service.Startup =>
       resourceSilo.Owner match {
         case building: Building =>
           UpdateChargeLevel(amount = 0)
