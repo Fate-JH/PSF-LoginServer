@@ -1549,9 +1549,9 @@ object Zone {
         )
         zone.soi = context.actorOf(Props(classOf[SphereOfInfluenceActor], zone), s"$id-soi")
 
-        zone.avatarEvents = context.actorOf(Props(classOf[AvatarService]), s"$id-avatar-events")
-        zone.localEvents = context.actorOf(Props(classOf[LocalService], zone), s"$id-local-events")
-        zone.vehicleEvents = context.actorOf(Props(classOf[VehicleService]), s"$id-vehicle-events")
+        zone.avatarEvents = context.actorOf(AvatarService(), s"$id-avatar-events")
+        zone.localEvents = context.actorOf(LocalService(zone), s"$id-local-events")
+        zone.vehicleEvents = context.actorOf(VehicleService(), s"$id-vehicle-events")
 
         BuildLocalObjects(zone)(context, guid)
         BuildSupportObjects(zone)
