@@ -12,7 +12,8 @@ import net.psforever.objects.vehicles.control.BfrFlight
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.game.{ChatMsg, ChildObjectStateMessage, DeployRequestMessage, FrameVehicleStateMessage, VehicleStateMessage, VehicleSubStateMessage}
 import net.psforever.services.base.CachedEnvelope
-import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
+import net.psforever.services.base.envelope.MessageEnvelope
+import net.psforever.services.vehicle.VehicleAction
 import net.psforever.types.{ChatMessageType, DriveState, Vector3}
 
 object VehicleLogic {
@@ -312,7 +313,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
     val mobileShift: String = if (obj.DeploymentState != DriveState.Mobile) {
       obj.DeploymentState = DriveState.Mobile
       sendResponse(DeployRequestMessage(player.GUID, obj.GUID, DriveState.Mobile, 0, unk3=false, Vector3.Zero))
-      continent.VehicleEvents ! VehicleServiceMessage(
+      continent.VehicleEvents ! MessageEnvelope(
         continent.id,
         player.GUID,
         VehicleAction.DeployRequest(obj.GUID, DriveState.Mobile, 0, unk2=false, Vector3.Zero)

@@ -6,11 +6,11 @@ import net.psforever.objects.ce.Deployable
 import net.psforever.objects.serverobject.hackable.GenericHackables.updateTurretUpgradeTime
 import net.psforever.objects.{Player, Tool, TurretDeployable}
 import net.psforever.packet.game.{HackMessage, HackState, HackState1, HackState7, InventoryStateMessage}
-import net.psforever.services.avatar.AvatarServiceMessage
+import net.psforever.services.base.envelope.MessageEnvelope
 import net.psforever.services.base.message.{SendResponse, SetEmpire}
-import net.psforever.services.local.{LocalAction, LocalServiceMessage}
+import net.psforever.services.local.LocalAction
 import net.psforever.services.vehicle.support.{TurretEnvelope, TurretUpgrader}
-import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
+import net.psforever.services.vehicle.VehicleAction
 import net.psforever.types.PlanetSideGUID
 
 object WeaponTurrets {
@@ -32,7 +32,7 @@ object WeaponTurrets {
       upgrade: TurretUpgrade.Value
   )(): Unit = {
     tool.Magazine = 0
-    target.Zone.AvatarEvents ! AvatarServiceMessage(
+    target.Zone.AvatarEvents ! MessageEnvelope(
       user.Name,
       SendResponse(InventoryStateMessage(tool.AmmoSlot.Box.GUID, tool.GUID, 0))
     )
@@ -86,7 +86,7 @@ object WeaponTurrets {
       updateTurretUpgradeTime()
       (HackState.Ongoing, progress.toInt)
     }
-    turret.Zone.AvatarEvents ! AvatarServiceMessage(
+    turret.Zone.AvatarEvents ! MessageEnvelope(
       tplayer.Name,
       SendResponse(
         HackMessage(progressType, turret.GUID, tplayer.GUID, progressGrade, -1f, progressState, HackState7.Unk8)
@@ -106,7 +106,7 @@ object WeaponTurrets {
           player: Player =>
             seat.unmount(player)
             player.VehicleSeated = None
-            zone.VehicleEvents ! VehicleServiceMessage(
+            zone.VehicleEvents ! MessageEnvelope(
               zone.id,
               player.GUID,
               VehicleAction.KickPassenger(4, unk2 = false, target.GUID)
@@ -117,11 +117,11 @@ object WeaponTurrets {
       target.OwnerGuid = None
       target.Actor ! Deployable.Ownership(hacker)
       //convert faction
-      zone.AvatarEvents ! AvatarServiceMessage(
+      zone.AvatarEvents ! MessageEnvelope(
         zone.id,
         SetEmpire(target.GUID, hacker.Faction)
       )
-      zone.LocalEvents ! LocalServiceMessage(
+      zone.LocalEvents ! MessageEnvelope(
         zone.id,
         hacker.GUID,
         LocalAction.TriggerSound(target.HackSound, target.Position, 30, 0.49803925f)

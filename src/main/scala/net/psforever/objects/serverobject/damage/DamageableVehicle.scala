@@ -11,10 +11,9 @@ import net.psforever.objects.vital.interaction.{Adversarial, DamageResult}
 import net.psforever.objects.vital.resolution.ResolutionCalculations
 import net.psforever.objects.zones.Zone
 import net.psforever.objects.zones.exp.ToDatabase
-import net.psforever.packet.game.DamageWithPositionMessage
-import net.psforever.services.Service
+import net.psforever.packet.game.{DamageWithPositionMessage, PlanetsideAttributeMessage}
+import net.psforever.services.base.envelope.MessageEnvelope
 import net.psforever.services.base.message.{PlanetsideAttribute, SendResponse}
-import net.psforever.services.vehicle.VehicleServiceMessage
 import net.psforever.types.Vector3
 
 import scala.concurrent.duration._
@@ -105,8 +104,7 @@ trait DamageableVehicle
     * If this vehicle has shields that were affected by previous damage, that is also reported to the clients.
     * @see `Service.defaultPlayerGUID`
     * @see `Vehicle.CargoHolds`
-    * @see `VehicleAction.PlanetsideAttribute`
-    * @see `VehicleServiceMessage`
+    * @see `PlanetsideAttribute`
     * @param target the entity being destroyed
     * @param cause historical information about the damage
     * @param amount how much damage was performed
@@ -143,14 +141,14 @@ trait DamageableVehicle
       }
       //stat changes
       if (damageToShields > 0) {
-        events ! VehicleServiceMessage(
+        events ! MessageEnvelope(
           shieldChannel,
           PlanetsideAttribute(targetGUID, obj.Definition.shieldUiAttribute, obj.Shields)
         )
         announceConfrontation = true
       }
       if (damageToHealth > 0) {
-        events ! VehicleServiceMessage(
+        events ! MessageEnvelope(
           healthChannel,
           PlanetsideAttribute(targetGUID, 0, obj.Health)
         )
@@ -163,7 +161,7 @@ trait DamageableVehicle
         obj.Seats.values
           .collect { case seat if seat.occupant.nonEmpty => seat.occupant.get.Name }
           .foreach { channel =>
-            events ! VehicleServiceMessage(channel, msg)
+            events ! MessageEnvelope(channel, msg)
           }
       }
       else {
@@ -183,11 +181,9 @@ trait DamageableVehicle
     * @see `DriveState.Undeploying`
     * @see `Service.defaultPlayerGUID`
     * @see `Vehicle.CargoHolds`
-    * @see `VehicleAction.PlanetsideAttribute`
+    * @see `PlanetsideAttribute`
     * @see `RemoverActor.AddTask`
     * @see `RemoverActor.ClearSpecific`
-    * @see `VehicleServiceMessage`
-    * @see `VehicleServiceMessage.Decon`
     * @see `Zone.VehicleEvents`
     * @param target the entity being destroyed
     * @param cause historical information about the damage
@@ -211,7 +207,7 @@ trait DamageableVehicle
         //shields
         if (obj.Shields > 0) {
           obj.Shields = 0
-          zone.VehicleEvents ! VehicleServiceMessage(
+          zone.VehicleEvents ! MessageEnvelope(
             zone.id,
             PlanetsideAttribute(target.GUID, obj.Definition.shieldUiAttribute, 0)
           )
@@ -243,17 +239,12 @@ trait DamageableVehicle
     obj.Health = 1
     obj.Shields = 0
     val guid = obj.GUID
-    val guid0 = Service.defaultPlayerGUID
     val zone = obj.Zone
     val zoneid = zone.id
     val events = zone.VehicleEvents
-    events ! VehicleServiceMessage(
+    events ! MessageEnvelope(
       zoneid,
-      PlanetsideAttribute(guid, 0, 1)
-    )
-    events ! VehicleServiceMessage(
-      zoneid,
-      PlanetsideAttribute(guid, obj.Definition.shieldUiAttribute, 0)
+      SendResponse(List(PlanetsideAttributeMessage(guid, 0, 1), PlanetsideAttributeMessage(guid, obj.Definition.shieldUiAttribute, 0)))
     )
     //passengers die with us
     DamageableMountable.DestructionAwareness(DamageableObject, cause)

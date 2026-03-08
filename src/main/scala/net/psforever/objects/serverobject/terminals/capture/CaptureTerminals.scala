@@ -3,8 +3,9 @@ package net.psforever.objects.serverobject.terminals.capture
 import net.psforever.objects.Player
 import net.psforever.objects.serverobject.CommonMessages
 import net.psforever.objects.sourcing.PlayerSource
+import net.psforever.services.base.envelope.MessageEnvelope
 import net.psforever.services.local.support.{CaptureEnvelope, HackCaptureActor}
-import net.psforever.services.local.{LocalAction, LocalServiceMessage}
+import net.psforever.services.local.LocalAction
 
 import scala.util.{Failure, Success}
 
@@ -35,7 +36,7 @@ object CaptureTerminals {import scala.concurrent.duration._
           val zoneid = zone.id
           val events = zone.LocalEvents
           val isResecured = hackingPlayer.Faction == target.Faction
-          events ! LocalServiceMessage(
+          events ! MessageEnvelope(
             zoneid,
             hackingPlayer.GUID,
             LocalAction.TriggerSound(target.HackSound, hackingPlayer.Position, 30, 0.49803925f)

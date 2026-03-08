@@ -10,13 +10,13 @@ import net.psforever.objects.serverobject.generator.{Generator, GeneratorControl
 import net.psforever.objects.serverobject.structures.{Amenity, Building}
 import net.psforever.objects.serverobject.terminals.capture.{CaptureTerminal, CaptureTerminalAware, CaptureTerminalAwareBehavior}
 import net.psforever.objects.sourcing.PlayerSource
-import net.psforever.packet.game.PlanetsideAttributeMessage
+import net.psforever.packet.game.{GenericObjectActionMessage, PlanetsideAttributeMessage}
 import net.psforever.services.InterstellarClusterService
-import net.psforever.services.avatar.AvatarServiceMessage
+import net.psforever.services.base.envelope.MessageEnvelope
 import net.psforever.services.base.message.{GenericObjectAction, PlanetsideAttribute, SendResponse}
-import net.psforever.services.galaxy.{GalaxyAction, GalaxyServiceMessage}
+import net.psforever.services.galaxy.GalaxyAction
 import net.psforever.services.local.support.{CaptureEnvelope, HackCaptureActor, HackClearActor, HackClearEnvelope}
-import net.psforever.services.local.{LocalAction, LocalServiceMessage}
+import net.psforever.services.local.LocalAction
 import net.psforever.types.{PlanetSideEmpire, PlanetSideGeneratorState}
 
 /**
@@ -90,7 +90,7 @@ case object MajorFacilityLogic
     val building = details.building
     val zone = building.Zone
     building.ForceDomeActive = updatedStatus
-    zone.LocalEvents ! LocalServiceMessage(
+    zone.LocalEvents ! MessageEnvelope(
       zone.id,
       LocalAction.UpdateForceDomeStatus(building.GUID, updatedStatus)
     )
@@ -197,7 +197,7 @@ case object MajorFacilityLogic
         }
       // No map update needed - will be sent by `HackCaptureActor` when required
       case _ =>
-        details.galaxyService ! GalaxyServiceMessage(GalaxyAction.MapUpdate(details.building.infoUpdateMessage()))
+        details.galaxyService ! MessageEnvelope("", GalaxyAction.MapUpdate(details.building.infoUpdateMessage()))
     }
     Behaviors.same
   }
@@ -284,7 +284,7 @@ case object MajorFacilityLogic
         val guid = building.GUID
         val msg = GenericObjectAction(guid, 15)
         building.PlayersInSOI.foreach { player =>
-          events ! AvatarServiceMessage(player.Name, msg)
+          events ! MessageEnvelope(player.Name, msg)
         }
         false
       case Some(GeneratorControl.Event.Critical) =>
@@ -292,7 +292,7 @@ case object MajorFacilityLogic
         val guid = building.GUID
         val msg = PlanetsideAttribute(guid, 46, 1)
         building.PlayersInSOI.foreach { player =>
-          events ! AvatarServiceMessage(player.Name, msg)
+          events ! MessageEnvelope(player.Name, msg)
         }
         true
       case Some(GeneratorControl.Event.Destabilized) =>
@@ -300,10 +300,10 @@ case object MajorFacilityLogic
         val guid = building.GUID
         val msg = GenericObjectAction(guid, 16)
         building.PlayersInSOI.foreach { player =>
-          events ! AvatarServiceMessage(player.Name, msg)
+          events ! MessageEnvelope(player.Name, msg)
         }
         if (building.hasCavernLockBenefit) {
-          zone.LocalEvents ! LocalServiceMessage(
+          zone.LocalEvents ! MessageEnvelope(
             zone.id,
             SendResponse(PlanetsideAttributeMessage(building.GUID, 67, 0))
           )
@@ -317,7 +317,7 @@ case object MajorFacilityLogic
         val zone = building.Zone
         val msg = PlanetsideAttribute(building.GUID, 46, 2)
         building.PlayersInSOI.foreach { player =>
-          zone.AvatarEvents ! AvatarServiceMessage(player.Name, msg)
+          zone.AvatarEvents ! MessageEnvelope(player.Name, msg)
         } //???
         true
       case Some(GeneratorControl.Event.Normal) =>
@@ -328,12 +328,14 @@ case object MajorFacilityLogic
         alignForceDomeStatus(details, mapUpdateOnChange = false)
         val events = zone.AvatarEvents
         val guid = building.GUID
-        val msg1 = PlanetsideAttribute(guid, 46, 0)
-        val msg2 = GenericObjectAction(guid, 17)
+        //1. reset ???; might be global?
+        //2. This facility's generator is back on line
+        val list = SendResponse(List(
+          PlanetsideAttributeMessage(guid, 46, 0),
+          GenericObjectActionMessage(guid, 17)
+        ))
         building.PlayersInSOI.foreach { player =>
-          val name = player.Name
-          events ! AvatarServiceMessage(name, msg1) //reset ???; might be global?
-          events ! AvatarServiceMessage(name, msg2) //This facility's generator is back on line
+          events ! MessageEnvelope(player.Name, list)
         }
         true
       case _ =>
@@ -383,10 +385,12 @@ case object MajorFacilityLogic
     building.Amenities.foreach { amenity =>
       amenity.Actor ! powerMsg
     }
-    //amenities disabled; red warning lights
-    events ! AvatarServiceMessage(zoneId, PlanetsideAttribute(guid, 48, 1))
-    //disable spawn target on deployment map
-    events ! AvatarServiceMessage(zoneId, PlanetsideAttribute(guid, 38, 0))
+    //1. amenities disabled; red warning lights
+    //2 .disable spawn target on deployment map
+    events ! MessageEnvelope(
+      zoneId,
+      SendResponse(List(PlanetsideAttributeMessage(guid, 48, 1), PlanetsideAttributeMessage(guid, 38, 0)))
+    )
     Behaviors.same
   }
 
@@ -406,10 +410,12 @@ case object MajorFacilityLogic
     building.Amenities.foreach { amenity =>
       amenity.Actor ! powerMsg
     }
-    //amenities enabled; normal lights
-    events ! AvatarServiceMessage(zoneId, PlanetsideAttribute(guid, 48, 0))
-    //enable spawn target on deployment map
-    events ! AvatarServiceMessage(zoneId, PlanetsideAttribute(guid, 38, 1))
+    //1. amenities enabled; normal lights
+    //2. enable spawn target on deployment map
+    events ! MessageEnvelope(
+      zoneId,
+      SendResponse(List(PlanetsideAttributeMessage(guid, 48, 0), PlanetsideAttributeMessage(guid, 38, 1)))
+    )
     Behaviors.same
   }
 

@@ -12,10 +12,10 @@ import net.psforever.objects.vehicles.control.BfrFlight
 import net.psforever.objects.vital.Vitality
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.game.{ChildObjectStateMessage, DeployRequestMessage, FrameVehicleStateMessage, PlanetsideAttributeMessage, VehicleStateMessage, VehicleSubStateMessage}
-import net.psforever.services.avatar.AvatarServiceMessage
 import net.psforever.services.base.CachedEnvelope
+import net.psforever.services.base.envelope.MessageEnvelope
 import net.psforever.services.base.message.PlanetsideAttribute
-import net.psforever.services.vehicle.{VehicleAction, VehicleServiceMessage}
+import net.psforever.services.vehicle.VehicleAction
 import net.psforever.types.{DriveState, Vector3}
 
 object VehicleLogic {
@@ -300,7 +300,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
     if (obj.DeploymentState != DriveState.Mobile) {
       obj.DeploymentState = DriveState.Mobile
       sendResponse(DeployRequestMessage(player.GUID, obj.GUID, DriveState.Mobile, 0, unk3=false, Vector3.Zero))
-      continent.VehicleEvents ! VehicleServiceMessage(
+      continent.VehicleEvents ! MessageEnvelope(
         continent.id,
         player.GUID,
         VehicleAction.DeployRequest(obj.GUID, DriveState.Mobile, 0, unk2=false, Vector3.Zero)
@@ -324,7 +324,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       player.Health = maxHealthOfPlayer.toInt
       player.LogActivity(player.ClearHistory().head)
       sendResponse(PlanetsideAttributeMessage(player.GUID, 0, maxHealthOfPlayer))
-      continent.AvatarEvents ! AvatarServiceMessage(sessionLogic.zoning.zoneChannel, player.GUID, PlanetsideAttribute(player.GUID, 0, maxHealthOfPlayer))
+      continent.AvatarEvents ! MessageEnvelope(sessionLogic.zoning.zoneChannel, player.GUID, PlanetsideAttribute(player.GUID, 0, maxHealthOfPlayer))
     }
   }
 
@@ -338,7 +338,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
       val guid = vehicle.GUID
       vehicle.Shields = maxShieldsOfVehicle.toInt
       sendResponse(PlanetsideAttributeMessage(guid, shieldsUi, maxShieldsOfVehicle))
-      continent.VehicleEvents ! VehicleServiceMessage(
+      continent.VehicleEvents ! MessageEnvelope(
         continent.id,
         PlanetsideAttribute(guid, shieldsUi, maxShieldsOfVehicle)
       )
@@ -353,7 +353,7 @@ class VehicleLogic(val ops: VehicleOperations, implicit val context: ActorContex
     if (obj.Health < maxHealthOf) {
       obj.Health = maxHealthOf.toInt
       sendResponse(PlanetsideAttributeMessage(guid, 0, maxHealthOf))
-      continent.VehicleEvents ! VehicleServiceMessage(
+      continent.VehicleEvents ! MessageEnvelope(
         continent.id,
         PlanetsideAttribute(guid, 0, maxHealthOf)
       )
