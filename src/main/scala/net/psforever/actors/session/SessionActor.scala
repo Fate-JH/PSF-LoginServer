@@ -3,7 +3,7 @@ package net.psforever.actors.session
 
 import akka.actor.{Actor, ActorRef, Cancellable, MDCContextAware, typed}
 import net.psforever.actors.session.normal.NormalMode
-import net.psforever.actors.session.support.ZoningOperations
+import net.psforever.actors.session.support.{CommonHandlerFunctions, CommonHandlerLogic, HandlerFilter, ZoningOperations}
 import net.psforever.objects.TurretDeployable
 import net.psforever.objects.serverobject.CommonMessages
 import net.psforever.objects.serverobject.containable.Containable
@@ -13,8 +13,7 @@ import net.psforever.objects.serverobject.terminals.{ProximityUnit, Terminal}
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.PlanetSideGamePacket
 import net.psforever.packet.game.{AIDamage, ActionCancelMessage, AvatarFirstTimeEventMessage, AvatarGrenadeStateMessage, AvatarImplantMessage, AvatarJumpMessage, BattleplanMessage, BeginZoningMessage, BindPlayerMessage, BugReportMessage, ChangeAmmoMessage, ChangeFireModeMessage, ChangeFireStateMessage_Start, ChangeFireStateMessage_Stop, ChangeShortcutBankMessage, CharacterCreateRequestMessage, CharacterRequestMessage, ChatMsg, ChildObjectStateMessage, ConnectToWorldRequestMessage, CreateShortcutMessage, DeployObjectMessage, DeployRequestMessage, DismountVehicleCargoMsg, DismountVehicleMsg, DisplayedAwardMessage, DropItemMessage, DroppodLaunchRequestMessage, EmoteMsg, FacilityBenefitShieldChargeRequestMessage, FavoritesRequest, FrameVehicleStateMessage, FriendsRequest, GenericActionMessage, GenericCollisionMsg, GenericObjectActionAtPositionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HitHint, HitMessage, InvalidTerrainMessage, ItemTransactionMessage, LashMessage, LongRangeProjectileInfoMessage, LootItemMessage, MountVehicleCargoMsg, MountVehicleMsg, MoveItemMessage, ObjectDetectedMessage, ObjectHeldMessage, OutfitMembershipRequest, OutfitMembershipResponse, OutfitRequest, PickupItemMessage, PlanetsideAttributeMessage, PlayerStateMessageUpstream, ProjectileStateMessage, ProximityTerminalUseMessage, ReleaseAvatarRequestMessage, ReloadMessage, RequestDestroyMessage, SetChatFilterMessage, SpawnRequestMessage, SplashHitMessage, SquadDefinitionActionMessage, SquadMembershipRequest, SquadWaypointRequest, TargetingImplantRequest, TradeMessage, UnuseItemMessage, UplinkRequest, UseItemMessage, VehicleStateMessage, VehicleSubStateMessage, VoiceHostInfo, VoiceHostRequest, WarpgateRequest, WeaponDelayFireMessage, WeaponDryFireMessage, WeaponFireMessage, WeaponLazeTargetPositionMessage, ZipLineMessage}
-import net.psforever.services.{InterstellarClusterService => ICS}
-import net.psforever.services.CavernRotationService
+import net.psforever.services.{CavernRotationService, InterstellarClusterService => ICS}
 import net.psforever.services.CavernRotationService.SendCavernRotationUpdates
 import net.psforever.services.ServiceManager.LookupResult
 import net.psforever.services.account.{PlayerToken, ReceiveAccountData}
@@ -108,6 +107,21 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
   private[this] var mode: PlayerMode = NormalMode
   private[this] var logic: ModeLogic = _
 
+  private val commonHandlerLogic: CommonHandlerLogic = new CommonHandlerLogic(data, context)
+  private def listOfHandlers: Seq[CommonHandlerFunctions] = {
+    if (logic == null) {
+      List.empty
+    } else {
+      List(
+        logic.avatarResponse,
+        logic.local,
+        logic.vehicleResponse,
+        logic.galaxy,
+        commonHandlerLogic
+      )
+    }
+  }
+
   override def postStop(): Unit = {
     clientKeepAlive.cancel()
     data.stop()
@@ -175,21 +189,7 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
       logic.squad.handle(reply, excluded)
 
     case envelope: GenericResponseEnvelope =>
-      val GenericResponseEnvelope(toChannel, guid, reply) = envelope
-      envelope.stamp match {
-        case AvatarStamp =>
-          logic.avatarResponse.handle(toChannel, guid, reply)
-        case LocalStamp =>
-          logic.local.handle(toChannel, guid, reply)
-        case VehicleStamp =>
-          logic.vehicleResponse.handle(toChannel, guid, reply)
-        case GalaxyStamp =>
-          logic.galaxy.handle(reply)
-        case Undelivered =>
-          log.error(s"received a message's response that was not delivered by an event system - $reply")
-        case unknownStamp =>
-          log.error(s"received a message's response from an unknown event system - stamp: $unknownStamp")
-      }
+      handleGenericResponseEnvelope(envelope)
 
     case Mountable.MountMessages(tplayer, reply) =>
       logic.mountResponse.handle(tplayer, reply)
@@ -373,6 +373,43 @@ class SessionActor(middlewareActor: typed.ActorRef[MiddlewareActor.Command], con
 
     case default =>
       logic.general.handleReceiveDefaultMessage(default, sender)
+  }
+
+  private def handleGenericResponseEnvelope(envelope: GenericResponseEnvelope): Unit = {
+    val GenericResponseEnvelope(_, guid, reply) = envelope
+    //try use the stamp to match the specific handler
+    val primaryHandler = envelope.stamp match {
+      case Undelivered =>
+        log.error(s"received a message's response that was not processed by an event system - $reply")
+        CommonHandlerFunctions.HandleAnything
+      case AvatarStamp =>
+        logic.avatarResponse
+      case LocalStamp =>
+        logic.local
+      case VehicleStamp =>
+        logic.vehicleResponse
+      case GalaxyStamp =>
+        logic.galaxy
+      case unknownStamp =>
+        log.error(s"received a message's response from an unknown event system - stamp: $unknownStamp")
+        CommonHandlerFunctions.HandleNothing
+    }
+    //try the handler on the input message
+    lazy val alwaysAllowFilter = HandlerFilter.Allow(guid)
+    if (primaryHandler.handleWith(guid).isDefinedAt(reply)) {
+      primaryHandler.receive.apply(reply)
+    } else if (!primaryHandler.handleWith(alwaysAllowFilter).isDefinedAt(reply)) {
+      //check a list of all handlers for any potentially valid case
+      val potentiallyValidHandlers = listOfHandlers.filter(_.handleWith(alwaysAllowFilter).isDefinedAt(reply))
+      if (potentiallyValidHandlers.nonEmpty) {
+        potentiallyValidHandlers
+          .find(_.handleWith(guid).isDefinedAt(reply))
+          .foreach(_.receive.apply(reply))
+        //arrive here without processing input, the guard for a handler blocked a case; not gonna fault
+      } else {
+        log.error(s"received completely unhandled response message - $envelope")
+      }
+    }
   }
 
   private def handleGamePkt: PlanetSideGamePacket => Unit = {

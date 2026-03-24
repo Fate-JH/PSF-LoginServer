@@ -100,7 +100,6 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
     val zone     = building.Zone
     building.Zone.AvatarEvents ! MessageEnvelope(
       zone.id,
-      building.GUID,
       PlanetsideAttribute(building.GUID, 47, if (resourceSilo.LowNtuWarningOn) 1 else 0)
     )
   }
@@ -124,7 +123,6 @@ class ResourceSiloControl(resourceSilo: ResourceSilo)
       )
       zone.AvatarEvents ! MessageEnvelope(
         zone.id,
-        resourceSilo.GUID,
         PlanetsideAttribute(resourceSilo.GUID, 45, resourceSilo.CapacitorDisplay)
       )
       building.Actor ! BuildingActor.MapUpdate()
