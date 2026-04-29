@@ -1444,7 +1444,7 @@ class ChatOperations(
           AvatarAction.SendResponse(Service.defaultPlayerGUID, msg)
         )
 
-        sendResponse(ChatMsg(messageType = UNK_227, contents = s"@CMT_SETTIME_OK^$hh~^$mm~"))
+        sendResponse(ChatMsg(messageType = UNK_227, contents = f"@CMT_SETTIME_OK^$hh~^$mm%02d~"))
       case _ =>
         sendResponse(ChatMsg(messageType = UNK_229, contents = "@CMT_SETTIME_usage"))
     }
