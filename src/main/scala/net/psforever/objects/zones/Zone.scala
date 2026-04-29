@@ -573,24 +573,25 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
   }
 
   def GetTimeOfDay(): Float = {
-    // get time since origin
-    val timeDiff = System.currentTimeMillis() - timeOfDayOrigin
-    // get seconds - limit to 24h
-    val diffSeconds = (timeDiff / 1000) % 86400
+    val now = System.currentTimeMillis()
+    val timeDiff = now - timeOfDayOrigin
 
-    diffSeconds.toFloat
+    // get seconds
+    val diffSeconds = timeDiff / 1000
+
+    // apply speed factor
+    val elapsedTime = diffSeconds * timeOfDaySpeed
+
+    // wrap time to 24h
+    elapsedTime % 86400
   }
 
   def SetTimeOfDay(requestedTime: Float) = {
-    // get current time
     val now = System.currentTimeMillis()
-    // get requested time in millis
-    val requestMillis = requestedTime * 1000
 
-    // substract requestedMillis from now to get new origin
-    val newOrigin = now - requestMillis
+    val requestedTimeDiff = requestedTime / timeOfDaySpeed
 
-    timeOfDayOrigin = newOrigin.toLong
+    timeOfDayOrigin = now - (requestedTimeDiff * 1000.0).toLong
   }
 
   def GetTimeOfDaySpeed(): Float = {
@@ -598,7 +599,13 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
   }
 
   def SetTimeOfDaySpeed(requestedSpeed: Float) = {
+    // store current time
+    val timeOfDay = GetTimeOfDay()
+
     timeOfDaySpeed = requestedSpeed
+
+    // restore old time with new speed considered
+    SetTimeOfDay(timeOfDay)
   }
 
   /**
