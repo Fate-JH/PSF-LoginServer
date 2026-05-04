@@ -477,14 +477,7 @@ class SessionData(
         } else {
           log.info(s"$name is attacking $ownerName's ${obj.Definition.Name}")
         }
-        if (obj.IsInVRZone && obj.Faction == player.Faction) {
-          //disable friendly-fire in VR zones
-          if (!ownerName.equals(name)) {
-            general.trainingGriefWarning()
-          }
-        } else {
-          obj.Actor ! Vitality.Damage(func)
-        }
+        obj.Actor ! Vitality.Damage(func)
 
       case _ => ()
     }
