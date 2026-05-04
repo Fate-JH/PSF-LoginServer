@@ -338,7 +338,7 @@ class VehicleControl(vehicle: Vehicle)
         //notify target spawner that the vehicle has despawned if this is a VR Shooting Range zone
         //todo: make this behavior cleaner
         if (zone.id.startsWith("tzsh") && vehicle.OwnerGuid.isEmpty && zone.NPCPopulation != Default.Actor) {
-          zone.NPCPopulation.tell(ShootingRangeTargetSpawner.VehicleTargetDeconstructed(vehicle, vehicle.Position), zone.NPCPopulation)
+          zone.NPCPopulation.tell(ShootingRangeTargetSpawner.VehicleTargetDeconstructed(vehicle), zone.NPCPopulation)
         }
         //unregister
         TaskWorkflow.execute(GUIDTask.unregisterVehicle(zone.GUID, vehicle))

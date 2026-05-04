@@ -20,7 +20,7 @@ import scala.util.Random
 object ShootingRangeTargetSpawner {
   final case class InfantryTargetReleased(bot: AvatarBot)
 
-  final case class VehicleTargetDeconstructed(vehicle: Vehicle, position: Vector3)
+  final case class VehicleTargetDeconstructed(vehicle: Vehicle)
 }
 
 class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
@@ -94,7 +94,7 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
   )
 
   private val activeInfantryTargets = ListBuffer[AvatarBot]()
-  private val activeVehicleTargets = ListBuffer[Vehicle]()
+  private val activeVehicleTargets = ListBuffer[(Vehicle, Vector3)]()
   private var botNamesInUse = List[String]()
 
   override def preStart() = {
@@ -113,7 +113,7 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
     }
     activeInfantryTargets.clear()
     botNamesInUse = List[String]()
-    activeVehicleTargets.foreach{ target =>
+    activeVehicleTargets.foreach{ case (target, pos) =>
       if (target.Actor != Default.Actor) {
         target.Actor ! Vehicle.Deconstruct(None)
       }
@@ -125,8 +125,8 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
     case ShootingRangeTargetSpawner.InfantryTargetReleased(bot) =>
       RemoveBot(bot)
 
-    case ShootingRangeTargetSpawner.VehicleTargetDeconstructed(vehicle, pos) =>
-      OnVehicleTargetDeconstructed(vehicle, pos)
+    case ShootingRangeTargetSpawner.VehicleTargetDeconstructed(vehicle) =>
+      OnVehicleTargetDeconstructed(vehicle)
 
     case _ => ()
   }
@@ -357,7 +357,7 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
               localVehicle.Definition.Packet.ConstructorData(localVehicle).get
             )
           )
-          activeVehicleTargets.addOne(localVehicle)
+          activeVehicleTargets.addOne((localVehicle, localVehicle.Position))
           log.debug(s"Spawned a ${localVehicle.Faction} ${localVehicle.Definition.Name} in ${zone.id} at ${localVehicle.Position}")
           Future(true)
         }
@@ -366,15 +366,16 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
     )
   }
 
-  private def OnVehicleTargetDeconstructed(vehicle: Vehicle, position: Vector3): Unit = {
-    activeVehicleTargets.indexOf(vehicle) match {
-      case -1    =>
-      case index => 
+  private def OnVehicleTargetDeconstructed(vehicle: Vehicle): Unit = {
+    activeVehicleTargets.find(_._1 == vehicle) match {
+      case Some((target, pos)) => 
+        val index = activeVehicleTargets.indexOf((target, pos))
         activeVehicleTargets.remove(index)
         context.system.scheduler.scheduleOnce(
           5.seconds,
-          new Runnable() { override def run(): Unit = CreateVehicleTarget(position, vehicle.Orientation.z, GlobalDefinitions.isFlightVehicle(vehicle.Definition)) }
+          new Runnable() { override def run(): Unit = CreateVehicleTarget(pos, vehicle.Orientation.z, GlobalDefinitions.isFlightVehicle(vehicle.Definition)) }
         )
+      case None =>
     }
   }
 }
