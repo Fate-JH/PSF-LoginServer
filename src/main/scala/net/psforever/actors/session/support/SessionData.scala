@@ -22,6 +22,7 @@ import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.structures.Amenity
 import net.psforever.objects.vehicles._
 import net.psforever.objects.vital._
+import net.psforever.objects.vital.base.DamageResolution
 import net.psforever.objects.vital.interaction.DamageInteraction
 import net.psforever.objects.zones._
 import net.psforever.objects.zones.blockmap.{BlockMap, BlockMapEntity, SectorGroup, SectorPopulation}
@@ -461,7 +462,9 @@ class SessionData(
       case obj: Amenity if obj.CanDamage =>
         if (obj.IsInVRZone && obj.Faction == player.Faction) {
           //disable friendly-fire in VR zones
-          general.trainingGriefWarning()
+          if (data.resolution != DamageResolution.Splash) { //don't do the grief warning against amenities from splash damage
+            general.trainingGriefWarning()
+          }
         } else {
           obj.Actor ! Vitality.Damage(func)
         }
