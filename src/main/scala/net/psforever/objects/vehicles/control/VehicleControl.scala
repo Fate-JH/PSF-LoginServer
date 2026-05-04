@@ -2,7 +2,7 @@
 package net.psforever.objects.vehicles.control
 
 import akka.actor.Cancellable
-import net.psforever.actors.zone.ZoneActor
+import net.psforever.actors.zone.{ShootingRangeTargetSpawner, ZoneActor}
 import net.psforever.objects._
 import net.psforever.objects.avatar.SpecialCarry
 import net.psforever.objects.definition.{VehicleDefinition, WithShields}
@@ -266,6 +266,15 @@ class VehicleControl(vehicle: Vehicle)
         PrepareForDisabled(kickPassengers)
         context.become(Disabled)
 
+      case Vehicle.Deconstruct(_) if (vehicle.Zone.id.startsWith("tzsh") && vehicle.OwnerGuid.isEmpty) =>
+        //deconstruct the vehicle immediately if this is a VR Shooting Range target
+        context.become(ReadyToDelete)
+        //cancel jammed behavior
+        CancelJammeredSound(vehicle)
+        CancelJammeredStatus(vehicle)
+        self ! VehicleControl.Deletion()
+        vehicle.ClearHistory()
+
       case Vehicle.Deconstruct(time) =>
         time match {
           case Some(delay) if vehicle.Definition.undergoesDecay =>
@@ -326,6 +335,13 @@ class VehicleControl(vehicle: Vehicle)
           VehicleAction.UnloadVehicle(Service.defaultPlayerGUID, vehicle, vehicle.GUID)
         )
         zone.Transport.tell(Zone.Vehicle.Despawn(vehicle), zone.Transport)
+        //notify target spawner that the vehicle has despawned if this is a VR Shooting Range zone
+        //todo: make this behavior cleaner
+        if (zone.id.startsWith("tzsh") && vehicle.OwnerGuid.isEmpty && zone.NPCPopulation != Default.Actor) {
+          zone.NPCPopulation.tell(ShootingRangeTargetSpawner.VehicleTargetDeconstructed(vehicle, vehicle.Position), zone.NPCPopulation)
+        }
+        //unregister
+        TaskWorkflow.execute(GUIDTask.unregisterVehicle(zone.GUID, vehicle))
     }
 
   final def ReadyToDelete: Receive = commonDeleteBehavior
@@ -448,8 +464,16 @@ class VehicleControl(vehicle: Vehicle)
     //cancel jammed behavior
     CancelJammeredSound(vehicle)
     CancelJammeredStatus(vehicle)
-    //unregister
-    TaskWorkflow.execute(GUIDTask.unregisterVehicle(zone.GUID, vehicle))
+    if (!vehicle.OwnerGuid.isEmpty) {
+      //remove vehicle ownership is not already removed
+      val obj = MountableObject
+      Vehicles.Disown(obj.GUID, obj)
+    }
+    //lock the vehicle to prevent interaction attempts during deletion
+    vehicle.PermissionGroup(0, 0)
+    vehicle.PermissionGroup(1, 0)
+    vehicle.PermissionGroup(2, 0)
+    vehicle.PermissionGroup(3, 0)
     //banished to the shadow realm
     vehicle.Position = Vector3.Zero
     vehicle.ClearHistory()

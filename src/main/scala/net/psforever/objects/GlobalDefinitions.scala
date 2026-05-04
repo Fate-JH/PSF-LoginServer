@@ -47,6 +47,96 @@ object GlobalDefinitions {
   avatar.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
   avatar.maxForwardSpeed = 27f //not in the ADB; running speed
 
+  val avatar_bot = new AvatarBotDefinition(122)
+  avatar_bot.MaxHealth = 100
+  avatar_bot.Damageable = true
+  avatar_bot.DrownAtMaxDepth = true
+  avatar_bot.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot.maxForwardSpeed = 27f //not in the ADB; running speed
+
+  val avatar_bot_agile = new AvatarBotDefinition(123)
+  avatar_bot_agile.MaxHealth = 100
+  avatar_bot_agile.Damageable = true
+  avatar_bot_agile.DrownAtMaxDepth = true
+  avatar_bot_agile.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot_agile.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot_agile.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot_agile.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot_agile.maxForwardSpeed = 27f //not in the ADB; running speed
+
+  val avatar_bot_agile_no_weapon = new AvatarBotDefinition(124)
+  avatar_bot_agile_no_weapon.MaxHealth = 100
+  avatar_bot_agile_no_weapon.Damageable = true
+  avatar_bot_agile_no_weapon.DrownAtMaxDepth = true
+  avatar_bot_agile_no_weapon.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot_agile_no_weapon.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot_agile_no_weapon.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot_agile_no_weapon.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot_agile_no_weapon.maxForwardSpeed = 27f //not in the ADB; running speed
+
+  val avatar_bot_max = new AvatarBotDefinition(125)
+  avatar_bot_max.MaxHealth = 100
+  avatar_bot_max.Damageable = true
+  avatar_bot_max.DrownAtMaxDepth = true
+  avatar_bot_max.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot_max.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot_max.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot_max.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot_max.maxForwardSpeed = 27f //not in the ADB; running speed
+
+  val avatar_bot_max_no_weapon = new AvatarBotDefinition(126)
+  avatar_bot_max_no_weapon.MaxHealth = 100
+  avatar_bot_max_no_weapon.Damageable = true
+  avatar_bot_max_no_weapon.DrownAtMaxDepth = true
+  avatar_bot_max_no_weapon.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot_max_no_weapon.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot_max_no_weapon.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot_max_no_weapon.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot_max_no_weapon.maxForwardSpeed = 27f //not in the ADB; running speed
+
+  val avatar_bot_reinforced = new AvatarBotDefinition(127)
+  avatar_bot_reinforced.MaxHealth = 100
+  avatar_bot_reinforced.Damageable = true
+  avatar_bot_reinforced.DrownAtMaxDepth = true
+  avatar_bot_reinforced.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot_reinforced.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot_reinforced.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot_reinforced.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot_reinforced.maxForwardSpeed = 27f //not in the ADB; running speed
+
+  val avatar_bot_reinforced_no_weapon = new AvatarBotDefinition(128)
+  avatar_bot_reinforced_no_weapon.MaxHealth = 100
+  avatar_bot_reinforced_no_weapon.Damageable = true
+  avatar_bot_reinforced_no_weapon.DrownAtMaxDepth = true
+  avatar_bot_reinforced_no_weapon.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot_reinforced_no_weapon.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot_reinforced_no_weapon.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot_reinforced_no_weapon.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot_reinforced_no_weapon.maxForwardSpeed = 27f //not in the ADB; running speed
+
+  val avatar_bot_standard = new AvatarBotDefinition(129)
+  avatar_bot_standard.MaxHealth = 100
+  avatar_bot_standard.Damageable = true
+  avatar_bot_standard.DrownAtMaxDepth = true
+  avatar_bot_standard.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot_standard.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot_standard.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot_standard.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot_standard.maxForwardSpeed = 27f //not in the ADB; running speed
+
+  val avatar_bot_standard_no_weapon = new AvatarBotDefinition(130)
+  avatar_bot_standard_no_weapon.MaxHealth = 100
+  avatar_bot_standard_no_weapon.Damageable = true
+  avatar_bot_standard_no_weapon.DrownAtMaxDepth = true
+  avatar_bot_standard_no_weapon.MaxDepth = 1.609375f //Male, standing, not MAX
+  avatar_bot_standard_no_weapon.UnderwaterLifespan(suffocation = 60000L, recovery = 10000L)
+  avatar_bot_standard_no_weapon.collision.xy = CollisionXYData(Array((0.1f, 0), (0.2f, 5), (0.50f, 15), (0.75f, 20), (1f, 30))) //not in the ADB
+  avatar_bot_standard_no_weapon.collision.z = CollisionZData(Array((0.1f, 0), (5f, 1), (10f, 3), (20f, 5), (35f, 7), (50f, 10), (75f, 40), (100f, 100))) //not in the ADB
+  avatar_bot_standard_no_weapon.maxForwardSpeed = 27f //not in the ADB; running speed
+
   /*
   exo-suits
    */

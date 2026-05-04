@@ -67,13 +67,14 @@ case object NoCavernEquipmentRule extends ExclusionRule {
 /**
   * Do not allow the player to spawn cavern equipment if not pulled from a facility and
   * only if the facility is subject to the benefit of an appropriate cavern perk.
+  * This is bypassed for VR Training terminals.
   */
 case object CavernEquipmentQuestion extends ExclusionRule {
   def checkRule(player: Player, msg: ItemTransactionMessage, obj: Any): Boolean = {
     obj match {
       case equipment: Equipment =>
         import net.psforever.objects.serverobject.structures.Building
-        if(GlobalDefinitions.isCavernWeapon(equipment.Definition)) {
+        if(GlobalDefinitions.isCavernWeapon(equipment.Definition) && !player.IsInVRZone) {
           (player.Zone.GUID(msg.terminal_guid) match {
             case Some(term: Amenity) => Some(term.Owner)
             case _                   => None
@@ -106,6 +107,7 @@ final case class NoVehicleRule(illegalDefinition: VehicleDefinition) extends Exc
 /**
   * Do not allow the player to spawn cavern vehicles if not pulled from a facility and
   * only if the facility is subject to the benefit of an appropriate cavern perk.
+  * This is bypassed for VR Training terminals.
   */
 case object CavernVehicleQuestion extends ExclusionRule {
   def checkRule(player: Player, msg: ItemTransactionMessage, obj: Any): Boolean = {
@@ -113,7 +115,7 @@ case object CavernVehicleQuestion extends ExclusionRule {
       case vehicle: Vehicle =>
         import net.psforever.objects.serverobject.structures.Building
         val definition = vehicle.Definition
-        if (definition == GlobalDefinitions.flail || definition == GlobalDefinitions.switchblade) {
+        if ((definition == GlobalDefinitions.flail || definition == GlobalDefinitions.switchblade) && !player.IsInVRZone) {
           (player.Zone.GUID(msg.terminal_guid) match {
             case Some(term: Amenity) => Some(term.Owner)
             case _                   => None

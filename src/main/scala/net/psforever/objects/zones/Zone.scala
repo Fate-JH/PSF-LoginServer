@@ -32,9 +32,9 @@ import scalax.collection.GraphEdge._
 import scala.util.Try
 import akka.actor.typed
 import net.psforever.actors.session.AvatarActor
-import net.psforever.actors.zone.{BuildingActor, ZoneActor}
+import net.psforever.actors.zone.{BuildingActor, ShootingRangeTargetSpawnerActor, ZoneActor}
 import net.psforever.actors.zone.building.WarpGateLogic
-import net.psforever.objects.avatar.{Avatar, PlayerControl}
+import net.psforever.objects.avatar.{Avatar, AvatarBot, PlayerControl}
 import net.psforever.objects.definition.ObjectDefinition
 import net.psforever.objects.geometry.d3.VolumetricGeometry
 import net.psforever.objects.guid.pool.NumberPool
@@ -136,6 +136,10 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
 
   /**
     */
+  private val bots: ListBuffer[AvatarBot] = ListBuffer[AvatarBot]()
+
+  /**
+    */
   private val corpses: ListBuffer[Player] = ListBuffer[Player]()
 
   private var projectiles: ActorRef = Default.Actor
@@ -144,6 +148,11 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
   /**
     */
   private var population: ActorRef = Default.Actor
+
+  /** 
+   * Actor that handles non-player controlled entities, used for VR Shooting Range targets. 
+   */
+  private var npcPopulation: ActorRef = Default.Actor
 
   private var buildings: PairMap[Int, Building] = PairMap.empty[Int, Building]
 
@@ -444,6 +453,8 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
 
   def Players: List[Avatar] = AllPlayers.map(_.avatar)
 
+  def BotAvatars: List[AvatarBot] = bots.toList
+
   def LivePlayers: List[Player] = AllPlayers.filterNot(_.spectator)
 
   def Spectator: List[Player] = AllPlayers.filter(_.spectator)
@@ -469,6 +480,8 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
   def Transport: ActorRef = transport
 
   def Population: ActorRef = population
+
+  def NPCPopulation: ActorRef = npcPopulation
 
   def Buildings: Map[Int, Building] = buildings
 
@@ -1221,6 +1234,21 @@ object Zone {
     final case class PlayerCanNotSpawn(zone: Zone, player: Player)
   }
 
+  object Bots {
+
+    /**
+      * Message that reports to the zone of a freshly spawned bot.
+      * @param bot the `AvatarBot`
+      */
+    final case class Spawn(bot: AvatarBot)
+
+    /**
+      * Message that tells the zone to no longer mind the bot.
+      * @param bot the `AvatarBot`
+      */
+    final case class Release(bot: AvatarBot)
+  }
+
   object Corpse {
 
     /**
@@ -1574,12 +1602,17 @@ object Zone {
         zone.deployables = context.actorOf(Props(classOf[ZoneDeployableActor], zone, zone.constructions, zone.linkDynamicTurretWeapon), s"$id-deployables")
         zone.projectiles = context.actorOf(Props(classOf[ZoneProjectileActor], zone, zone.projectileList), s"$id-projectiles")
         zone.transport = context.actorOf(Props(classOf[ZoneVehicleActor], zone, zone.vehicles, zone.linkDynamicTurretWeapon), s"$id-vehicles")
-        zone.population = context.actorOf(Props(classOf[ZonePopulationActor], zone, zone.players, zone.corpses), s"$id-players")
+        zone.population = context.actorOf(Props(classOf[ZonePopulationActor], zone, zone.players, zone.bots, zone.corpses), s"$id-players")
         zone.projector = context.actorOf(
           Props(classOf[ZoneHotSpotDisplay], zone, zone.hotspots, 15 seconds, zone.hotspotHistory, 60 seconds),
           s"$id-hotspots"
         )
         zone.soi = context.actorOf(Props(classOf[SphereOfInfluenceActor], zone), s"$id-soi")
+
+        //enable target spawns for VR Shooting Range zones
+        if (zone.id.startsWith("tzsh")) {
+          zone.npcPopulation = context.actorOf(Props(classOf[ShootingRangeTargetSpawnerActor], zone), s"$id-npcs")
+        }
 
         zone.avatarEvents = context.actorOf(Props(classOf[AvatarService], zone), s"$id-avatar-events")
         zone.localEvents = context.actorOf(Props(classOf[LocalService], zone), s"$id-local-events")
@@ -1943,9 +1976,14 @@ object Zone {
     val allAffectedTargets = pssos.filter { target => testTargetsFromZone(source, target, radius) }
     //inform remaining targets that they have suffered damage
     allAffectedTargets
-      .foreach { target =>
-      if (zone.id.startsWith("tz") && source.Faction == target.Faction) {
-        //do not perform friendly-fire in VR zones
+      .foreach { target => 
+      if (target.IsInVRZone) {
+        //disable all server-side damage in VR zones, unless the target is a bot in the VR Shooting Range
+        target match {
+          case bot: AvatarBot =>
+            target.Actor ! Vitality.Damage(createInteraction(source, target).calculate())
+          case _ =>
+        }
       } else {
         target.Actor ! Vitality.Damage(createInteraction(source, target).calculate())
       }
@@ -2107,6 +2145,8 @@ object Zone {
     //collect all targets that can be damaged
     //players
     val playerTargets = sector.livePlayerList.filterNot { _.VehicleSeated.nonEmpty }
+    //bots
+    val botTargets = sector.botList
     //vehicles
     val vehicleTargets = sector.vehicleList.filterNot { v => v.Destroyed || v.MountedIn.nonEmpty }
     //deployables
@@ -2114,7 +2154,7 @@ object Zone {
     //amenities
     val soiTargets = sector.amenityList.collect { case amenity: Vitality if !amenity.Destroyed => amenity }
     //altogether ...
-    playerTargets ++ vehicleTargets ++ deployableTargets ++ soiTargets
+    playerTargets ++ botTargets ++ vehicleTargets ++ deployableTargets ++ soiTargets
   }
 
   /**
@@ -2140,6 +2180,8 @@ object Zone {
     //collect all targets that can be damaged
     //players
     val playerTargets = sector.livePlayerList.filter { player => player.VehicleSeated.isEmpty && player.WhichSide == Sidedness.OutsideOf }
+    //bots
+    val botTargets = sector.botList.filter { bot => bot.WhichSide == Sidedness.OutsideOf }
     //vehicles
     val vehicleTargets = sector.vehicleList.filterNot { _.Destroyed }
     //deployables
@@ -2148,7 +2190,7 @@ object Zone {
     val soiTargets = sector.amenityList.collect {
       case amenity: Vitality if !amenity.Destroyed && amenity.WhichSide == Sidedness.OutsideOf && amenity.CanDamage => amenity }
     //altogether ...
-    playerTargets ++ vehicleTargets ++ deployableTargets ++ soiTargets
+    playerTargets ++ botTargets ++ vehicleTargets ++ deployableTargets ++ soiTargets
   }
 
   /**

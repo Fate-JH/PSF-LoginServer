@@ -2,6 +2,7 @@
 package net.psforever.objects.equipment
 
 import net.psforever.objects._
+import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.ce.{DeployableCategory, DeployedItem}
 import net.psforever.objects.serverobject.turret.{FacilityTurret, WeaponTurret}
 import net.psforever.objects.vital.{DamagingActivity, InGameHistory, Vitality}
@@ -111,6 +112,8 @@ object EffectTarget {
       target match {
         case p: Player =>
           p.isAlive
+        case b: AvatarBot =>
+          b.isAlive
         case _ =>
           false
       }

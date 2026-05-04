@@ -404,28 +404,37 @@ object ObjectClass {
   final val vulture                         = 986
   final val wasp                            = 997
   //other
-  final val ams_order_terminal          = 48
-  final val ams_respawn_tube            = 49
-  final val avatar                      = 121
-  final val bfr_rearm_terminal          = 142
-  final val capture_flag                = 157
-  final val implant_terminal_interface  = 409
-  final val locker_container            = 456
-  final val lodestar_repair_terminal    = 461
-  final val manned_turret               = 480
-  final val matrix_terminala            = 517
-  final val matrix_terminalb            = 518
-  final val matrix_terminalc            = 519
-  final val multivehicle_rearm_terminal = 576
-  final val order_terminal              = 612
-  final val order_terminala             = 613
-  final val order_terminalb             = 614
-  final val portable_ammo_terminal      = 684
-  final val portable_order_terminal     = 690
-  final val spawn_pad                   = 800
-  final val spawn_zone                  = 815
-  final val targeting_laser_dispenser   = 851
-  final val teleportpad_terminal        = 853
+  final val ams_order_terminal              = 48
+  final val ams_respawn_tube                = 49
+  final val avatar                          = 121
+  final val avatar_bot                      = 122
+  final val avatar_bot_agile                = 123
+  final val avatar_bot_agile_no_weapon      = 124
+  final val avatar_bot_max                  = 125
+  final val avatar_bot_max_no_weapon        = 126
+  final val avatar_bot_reinforced           = 127
+  final val avatar_bot_reinforced_no_weapon = 128
+  final val avatar_bot_standard             = 129
+  final val avatar_bot_standard_no_weapon   = 130
+  final val bfr_rearm_terminal              = 142
+  final val capture_flag                    = 157
+  final val implant_terminal_interface      = 409
+  final val locker_container                = 456
+  final val lodestar_repair_terminal        = 461
+  final val manned_turret                   = 480
+  final val matrix_terminala                = 517
+  final val matrix_terminalb                = 518
+  final val matrix_terminalc                = 519
+  final val multivehicle_rearm_terminal     = 576
+  final val order_terminal                  = 612
+  final val order_terminala                 = 613
+  final val order_terminalb                 = 614
+  final val portable_ammo_terminal          = 684
+  final val portable_order_terminal         = 690
+  final val spawn_pad                       = 800
+  final val spawn_zone                      = 815
+  final val targeting_laser_dispenser       = 851
+  final val teleportpad_terminal            = 853
 
   // For property overrides
   final val delivererv                = 239
@@ -664,8 +673,17 @@ object ObjectClass {
       case ObjectClass.router_telepad => ConstructorData(DetailedConstructionToolData.codec, "router telepad")
       case ObjectClass.boomer_trigger => ConstructorData(DetailedConstructionToolData.codec, "boomer trigger")
       //other
-      case ObjectClass.avatar           => ConstructorData(DetailedPlayerData.codec(false), "avatar")
-      case ObjectClass.locker_container => ConstructorData(DetailedLockerContainerData.codec, "locker container")
+      case ObjectClass.avatar                          => ConstructorData(DetailedPlayerData.codec(false), "avatar")
+      case ObjectClass.avatar_bot                      => ConstructorData(DetailedPlayerData.codec(false), "avatar bot")
+      case ObjectClass.avatar_bot_agile                => ConstructorData(DetailedPlayerData.codec(false), "avatar bot agile")
+      case ObjectClass.avatar_bot_agile_no_weapon      => ConstructorData(DetailedPlayerData.codec(false), "avatar bot agile no weapon")
+      case ObjectClass.avatar_bot_max                  => ConstructorData(DetailedPlayerData.codec(false), "avatar bot max")
+      case ObjectClass.avatar_bot_max_no_weapon        => ConstructorData(DetailedPlayerData.codec(false), "avatar bot max no weapon")
+      case ObjectClass.avatar_bot_reinforced           => ConstructorData(DetailedPlayerData.codec(false), "avatar bot reinforced")
+      case ObjectClass.avatar_bot_reinforced_no_weapon => ConstructorData(DetailedPlayerData.codec(false), "avatar bot reinforced no weapon")
+      case ObjectClass.avatar_bot_standard             => ConstructorData(DetailedPlayerData.codec(false), "avatar bot standard")
+      case ObjectClass.avatar_bot_standard_no_weapon   => ConstructorData(DetailedPlayerData.codec(false), "avatar bot standard no weapon")
+      case ObjectClass.locker_container                => ConstructorData(DetailedLockerContainerData.codec, "locker container")
 
       //failure case
       case _ => defaultFailureCodec(objClass)
@@ -983,21 +1001,30 @@ object ObjectClass {
       //vehicles?
       case ObjectClass.orbital_shuttle => ConstructorData(OrbitalShuttleData.codec, "HART")
       //other
-      case ObjectClass.ams_order_terminal          => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.ams_respawn_tube            => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.avatar                      => ConstructorData(PlayerData.codec(false), "avatar")
-      case ObjectClass.bfr_rearm_terminal          => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.implant_terminal_interface  => ConstructorData(CommonFieldData.codec2, "implant terminal")
-      case ObjectClass.lodestar_repair_terminal    => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.matrix_terminala            => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.matrix_terminalb            => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.matrix_terminalc            => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.multivehicle_rearm_terminal => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.order_terminal              => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.order_terminala             => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.order_terminalb             => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.targeting_laser_dispenser   => ConstructorData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.teleportpad_terminal        => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.ams_order_terminal              => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.ams_respawn_tube                => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.avatar                          => ConstructorData(PlayerData.codec(false), "avatar")
+      case ObjectClass.avatar_bot                      => ConstructorData(PlayerData.codec(false), "avatar bot")
+      case ObjectClass.avatar_bot_agile                => ConstructorData(PlayerData.codec(false), "avatar bot agile")
+      case ObjectClass.avatar_bot_agile_no_weapon      => ConstructorData(PlayerData.codec(false), "avatar bot agile no weapon")
+      case ObjectClass.avatar_bot_max                  => ConstructorData(PlayerData.codec(false), "avatar bot max")
+      case ObjectClass.avatar_bot_max_no_weapon        => ConstructorData(PlayerData.codec(false), "avatar bot max no weapon")
+      case ObjectClass.avatar_bot_reinforced           => ConstructorData(PlayerData.codec(false), "avatar bot reinforced")
+      case ObjectClass.avatar_bot_reinforced_no_weapon => ConstructorData(PlayerData.codec(false), "avatar bot reinforced no weapon")
+      case ObjectClass.avatar_bot_standard             => ConstructorData(PlayerData.codec(false), "avatar bot standard")
+      case ObjectClass.avatar_bot_standard_no_weapon   => ConstructorData(PlayerData.codec(false), "avatar bot standard no weapon")
+      case ObjectClass.bfr_rearm_terminal              => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.implant_terminal_interface      => ConstructorData(CommonFieldData.codec2, "implant terminal")
+      case ObjectClass.lodestar_repair_terminal        => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.matrix_terminala                => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.matrix_terminalb                => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.matrix_terminalc                => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.multivehicle_rearm_terminal     => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.order_terminal                  => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.order_terminala                 => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.order_terminalb                 => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.targeting_laser_dispenser       => ConstructorData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.teleportpad_terminal            => ConstructorData(CommonFieldData.codec2, "terminal")
       //failure case
       case _ => defaultFailureCodec(objClass)
     }
@@ -1324,17 +1351,26 @@ object ObjectClass {
       case ObjectClass.vulture                         => ConstructorData(VehicleData.codec(VehicleFormat.Variant), "vehicle")
       case ObjectClass.wasp                            => ConstructorData(VehicleData.codec(VehicleFormat.Variant), "vehicle")
       //other
-      case ObjectClass.ams_respawn_tube           => DroppedItemData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.avatar                     => ConstructorData(PlayerData.codec(true), "avatar")
-      case ObjectClass.capture_flag               => ConstructorData(CaptureFlagData.codec, "capture flag")
-      case ObjectClass.implant_terminal_interface => ConstructorData(CommonFieldData.codec2, "implant terminal")
-      case ObjectClass.locker_container           => ConstructorData(LockerContainerData.codec, "locker container")
-      case ObjectClass.matrix_terminala           => DroppedItemData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.matrix_terminalb           => DroppedItemData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.matrix_terminalc           => DroppedItemData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.order_terminal             => DroppedItemData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.order_terminala            => DroppedItemData(CommonFieldData.codec2, "terminal")
-      case ObjectClass.order_terminalb            => DroppedItemData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.ams_respawn_tube                => DroppedItemData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.avatar                          => ConstructorData(PlayerData.codec(true), "avatar")
+      case ObjectClass.avatar_bot                      => ConstructorData(PlayerData.codec(true), "avatar bot")
+      case ObjectClass.avatar_bot_agile                => ConstructorData(PlayerData.codec(true), "avatar bot agile")
+      case ObjectClass.avatar_bot_agile_no_weapon      => ConstructorData(PlayerData.codec(true), "avatar bot agile no weapon")
+      case ObjectClass.avatar_bot_max                  => ConstructorData(PlayerData.codec(true), "avatar bot max")
+      case ObjectClass.avatar_bot_max_no_weapon        => ConstructorData(PlayerData.codec(true), "avatar bot max no weapon")
+      case ObjectClass.avatar_bot_reinforced           => ConstructorData(PlayerData.codec(true), "avatar bot reinforced")
+      case ObjectClass.avatar_bot_reinforced_no_weapon => ConstructorData(PlayerData.codec(true), "avatar bot reinforced no weapon")
+      case ObjectClass.avatar_bot_standard             => ConstructorData(PlayerData.codec(true), "avatar bot standard")
+      case ObjectClass.avatar_bot_standard_no_weapon   => ConstructorData(PlayerData.codec(true), "avatar bot standard no weapon")
+      case ObjectClass.capture_flag                    => ConstructorData(CaptureFlagData.codec, "capture flag")
+      case ObjectClass.implant_terminal_interface      => ConstructorData(CommonFieldData.codec2, "implant terminal")
+      case ObjectClass.locker_container                => ConstructorData(LockerContainerData.codec, "locker container")
+      case ObjectClass.matrix_terminala                => DroppedItemData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.matrix_terminalb                => DroppedItemData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.matrix_terminalc                => DroppedItemData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.order_terminal                  => DroppedItemData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.order_terminala                 => DroppedItemData(CommonFieldData.codec2, "terminal")
+      case ObjectClass.order_terminalb                 => DroppedItemData(CommonFieldData.codec2, "terminal")
       //failure case
       case _ => defaultFailureCodec(objClass)
     }

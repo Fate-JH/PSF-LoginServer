@@ -7,6 +7,7 @@ import net.psforever.objects.equipment.Equipment
 import net.psforever.objects.serverobject.environment.PieceOfEnvironment
 import net.psforever.objects.serverobject.structures.{Amenity, Building}
 import net.psforever.objects.{Player, Vehicle}
+import net.psforever.objects.avatar.AvatarBot
 
 import scala.collection.mutable.ListBuffer
 
@@ -19,6 +20,8 @@ trait SectorPopulation {
   def rangeY: Float
 
   def livePlayerList: List[Player]
+
+  def botList: List[AvatarBot]
 
   def corpseList: List[Player]
 
@@ -41,6 +44,7 @@ trait SectorPopulation {
     */
   def total: Int = {
     livePlayerList.size +
+    botList.size +
     corpseList.size +
     vehicleList.size +
     equipmentOnGroundList.size +
@@ -123,6 +127,10 @@ class Sector(val longitude: Int, val latitude: Int, val span: Int)
     (a: Player, b: Player) => a.GUID == b.GUID
   )
 
+  private val bots: SectorListOf[AvatarBot] = new SectorListOf[AvatarBot](
+    (a: AvatarBot, b: AvatarBot) => a.GUID == b.GUID
+  )
+
   private val corpses: SectorListOf[Player] = new SectorListOf[Player](
     (a: Player, b: Player) => a eq b
   )
@@ -161,6 +169,8 @@ class Sector(val longitude: Int, val latitude: Int, val span: Int)
 
   def livePlayerList : List[Player] = livePlayers.list
 
+  def botList : List[AvatarBot] = bots.list
+
   def corpseList: List[Player] = corpses.list
 
   def vehicleList: List[Vehicle] = vehicles.list
@@ -191,6 +201,8 @@ class Sector(val longitude: Int, val latitude: Int, val span: Int)
         corpses.list.size < corpses.addTo(p).size
       case p: Player =>
         livePlayers.list.size < livePlayers.addTo(p).size
+      case ab: AvatarBot =>
+        bots.list.size < bots.addTo(ab).size
       case v: Vehicle =>
         vehicles.list.size < vehicles.addTo(v).size
       case e: Equipment =>
@@ -226,6 +238,8 @@ class Sector(val longitude: Int, val latitude: Int, val span: Int)
         corpses.list.size > corpses.removeFrom(p).size
       case p: Player =>
         livePlayers.list.size > livePlayers.removeFrom(p).size
+      case ab: AvatarBot =>
+        bots.list.size > bots.removeFrom(ab).size
       case v: Vehicle =>
         vehicles.list.size > vehicles.removeFrom(v).size
       case e: Equipment =>
@@ -253,6 +267,7 @@ object Sector {
   * The specific datastructure that is mentioned when using the term "sector conglomerate".
   * Typically used to compose the lists of entities from various individual sectors.
   * @param livePlayerList the living players
+  * @param botList the bot avatars
   * @param corpseList the dead players
   * @param vehicleList vehicles
   * @param equipmentOnGroundList dropped equipment
@@ -265,6 +280,7 @@ class SectorGroup(
                    val rangeX: Float,
                    val rangeY: Float,
                    val livePlayerList: List[Player],
+                   val botList: List[AvatarBot],
                    val corpseList: List[Player],
                    val vehicleList: List[Vehicle],
                    val equipmentOnGroundList: List[Equipment],
@@ -314,6 +330,7 @@ object SectorGroup {
       rangeX,
       rangeY,
       sector.livePlayerList.filterNot(p => p.spectator || !p.allowInteraction),
+      sector.botList.filterNot(b => !b.allowInteraction),
       sector.corpseList,
       sector.vehicleList,
       sector.equipmentOnGroundList,
@@ -362,13 +379,14 @@ object SectorGroup {
     */
   def apply(rangeX: Float, rangeY: Float, sectors: Iterable[Sector]): SectorGroup = {
     if (sectors.isEmpty) {
-      new SectorGroup(rangeX, rangeY, Nil, Nil, Nil, Nil, Nil, Nil, Nil, Nil, Nil)
+      new SectorGroup(rangeX, rangeY, Nil, Nil, Nil, Nil, Nil, Nil, Nil, Nil, Nil, Nil)
     } else if (sectors.size == 1) {
       val sector = sectors.head
       new SectorGroup(
         rangeX,
         rangeY,
         sector.livePlayerList.filterNot(p => p.spectator || !p.allowInteraction),
+        sector.botList.filterNot(b => !b.allowInteraction),
         sector.corpseList,
         sector.vehicleList,
         sector.equipmentOnGroundList,
@@ -383,6 +401,7 @@ object SectorGroup {
         rangeX,
         rangeY,
         sectors.flatMap { _.livePlayerList }.toList.distinct.filterNot(p => p.spectator || !p.allowInteraction),
+        sectors.flatMap { _.botList }.toList.distinct.filterNot(b => !b.allowInteraction),
         sectors.flatMap { _.corpseList }.toList.distinct,
         sectors.flatMap { _.vehicleList }.toList.distinct,
         sectors.flatMap { _.equipmentOnGroundList }.toList.distinct,

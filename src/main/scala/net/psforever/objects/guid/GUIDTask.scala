@@ -2,6 +2,7 @@
 package net.psforever.objects.guid
 
 import akka.util.Timeout
+import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.entity.IdentifiableEntity
 import net.psforever.objects.equipment.{Equipment, EquipmentSlot}
 import net.psforever.objects._
@@ -204,6 +205,19 @@ object GUIDTask {
   }
 
   /**
+    * Construct tasking that registers an object with a globally unique identifier selected from a pool of numbers, as an `AvatarBot`.<br>
+    * <br>
+    * @param bot the `AvatarBot` object being registered
+    * @param guid implicit reference to a unique number system
+    * @return a `TaskBundle` message
+    */
+  def registerBot(guid: UniqueNumberOps, bot: AvatarBot): TaskBundle = {
+    val holsterTasks   = visibleSlotTaskBuilding(guid, bot.Holsters(), registerEquipment)
+    val inventoryTasks = registerInventory(guid, bot)
+    TaskBundle(RegisterObjectTask(guid, bot), holsterTasks ++ inventoryTasks)
+  }
+
+  /**
     * Construct tasking that registers an object with a globally unique identifier selected from a pool of numbers, as a `Vehicle`.<br>
     *  <br>
     * `Vehicle` objects are far more complicated than `Tools` (but they are not `Equipment`).
@@ -368,6 +382,21 @@ object GUIDTask {
     val holsterTasks   = visibleSlotTaskBuilding(guid, tplayer.Holsters(), unregisterEquipment)
     val inventoryTasks = unregisterInventory(guid, tplayer)
     TaskBundle(UnregisterObjectTask(guid, tplayer), holsterTasks ++ inventoryTasks)
+  }
+
+  /**
+    * Construct tasking that unregisters a `AvatarBot` object from a globally unique identifier system.<br>
+    * <br>
+    * This task performs an operation that reverses the effect of `RegisterBot`.
+    * @param bot the `AvatarBot` object being unregistered
+    * @param guid implicit reference to a unique number system
+    * @see `GUIDTask.registerAvatar`
+    * @return a `TaskBundle` message
+    */
+  def unregisterBot(guid: UniqueNumberOps, bot: AvatarBot): TaskBundle = {
+    val holsterTasks   = visibleSlotTaskBuilding(guid, bot.Holsters(), unregisterEquipment)
+    val inventoryTasks = unregisterInventory(guid, bot)
+    TaskBundle(UnregisterObjectTask(guid, bot), holsterTasks ++ inventoryTasks)
   }
 
   /**

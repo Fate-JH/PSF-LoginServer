@@ -3,17 +3,18 @@ package net.psforever.objects.zones
 
 import akka.actor.{Actor, ActorRef, Props}
 import net.psforever.actors.zone.ZoneActor
-import net.psforever.objects.avatar.{CorpseControl, PlayerControl}
+import net.psforever.objects.avatar.{AvatarBot, CorpseControl, PlayerControl}
 import net.psforever.objects.sourcing.PlayerSource
 import net.psforever.objects.vital.{InGameHistory, SpawningActivity}
 import net.psforever.objects.{Default, Player}
+import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.types.Vector3
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 
 /**
-  * A support `Actor` that sequences adding and removing `Avatar` and `Player` objects to mappings and lists.
+  * A support `Actor` that sequences adding and removing `Avatar`, `AvatarBot`, and `Player` objects to mappings and lists.
   * The former mapping is considered to represent every user connect to the `zone` (`as Avatar` objects)
   * and their current representation (as `Player` objects).
   * The latter list keeps track of a group of former user representations.
@@ -22,7 +23,7 @@ import scala.collection.mutable.ListBuffer
   * @param playerMap  the mapping of `Avatar` objects to `Player` objects
   * @param corpseList a list of `Player` objects
   */
-class ZonePopulationActor(zone: Zone, playerMap: TrieMap[Int, Option[Player]], corpseList: ListBuffer[Player])
+class ZonePopulationActor(zone: Zone, playerMap: TrieMap[Int, Option[Player]], botList: ListBuffer[AvatarBot], corpseList: ListBuffer[Player])
     extends Actor {
 
   import ZonePopulationActor._
@@ -81,6 +82,27 @@ class ZonePopulationActor(zone: Zone, playerMap: TrieMap[Int, Option[Player]], c
           sender() ! Zone.Population.PlayerHasLeft(zone, Some(tplayer))
         case None =>
           sender() ! Zone.Population.PlayerHasLeft(zone, None)
+      }
+
+    case Zone.Bots.Spawn(bot) =>
+      if (BotSpawn(bot, botList)) {
+        bot.Zone = zone
+        zone.actor ! ZoneActor.AddToBlockMap(bot, bot.Position)
+        zone.AvatarEvents ! AvatarServiceMessage(
+          zone.id,
+          AvatarAction.LoadPlayer(bot.GUID, bot.Definition.ObjectId, bot.GUID, bot.Definition.Packet.ConstructorData(bot).get, None)
+        )
+      }
+
+    case Zone.Bots.Release(bot) =>
+      if (BotRelease(bot, botList)) {
+        if (bot.Actor != null) bot.Actor ! akka.actor.PoisonPill
+        bot.Actor = Default.Actor
+        zone.actor ! ZoneActor.RemoveFromBlockMap(bot)
+        zone.AvatarEvents ! AvatarServiceMessage(
+          zone.id,
+          AvatarAction.ObjectDelete(bot.GUID, bot.GUID, unk=0)
+        )
       }
 
     case Zone.Corpse.Add(player) =>
@@ -199,6 +221,31 @@ object ZonePopulationActor {
       case Some(value) =>
         playerMap(id) = None
         value
+    }
+  }
+
+  /**
+    * Add the given `AvatarBot` to the list of bots.
+    * @param bot an `AvatarBot` object
+    * @param botList a list of `AvatarBot` objects
+    */
+  def BotSpawn(bot: AvatarBot, botList: ListBuffer[AvatarBot]): Boolean = {
+    botList += bot
+    true
+  }
+
+  /**
+    * Remove the given `AvatarBot` from the list of bots.
+    * @param bot an `AvatarBot` object
+    * @param botList a list of `AvatarBot` objects
+    */
+  def BotRelease(bot: AvatarBot, botList: ListBuffer[AvatarBot]): Boolean = {
+    botList.indexOf(bot) match {
+      case -1 =>
+        false
+      case index =>
+        botList.remove(index)
+        true
     }
   }
 
