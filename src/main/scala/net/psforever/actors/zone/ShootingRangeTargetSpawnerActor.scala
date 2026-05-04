@@ -95,7 +95,7 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
 
   private val activeInfantryTargets = ListBuffer[AvatarBot]()
   private val activeVehicleTargets = ListBuffer[Vehicle]()
-  private val botNamesInUse = ListBuffer[String]()
+  private var botNamesInUse = List[String]()
 
   override def preStart() = {
     if (Config.app.game.virtualTraining.shootingRangeTargetsEnabled) {
@@ -112,7 +112,7 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
       target.Actor ! AvatarBot.Release()
     }
     activeInfantryTargets.clear()
-    botNamesInUse.clear()
+    botNamesInUse = List[String]()
     activeVehicleTargets.foreach{ target =>
       if (target.Actor != Default.Actor) {
         target.Actor ! Vehicle.Deconstruct(None)
@@ -209,27 +209,34 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
    * @return the name as a string
    */
   private def GetRandomBotName(gender: CharacterSex): String = {
-    gender match {
-      case CharacterSex.Male =>
-        val availableNames = (maleOnlyBotNames ++ universalBotNames).filterNot(n => botNamesInUse.contains(n))
-        if (!availableNames.isEmpty) {
-          val name = availableNames(Random.nextInt(availableNames.size))
-          botNamesInUse.addOne(name)
-          name
-        } else {
-          log.warn(s"Male bot name pool in ${zone.id} is empty!")
-          "Undefined"
-        }
-       case CharacterSex.Female =>
-        val availableNames = (femaleOnlyBotNames ++ universalBotNames).filterNot(n => botNamesInUse.contains(n))
-        if (!availableNames.isEmpty) {
-          val name = availableNames(Random.nextInt(availableNames.size))
-          botNamesInUse.addOne(name)
-          name
-        } else {
-          log.warn(s"Female bot name pool in ${zone.id} is empty!")
-          "Undefined"
-        }
+    try {
+      gender match {
+        case CharacterSex.Male =>
+          val availableNames = (maleOnlyBotNames ++ universalBotNames).filterNot(n => botNamesInUse.contains(n))
+          if (!availableNames.isEmpty) {
+            val name = availableNames(Random.nextInt(availableNames.size))
+            botNamesInUse = botNamesInUse :+ name
+            name
+          } else {
+            log.warn(s"Male bot name pool in ${zone.id} is empty!")
+            "Bot"
+          }
+         case CharacterSex.Female =>
+          val availableNames = (femaleOnlyBotNames ++ universalBotNames).filterNot(n => botNamesInUse.contains(n))
+          if (!availableNames.isEmpty) {
+            val name = availableNames(Random.nextInt(availableNames.size))
+            botNamesInUse = botNamesInUse :+ name
+            name
+          } else {
+            log.warn(s"Female bot name pool in ${zone.id} is empty!")
+            "Bot"
+          }
+      }
+    } catch {
+      //while the issue that was causing a mutation during iteration exception to be thrown here rarely should hopefully be fixed now,
+      //this is still being put here as a fallback to not block the bot from spawning
+      case ex: Exception =>
+        "Bot"
     }
   }
 
@@ -291,7 +298,7 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
     //return bot name to name pool
     botNamesInUse.indexOf(bot.Name) match {
       case -1    => log.warn(s"Failed to restore bot name `${bot.Name}` to the bot name pool!")
-      case index => botNamesInUse.remove(index)
+      case index => botNamesInUse = botNamesInUse.filterNot(n => n == bot.Name)
     }
     true
   }
