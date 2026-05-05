@@ -16,8 +16,7 @@ import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.objects.serverobject.environment.interaction.RespondsToZoneEnvironment
 import net.psforever.objects.sourcing.PlayerSource
-import net.psforever.objects.vital.collision.CollisionReason
-import net.psforever.objects.vital.etc.{PainboxReason, SuicideReason}
+import net.psforever.objects.vital.etc.SuicideReason
 import net.psforever.objects.vital.interaction.{DamageInteraction, DamageResult}
 
 import java.util.concurrent.{Executors, TimeUnit}
@@ -203,55 +202,6 @@ class AvatarBotActor(bot: AvatarBot, spawnerActor: ActorRef)
       } else {
         //activity on map
         zone.Activity ! Zone.HotSpot.Activity(cause)
-        //alert to damage source
-        cause.adversarial match {
-          case Some(adversarial) =>
-            adversarial.attacker match {
-              case pSource: PlayerSource => //bot damage
-                val name = pSource.Name
-                zone.LivePlayers.find(_.Name == name).orElse(zone.Corpses.find(_.Name == name)) match {
-                  case Some(tplayer) =>
-                    zone.AvatarEvents ! AvatarServiceMessage(
-                      target.Name,
-                      AvatarAction.HitHint(tplayer.GUID, target.GUID)
-                    )
-                  case None =>
-                    zone.AvatarEvents ! AvatarServiceMessage(
-                      target.Name,
-                      AvatarAction.SendResponse(
-                        targetGUID,
-                        DamageWithPositionMessage(countableDamage, pSource.Position)
-                      )
-                    )
-                }
-              case source =>
-                zone.AvatarEvents ! AvatarServiceMessage(
-                  target.Name,
-                  AvatarAction.SendResponse(
-                    targetGUID,
-                    DamageWithPositionMessage(countableDamage, source.Position)
-                  )
-                )
-            }
-          case None =>
-            cause.interaction.cause match {
-              case o: PainboxReason =>
-                zone.AvatarEvents ! AvatarServiceMessage(
-                  target.Name,
-                  AvatarAction.EnvironmentalDamage(target.GUID, o.entity.GUID, countableDamage)
-                )
-              case _: CollisionReason =>
-                events ! AvatarServiceMessage(
-                  zoneId,
-                  AvatarAction.SendResponse(targetGUID, AggravatedDamageMessage(targetGUID, countableDamage))
-                )
-              case _ =>
-                zone.AvatarEvents ! AvatarServiceMessage(
-                  target.Name,
-                  AvatarAction.EnvironmentalDamage(target.GUID, ValidPlanetSideGUID(0), countableDamage)
-                )
-            }
-        }
       }
     }
   }
