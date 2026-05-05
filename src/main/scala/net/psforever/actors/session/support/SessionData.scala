@@ -462,9 +462,6 @@ class SessionData(
       case obj: Amenity if obj.CanDamage =>
         if (obj.IsInVRZone && obj.Faction == player.Faction) {
           //disable friendly-fire in VR zones
-          if (data.resolution != DamageResolution.Splash) { //don't do the grief warning against amenities from splash damage
-            general.trainingGriefWarning()
-          }
         } else {
           obj.Actor ! Vitality.Damage(func)
         }
