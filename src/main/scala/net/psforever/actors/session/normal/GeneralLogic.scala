@@ -6,7 +6,7 @@ import akka.actor.{ActorContext, ActorRef, typed}
 import net.psforever.actors.session.{AvatarActor, SessionActor}
 import net.psforever.actors.session.support.{GeneralFunctions, GeneralOperations, SessionData, SessionOutfitHandlers}
 import net.psforever.objects.{Account, BoomerDeployable, BoomerTrigger, ConstructionItem, GlobalDefinitions, LivePlayerList, Player, SensorDeployable, ShieldGeneratorDeployable, SpecialEmp, TelepadDeployable, Tool, TrapDeployable, TurretDeployable, Vehicle}
-import net.psforever.objects.avatar.{Avatar, PlayerControl, SpecialCarry}
+import net.psforever.objects.avatar.{Avatar, AvatarBot, PlayerControl, SpecialCarry}
 import net.psforever.objects.ballistics.Projectile
 import net.psforever.objects.ce.{Deployable, DeployedItem}
 import net.psforever.objects.definition.{BasicDefinition, KitDefinition, SpecialExoSuitDefinition}
@@ -356,6 +356,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
         ops.handleUseGeneralEntity(panel, equipment)
       case Some(obj: Player) =>
         ops.handleUsePlayer(obj, equipment, pkt)
+      case Some(obj: AvatarBot) =>
+        ops.handleUseBot(obj, equipment, pkt)
       case Some(locker: Locker) =>
         ops.handleUseLocker(locker, equipment, pkt)
       case Some(gen: Generator) =>

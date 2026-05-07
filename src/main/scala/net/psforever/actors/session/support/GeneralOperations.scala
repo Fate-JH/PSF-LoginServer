@@ -1206,6 +1206,27 @@ class GeneralOperations(
     }
   }
 
+  def handleUseBot(obj: AvatarBot, equipment: Option[Equipment], msg: UseItemMessage): Unit = {
+    sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
+    if (msg.unk3) {
+      msg.object_id match {
+        case ObjectClass.avatar | ObjectClass.avatar_bot | ObjectClass.avatar_bot_agile | ObjectClass.avatar_bot_agile_no_weapon | 
+        ObjectClass.avatar_bot_max | ObjectClass.avatar_bot_max_no_weapon | ObjectClass.avatar_bot_reinforced | 
+        ObjectClass.avatar_bot_reinforced_no_weapon | ObjectClass.avatar_bot_standard | ObjectClass.avatar_bot_standard_no_weapon =>
+        equipment match {
+          case Some(tool: Tool) if tool.Definition == GlobalDefinitions.bank =>
+            obj.Actor ! CommonMessages.Use(player, equipment)
+
+          case Some(tool: Tool) if tool.Definition == GlobalDefinitions.medicalapplicator =>
+            obj.Actor ! CommonMessages.Use(player, equipment)
+          case _ => ()
+        }
+
+        case _ =>
+      }
+    }
+  }
+
   def handleUseLocker(locker: Locker, equipment: Option[Equipment], msg: UseItemMessage): Unit = {
     equipment match {
       case Some(item) =>

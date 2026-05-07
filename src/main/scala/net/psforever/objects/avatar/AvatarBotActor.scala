@@ -3,19 +3,24 @@ package net.psforever.objects.avatar
 
 import akka.actor.{Actor, ActorRef}
 import net.psforever.actors.zone.ShootingRangeTargetSpawner
+import net.psforever.objects.{GlobalDefinitions, Tool}
 import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.equipment._
 import net.psforever.objects.serverobject.aura.{Aura, AuraEffectBehavior}
+import net.psforever.objects.serverobject.CommonMessages
 import net.psforever.objects.serverobject.damage.Damageable.Target
 import net.psforever.objects.serverobject.damage.{AggravatedBehavior, Damageable, DamageableEntity}
 import net.psforever.objects.vital.resolution.ResolutionCalculations.Output
 import net.psforever.objects.zones._
 import net.psforever.packet.game._
 import net.psforever.types._
+import net.psforever.services.Service
 import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
 import net.psforever.services.local.{LocalAction, LocalServiceMessage}
 import net.psforever.objects.serverobject.environment.interaction.RespondsToZoneEnvironment
+import net.psforever.objects.serverobject.repair.Repairable
 import net.psforever.objects.sourcing.PlayerSource
+import net.psforever.objects.vital.{HealFromEquipment, RepairFromEquipment}
 import net.psforever.objects.vital.etc.SuicideReason
 import net.psforever.objects.vital.interaction.{DamageInteraction, DamageResult}
 
@@ -82,6 +87,91 @@ class AvatarBotActor(bot: AvatarBot, spawnerActor: ActorRef)
 
         case AvatarBot.Release() =>
           release()
+
+        case CommonMessages.Use(user, Some(item: Tool))
+          if item.Definition == GlobalDefinitions.medicalapplicator && bot.isAlive =>
+          //heal
+          val originalHealth = bot.Health
+          val definition = bot.Definition
+          if (
+            bot.MaxHealth > 0 && originalHealth < bot.MaxHealth &&
+            user.Faction == bot.Faction &&
+            item.Magazine > 0 &&
+            Vector3.Distance(user.Position, bot.Position) < definition.RepairDistance
+          ) {
+            val zone = bot.Zone
+            val events = zone.AvatarEvents
+            val uname = user.Name
+            val guid = bot.GUID
+            if (!(bot.isMoving || user.isMoving)) { //only allow stationary heals
+              val newHealth = bot.Health = originalHealth + 10
+              val magazine = item.Discharge()
+              events ! AvatarServiceMessage(
+                uname,
+                AvatarAction.SendResponse(
+                  Service.defaultPlayerGUID,
+                  InventoryStateMessage(item.AmmoSlot.Box.GUID, item.GUID, magazine.toLong)
+                )
+              )
+              events ! AvatarServiceMessage(zone.id, AvatarAction.PlanetsideAttributeToAll(guid, 0, newHealth))
+              bot.LogActivity(
+                HealFromEquipment(
+                  PlayerSource(user),
+                  GlobalDefinitions.medicalapplicator,
+                  newHealth - originalHealth
+                )
+              )
+            }
+            //progress bar remains visible for all heal attempts
+            events ! AvatarServiceMessage(
+              uname,
+              AvatarAction.SendResponse(
+                Service.defaultPlayerGUID,
+                RepairMessage(guid, bot.Health * 100 / definition.MaxHealth)
+              )
+            )
+          }
+
+        case CommonMessages.Use(user, Some(item: Tool)) if item.Definition == GlobalDefinitions.bank =>
+          val originalArmor = bot.Armor
+          val definition = bot.Definition
+          if (
+            bot.MaxArmor > 0 && originalArmor < bot.MaxArmor &&
+            user.Faction == bot.Faction &&
+            item.AmmoType == Ammo.armor_canister && item.Magazine > 0 &&
+            Vector3.Distance(user.Position, bot.Position) < definition.RepairDistance
+          ) {
+            val zone = bot.Zone
+            val events = zone.AvatarEvents
+            val uname = user.Name
+            val guid = bot.GUID
+            if (!(bot.isMoving || user.isMoving)) { //only allow stationary repairs
+              val newArmor = bot.Armor =
+                originalArmor + Repairable.applyLevelModifier(user, item, RepairToolValue(item)).toInt + definition.RepairMod
+              val magazine = item.Discharge()
+              events ! AvatarServiceMessage(
+                uname,
+                AvatarAction.SendResponse(
+                  Service.defaultPlayerGUID,
+                  InventoryStateMessage(item.AmmoSlot.Box.GUID, item.GUID, magazine.toLong)
+                )
+              )
+              events ! AvatarServiceMessage(zone.id, AvatarAction.PlanetsideAttributeToAll(guid, 4, bot.Armor))
+              bot.LogActivity(
+                RepairFromEquipment(
+                  PlayerSource(user),
+                  GlobalDefinitions.bank,
+                  newArmor - originalArmor
+                )
+              )
+            }
+            //progress bar remains visible for all repair attempts
+            events ! AvatarServiceMessage(
+              uname,
+              AvatarAction
+                .SendResponse(Service.defaultPlayerGUID, RepairMessage(guid, bot.Armor * 100 / bot.MaxArmor))
+            )
+          }
 
         case _ => ;
       }
@@ -403,6 +493,16 @@ class AvatarBotActor(bot: AvatarBot, spawnerActor: ActorRef)
         super.CancelJammeredSound(obj)
       case _ => ;
     }
+
+  def RepairToolValue(item: Tool): Float = {
+    item.AmmoSlot.Box.Definition.repairAmount +
+    (if (bot.ExoSuit != ExoSuitType.MAX) {
+      item.FireMode.Add.Damage0
+    }
+    else {
+      item.FireMode.Add.Damage3
+    })
+  }
 
   def UpdateAuraEffect(target: AuraEffectBehavior.Target) : Unit = {
     import net.psforever.services.avatar.{AvatarAction, AvatarServiceMessage}
