@@ -141,8 +141,8 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
     } else {
       airVehicleSpawns.foreach{case (pos, yaw) => CreateVehicleTarget(pos, yaw, true)}
       groundVehicleSpawns.foreach{case (pos, yaw) => CreateVehicleTarget(pos, yaw, false)}
-      infantrySpawns.foreach{case (pos, yaw) => CreateInfantryTarget(pos, yaw, false)}
-      infantrySpawnsMAX.foreach{case (pos, yaw) => CreateInfantryTarget(pos, yaw, true)}
+      infantrySpawns.foreach{case (pos, yaw) => CreateInfantryTarget(pos, false)}
+      infantrySpawnsMAX.foreach{case (pos, yaw) => CreateInfantryTarget(pos, true)}
 
       log.info(s"Enabled target spawns for zone ${zone.id}")
     }
@@ -154,7 +154,7 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
    * @param facingYaw the direction the target will be facing
    * @param isMAX if this target is a MAX unit
    */
-  def CreateInfantryTarget(position: Vector3, facingYaw: Float, isMAX: Boolean): Unit = {
+  def CreateInfantryTarget(position: Vector3, isMAX: Boolean): Unit = {
     val definition = if (isMAX) GlobalDefinitions.avatar_bot_max_no_weapon else Random.nextInt(3) match {
       case 0 => GlobalDefinitions.avatar_bot_agile_no_weapon
       case 1 => GlobalDefinitions.avatar_bot_reinforced_no_weapon
@@ -177,6 +177,15 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
       case 3 => CharacterVoice.Voice4
       case 4 => CharacterVoice.Voice5
     }
+
+    val facingYaw = if (isMAX) infantrySpawnsMAX.find(_._1 == position) match {
+        case Some((_, yaw)) => yaw
+        case _ => 0
+      }
+    else infantrySpawns.find(_._1 == position) match {
+        case Some((_, yaw)) => yaw
+        case _ => 0
+      }
 
     val bot = AvatarBot(name, faction, gender, head, voice, definition)
     bot.Position = position
@@ -288,7 +297,7 @@ class ShootingRangeTargetSpawnerActor(zone: Zone) extends Actor {
     //spawn a replacement bot
     context.system.scheduler.scheduleOnce(
       5.seconds,
-      new Runnable() { override def run(): Unit = CreateInfantryTarget(bot.Position, bot.Orientation.z, bot.ExoSuit == ExoSuitType.MAX) }
+      new Runnable() { override def run(): Unit = CreateInfantryTarget(bot.Position, bot.ExoSuit == ExoSuitType.MAX) }
     )
     //unregister bot (delay is to prevent ValidObjects from complaining if the bot is getting hit too quickly when it is destroyed)
     context.system.scheduler.scheduleOnce(

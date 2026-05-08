@@ -59,6 +59,7 @@ class AvatarBotActor(bot: AvatarBot, spawnerActor: ActorRef)
   /** suffocating, or regaining breath? */
   var submergedCondition: Option[OxygenState] = None
   private var canEmote = false
+  private var canRotate = false
 
   override def postStop(): Unit = {
     EndAllEffects()
@@ -371,6 +372,7 @@ class AvatarBotActor(bot: AvatarBot, spawnerActor: ActorRef)
     bot.Spawn()
     bot.Zone.Population ! Zone.Bots.Spawn(bot)
     canEmote = true
+    canRotate = true
     scheduler.scheduleAtFixedRate(new Runnable() { override def run(): Unit = tickLogic() }, 0, 250, TimeUnit.MILLISECONDS)
   }
 
@@ -408,6 +410,20 @@ class AvatarBotActor(bot: AvatarBot, spawnerActor: ActorRef)
     val zone = bot.Zone
     if (!bot.Destroyed && zone.AllPlayers.size > 0) {
       bot.zoneInteractions()
+      val rotateRNG = Random.nextDouble()
+      if (canRotate) {
+        if (rotateRNG > 0.95) {
+          val amount = 5f + Random.nextInt(10)
+          val finalRotation = if (Random.nextBoolean()) -amount else amount
+          bot.Orientation = Vector3(bot.Orientation.x, bot.Orientation.y, (bot.Orientation.z + finalRotation) % 360)
+          canRotate = false
+          //rotation cooldown
+          context.system.scheduler.scheduleOnce(
+            2.seconds,
+            new Runnable() { override def run(): Unit = if (!bot.Destroyed) canRotate = true }
+          )
+        }
+      }
       zone.AvatarEvents ! AvatarServiceMessage(
         zone.id,
         AvatarAction.PlayerState(
