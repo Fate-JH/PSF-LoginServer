@@ -1,6 +1,7 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.sourcing
 
+import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.ce.Deployable
 import net.psforever.objects.definition.ObjectDefinition
 import net.psforever.objects.serverobject.affinity.FactionAffinity
@@ -49,6 +50,7 @@ object SourceEntry {
   def apply(target: PlanetSideGameObject with FactionAffinity): SourceEntry = {
     target match {
       case obj: Player           => PlayerSource(obj)
+      case obj: AvatarBot        => PlayerSource(obj)
       case obj: Vehicle          => VehicleSource(obj)
       case obj: FacilityTurret   => TurretSource(obj)
       case obj: Amenity          => AmenitySource(obj)

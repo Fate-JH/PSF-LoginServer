@@ -1,6 +1,7 @@
 // Copyright (c) 2021 PSForever
 package net.psforever.objects.geometry
 
+import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.ballistics.Projectile
 import net.psforever.objects.geometry.d3._
 import net.psforever.objects.sourcing.{PlayerSource, SourceEntry}
@@ -151,6 +152,13 @@ object GeometryForm {
           p.Position,
           radius + radialOffset,
           heightOffset
+        )
+      case b: AvatarBot =>
+        val radialOffset = if(b.ExoSuit == ExoSuitType.MAX) 0.25f else 0f
+        Cylinder(
+          b.Position,
+          radius + radialOffset,
+          GlobalDefinitions.MaxDepth(b)
         )
       case _ =>
         invalidCylinder

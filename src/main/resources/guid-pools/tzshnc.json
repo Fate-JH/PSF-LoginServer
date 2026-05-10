@@ -1,0 +1,14 @@
+[
+  {
+    "Name": "environment",
+    "Start": 0,
+    "Max": 896,
+    "Selector": "specific"
+  },
+  {
+    "Name": "bots",
+    "Start": 1300,
+    "Max": 1600,
+    "Selector": "random"
+  }
+]

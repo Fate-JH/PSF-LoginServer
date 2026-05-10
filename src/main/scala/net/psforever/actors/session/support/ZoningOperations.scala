@@ -352,6 +352,9 @@ class ZoningOperations(
       .foreach { targetPlayer =>
         sendResponse(PlanetsideAttributeMessage(targetPlayer.GUID, 1, 120))
       }
+    //load active bots in zone
+    val bots = continent.BotAvatars
+    bots.foreach(bot => sendResponse(OCM.apply(bot)))
     //load corpses in zone
     continent.Corpses.foreach {
       spawn.DepictPlayerAsCorpse
@@ -887,30 +890,18 @@ class ZoningOperations(
         RequestSanctuaryZoneSpawn(player, player.Zone.Number)
       // leveraging SetZone for now because the VR zones have no "proper" spawn points configured yet
       case 17 =>
-        if (player.Zone.id != "tzshtr") {
-          context.self ! SessionActor.SetZone("tzshtr", vrShootingZoneSpawns.toArray.apply(rand.nextInt(vrShootingZoneSpawns.size)))
-        }
+        context.self ! SessionActor.SetZone("tzshtr", vrShootingZoneSpawns.toArray.apply(rand.nextInt(vrShootingZoneSpawns.size)))
       case 18 =>
-        if (player.Zone.id != "tzshnc") {
-          context.self ! SessionActor.SetZone("tzshnc", vrShootingZoneSpawns.toArray.apply(rand.nextInt(vrShootingZoneSpawns.size)))
-        }
+        context.self ! SessionActor.SetZone("tzshnc", vrShootingZoneSpawns.toArray.apply(rand.nextInt(vrShootingZoneSpawns.size)))
       case 19 =>
-        if (player.Zone.id != "tzshvs") {
-          context.self ! SessionActor.SetZone("tzshvs", vrShootingZoneSpawns.toArray.apply(rand.nextInt(vrShootingZoneSpawns.size)))
-        }
+        context.self ! SessionActor.SetZone("tzshvs", vrShootingZoneSpawns.toArray.apply(rand.nextInt(vrShootingZoneSpawns.size)))
       case 20 =>
-        if (player.Zone.id != "tzdrtr") {
-          context.self ! SessionActor.SetZone("tzdrtr", vrDrivingAreaSpawns.toArray.apply(rand.nextInt(vrDrivingAreaSpawns.size)))
-        }
+        context.self ! SessionActor.SetZone("tzdrtr", vrDrivingAreaSpawns.toArray.apply(rand.nextInt(vrDrivingAreaSpawns.size)))
       case 21 =>
-        if (player.Zone.id != "tzdrnc") {
-          context.self ! SessionActor.SetZone("tzdrnc", vrDrivingAreaSpawns.toArray.apply(rand.nextInt(vrDrivingAreaSpawns.size)))
-        }
+        context.self ! SessionActor.SetZone("tzdrnc", vrDrivingAreaSpawns.toArray.apply(rand.nextInt(vrDrivingAreaSpawns.size)))
       case 22 =>
-        if (player.Zone.id != "tzdrvs") {
-          context.self ! SessionActor.SetZone("tzdrvs", vrDrivingAreaSpawns.toArray.apply(rand.nextInt(vrDrivingAreaSpawns.size)))
-        }
-      case _ =>
+        context.self ! SessionActor.SetZone("tzdrvs", vrDrivingAreaSpawns.toArray.apply(rand.nextInt(vrDrivingAreaSpawns.size)))
+      case _ => 
         log.warn(s"Received TrainingZoneMessage that requests unexpected zone number ${pkt.zone.guid}?")
     }
   }
@@ -1280,9 +1271,11 @@ class ZoningOperations(
           ICS.FindZone(_.id.equals(zoneId), context.self)
         ))
       } else if (player.HasGUID) {
-        if (player.IsInVRZone && !zoneId.startsWith("tz")) {
-          // reset the player to default gear to prevent them from smuggling things out of VR
-          log.info(s"${player.Name} is exiting VR Training, resetting ${player.Sex.possessive} loadout")
+        if (zoneId.startsWith("tz") || player.IsInVRZone) {
+          // reset the players loadout when entering or exiting any VR Training zone
+          // this is to prevent both entering the VR Driving Area with an ExoSuit too heavy to drive,
+          // or smuggling special equipment out of the VR Shooting Range
+          log.info(s"${player.Name} is zoning to or from a VR Training zone, resetting ${player.Sex.possessive} loadout")
           val newPlayer = Player.Respawn(player)
           DefinitionUtil.applyDefaultLoadout(newPlayer)
           session = session.copy(player = newPlayer)
@@ -3176,10 +3169,12 @@ class ZoningOperations(
 
             case _ if player.HasGUID => // player is deconstructing self or instant action
               val player_guid = player.GUID
-              sendResponse(ObjectDeleteMessage(player_guid, unk1=1))
+              // entering or exiting VR zones uses a fade-out effect for the player instead of the usual green cloud deconstruction effect
+              val effect = if (player.IsInVRZone || zoneId.startsWith("tz")) 2 else 1
+              sendResponse(ObjectDeleteMessage(player_guid, unk1=effect))
               continent.AvatarEvents ! AvatarServiceMessage(
                 continent.id,
-                AvatarAction.ObjectDelete(player_guid, player_guid, unk=1)
+                AvatarAction.ObjectDelete(player_guid, player_guid, unk=effect)
               )
               InGameHistory.SpawnReconstructionActivity(player, toZoneNumber, betterSpawnPoint)
               LoadZoneAsPlayerUsing(player, pos, ori, toSide, zoneId)

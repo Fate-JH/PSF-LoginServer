@@ -27,17 +27,28 @@ class InteractWithRadiationClouds(
       val position = target.Position
       projectiles
         .foreach { projectile =>
-          target.Actor ! Vitality.Damage(
-            DamageInteraction(
-              SourceEntry(target),
-              RadiationReason(
-                ProjectileQuality.modifiers(projectile, DamageResolution.Radiation, target, target.Position, user),
-                target.DamageModel,
-                RadiationCloudInteraction.RadiationShieldingFrom(target)
-              ),
-              position
-            ).calculate()
-          )
+          val shouldDamage = user match {
+            case Some(player) if (player.IsInVRZone && target.Faction == player.Faction) =>
+              //disable self-damage and friendly-fire in VR zones
+              false
+            case Some(player) =>
+              true
+            case None =>
+              true
+          }
+          if (shouldDamage) {
+            target.Actor ! Vitality.Damage(
+              DamageInteraction(
+                SourceEntry(target),
+                RadiationReason(
+                  ProjectileQuality.modifiers(projectile, DamageResolution.Radiation, target, target.Position, user),
+                  target.DamageModel,
+                  RadiationCloudInteraction.RadiationShieldingFrom(target)
+                ),
+                position
+              ).calculate()
+            )
+          }
         }
     }
   }

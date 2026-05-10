@@ -2,6 +2,7 @@
 package net.psforever.actors.session.support
 
 import akka.actor.{ActorContext, ActorRef, Cancellable, typed}
+import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.interior.Sidedness
@@ -393,9 +394,17 @@ class GeneralOperations(
             0
           }
           Some(TargetInfo(player.GUID, health, armor))
+        case Some(bot: AvatarBot) =>
+          val health = bot.Health.toFloat / bot.MaxHealth
+          val armor = if (bot.MaxArmor > 0) {
+            bot.Armor.toFloat / bot.MaxArmor
+          } else {
+            0
+          }
+          Some(TargetInfo(bot.GUID, health, armor))
         case _ =>
           log.warn(
-            s"TargetingImplantRequest: the info that ${player.Name} requested for target ${x.target_guid} is not for a player"
+            s"TargetingImplantRequest: the info that ${player.Name} requested for target ${x.target_guid} is not for a player or bot"
           )
           None
       }
@@ -1060,9 +1069,7 @@ class GeneralOperations(
   }
 
   def trainingGriefWarning(): Unit = {
-    //don't know the correct ChatMessageType for this one yet; 
-    //it's supposed to use a pop-up that takes 5 seconds before you are allowed to close it, so disabled for now
-    //sendResponse(ChatMsg(ChatMessageType.CMT_QUIT, wideContents=true, "", "@TrainingGriefWarning", None))
+    sendResponse(GenericActionMessage(GenericAction.TrainingGriefWarning))
   }
 
   def noVoicedChat(pkt: PlanetSideGamePacket): Unit = {
@@ -1195,6 +1202,27 @@ class GeneralOperations(
         case Some(tool: Tool) if tool.Definition == GlobalDefinitions.medicalapplicator =>
           obj.Actor ! CommonMessages.Use(player, equipment)
         case _ => ()
+      }
+    }
+  }
+
+  def handleUseBot(obj: AvatarBot, equipment: Option[Equipment], msg: UseItemMessage): Unit = {
+    sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
+    if (msg.unk3) {
+      msg.object_id match {
+        case ObjectClass.avatar | ObjectClass.avatar_bot | ObjectClass.avatar_bot_agile | ObjectClass.avatar_bot_agile_no_weapon | 
+        ObjectClass.avatar_bot_max | ObjectClass.avatar_bot_max_no_weapon | ObjectClass.avatar_bot_reinforced | 
+        ObjectClass.avatar_bot_reinforced_no_weapon | ObjectClass.avatar_bot_standard | ObjectClass.avatar_bot_standard_no_weapon =>
+        equipment match {
+          case Some(tool: Tool) if tool.Definition == GlobalDefinitions.bank =>
+            obj.Actor ! CommonMessages.Use(player, equipment)
+
+          case Some(tool: Tool) if tool.Definition == GlobalDefinitions.medicalapplicator =>
+            obj.Actor ! CommonMessages.Use(player, equipment)
+          case _ => ()
+        }
+
+        case _ =>
       }
     }
   }

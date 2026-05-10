@@ -725,7 +725,7 @@ class WeaponAndProjectileOperations(
             proxy.Position = hitPos
             proxy.WhichSide = Sidedness.StrictlyBetweenSides
             val radiusSquared = proxy.profile.LashRadius * proxy.profile.LashRadius
-            var availableTargets = sessionLogic.localSector.livePlayerList
+            var availableTargets = sessionLogic.localSector.livePlayerList ++ sessionLogic.localSector.botList
             var unresolvedChainLashHits: Seq[VolumetricGeometry] = Seq(Point(hitPos))
             var uniqueChainLashTargets: Seq[(PlanetSideGameObject with FactionAffinity with Vitality, Projectile)] = Seq()
             while (unresolvedChainLashHits.nonEmpty) {

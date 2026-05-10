@@ -158,6 +158,7 @@ case class GameConfig(
     baseCertifications: Seq[Certification],
     warpGates: WarpGateConfig,
     cavernRotation: CavernRotationConfig,
+    virtualTraining: VirtualTrainingConfig,
     savedMsg: SavedMessageEvents,
     playerDraw: PlayerStateDrawSettings,
     doorsCanBeOpenedByMedAppFromThisDistance: Float,
@@ -216,6 +217,13 @@ case class CavernRotationConfig(
     simultaneousUnlockedZones: Int,
     enhancedRotationOrder: Seq[Int],
     forceRotationImmediately: Boolean
+)
+
+case class VirtualTrainingConfig(
+    shootingRangeTargetsEnabled: Boolean,
+    maleBotNames: List[String],
+    femaleBotNames: List[String],
+    universalBotNames: List[String]
 )
 
 case class SavedMessageEvents(

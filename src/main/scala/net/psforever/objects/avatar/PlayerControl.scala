@@ -417,11 +417,15 @@ class PlayerControl(player: Player, avatarActor: typed.ActorRef[AvatarActor.Comm
                 }
               val hasCavernEquipmentBenefit: Boolean =
                 terminalOpt.exists { terminal =>
-                  terminal.Owner match {
-                    case fac: Building =>
-                      fac.hasCavernLockBenefit && player.Faction == fac.Faction
-                    case _ =>
-                      false
+                  if (terminal.IsInVRZone) {
+                    true
+                  } else {
+                    terminal.Owner match {
+                      case fac: Building =>
+                        fac.hasCavernLockBenefit && player.Faction == fac.Faction
+                      case _ =>
+                        false
+                    }
                   }
                 }
               val dropPred =

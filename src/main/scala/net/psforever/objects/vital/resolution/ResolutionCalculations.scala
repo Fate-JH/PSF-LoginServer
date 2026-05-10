@@ -2,6 +2,7 @@
 package net.psforever.objects.vital.resolution
 
 import net.psforever.objects._
+import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.ce.Deployable
 import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.serverobject.damage.Damageable
@@ -236,6 +237,50 @@ object ResolutionCalculations {
               player.avatar.copy(stamina = math.max(0, player.avatar.stamina - math.floor(delta / 2).toInt))
           }
         }
+      case bot: AvatarBot if noDoubleLash(bot, data) =>
+        var (a, b) = damageValues
+        if (bot.isAlive && !(a == 0 && b == 0)) {
+          val originalHealth = bot.Health
+          if (data.cause.source.DamageToHealthOnly) {
+            bot.Health = SubtractWithRemainder(bot.Health, a)._1
+          } else {
+            var result = (0, 0)
+            bot.implants.flatten.find(x => x.definition.implantType == ImplantType.PersonalShield) match {
+              case Some(implant) if implant.active =>
+                // Subtract armour damage from stamina
+                result = SubtractWithRemainder(bot.stamina, b)
+                bot.stamina = result._1
+                b = result._2
+
+                // Then follow up with health damage if any stamina is left
+                result = SubtractWithRemainder(bot.stamina, a)
+                bot.stamina = result._1
+                a = result._2
+
+              case _ => ;
+            }
+
+            // Subtract any remaining armour damage from armour
+            result = SubtractWithRemainder(bot.Armor, b)
+            bot.Armor = result._1
+            b = result._2
+            // Then bleed through to health if armour ran out
+            result = SubtractWithRemainder(bot.Health, b)
+            bot.Health = result._1
+            b = result._2
+
+            // Finally, apply health damage to health
+            result = SubtractWithRemainder(bot.Health, a)
+            bot.Health = result._1
+            //if b > 0 (armor) or result._2 > 0 (health), then we did the math wrong
+          }
+
+          // If any health damage was applied also drain an amount of stamina equal to half the health damage
+          if (bot.Health < originalHealth) {
+            val delta = originalHealth - bot.Health
+            bot.stamina = math.max(0, bot.stamina - math.floor(delta / 2).toInt)
+          }
+        }
       case _ =>
     }
     DamageResult(targetBefore, SourceEntry(target), data)
@@ -336,7 +381,7 @@ object ResolutionCalculations {
 
   def WildcardApplication(damage: Any, data: DamageInteraction)(target: PlanetSideGameObject with FactionAffinity): DamageResult = {
     target match {
-      case _: Player =>
+      case _: Player | _: AvatarBot  =>
         val dam : (Int, Int) = damage match {
           case (a: Int, b: Int) => (a, b)
           case a: Int => (a, 0)

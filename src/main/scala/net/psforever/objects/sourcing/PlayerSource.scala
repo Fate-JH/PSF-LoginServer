@@ -1,6 +1,7 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.sourcing
 
+import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.avatar.scoring.Life
 import net.psforever.objects.definition.{AvatarDefinition, ExoSuitDefinition}
 import net.psforever.objects.serverobject.affinity.FactionAffinity
@@ -69,6 +70,27 @@ object PlayerSource {
       avatar.bep,
       progress = avatar.scorecard.CurrentLife,
       UniquePlayer(p.CharId, p.Name, p.Sex, faction)
+    )
+  }
+
+  def apply(b: AvatarBot): PlayerSource = {
+    val exosuit = b.ExoSuit
+    val faction = b.Faction
+    PlayerSource(
+      GlobalDefinitions.avatar,
+      exosuit,
+      seatedIn = None,
+      b.Health,
+      b.Armor,
+      b.Position,
+      b.Orientation,
+      b.Velocity,
+      b.Crouching,
+      b.Jumping,
+      ExoSuitDefinition.Select(exosuit, faction),
+      b.bep,
+      progress = tokenLife,
+      UniquePlayer(0L, b.Name, b.Sex, faction)
     )
   }
 
