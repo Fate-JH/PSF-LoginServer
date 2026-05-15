@@ -599,7 +599,7 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
     elapsedTime % 86400
   }
 
-  def SetTimeOfDay(requestedTime: Float) = {
+  def SetTimeOfDay(requestedTime: Float): Unit = {
     val now = System.currentTimeMillis()
 
     val requestedTimeDiff = requestedTime / timeOfDaySpeed
@@ -611,7 +611,7 @@ class Zone(val id: String, val map: ZoneMap, zoneNumber: Int) {
     timeOfDaySpeed
   }
 
-  def SetTimeOfDaySpeed(requestedSpeed: Float) = {
+  def SetTimeOfDaySpeed(requestedSpeed: Float): Unit = {
     // store current time
     val timeOfDay = GetTimeOfDay()
 
