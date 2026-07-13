@@ -19,9 +19,9 @@ import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
+import net.psforever.objects.serverobject.flag.base.{FlagType, OwnedFlag}
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
-import net.psforever.objects.serverobject.llu.CaptureFlag
 import net.psforever.objects.serverobject.locks.IFFLock
 import net.psforever.objects.serverobject.mblocker.Locker
 import net.psforever.objects.serverobject.mount.MountableEntity
@@ -389,7 +389,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
         ops.handleUseTelepadDeployable(obj, equipment, pkt, ops.useRouterTelepadSystem)
       case Some(obj: Utility.InternalTelepad) =>
         ops.handleUseInternalTelepad(obj, pkt, ops.useRouterTelepadSystem)
-      case Some(obj: CaptureFlag) =>
+      case Some(obj: OwnedFlag) if obj.ValidFlagType == FlagType.CaptureFlag =>
         ops.handleUseCaptureFlag(obj)
       case Some(_: WarpGate) =>
         ops.handleUseWarpGate(equipment)

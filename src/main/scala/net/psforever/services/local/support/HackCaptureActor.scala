@@ -5,11 +5,11 @@ import akka.actor.{Actor, ActorContext, ActorRef, Cancellable, Props}
 import net.psforever.actors.zone.{BuildingActor, ZoneActor}
 import net.psforever.objects.serverobject.CommonMessages
 import net.psforever.objects.serverobject.hackable.Hackable
-import net.psforever.objects.serverobject.llu.CaptureFlag
 import net.psforever.objects.serverobject.structures.{Building, StructureType}
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
 import net.psforever.objects.zones.Zone
 import net.psforever.objects.Default
+import net.psforever.objects.serverobject.flag.base.OwnedFlag
 import net.psforever.objects.serverobject.structures.participation.MajorFacilityHackParticipation
 import net.psforever.objects.sourcing.PlayerSource
 import net.psforever.packet.game.packets.{ChatMsg, GenericAction, HackState7, PlanetsideAttributeEnum}
@@ -126,7 +126,7 @@ class HackCaptureActor extends Actor {
       val hackTime = results.headOption.map { now - _.hack_timestamp }.getOrElse(facilityHackTime)
       // If LLU exists it was not delivered. Send resecured notifications
       building.GetFlag.collect {
-        case flag: CaptureFlag => target.Zone.LocalEvents ! FlagEnvelope(CaptureFlagManager.Lost(flag, CaptureFlagLostReasonEnum.Resecured))
+        case flag: OwnedFlag => target.Zone.LocalEvents ! CaptureFlagManager.Lost(flag, CaptureFlagLostReasonEnum.Resecured)
       }
       NotifyHackStateChange(target, isResecured = true)
       building.Participation.RewardFacilityCapture(
@@ -379,8 +379,8 @@ object HackCaptureActor {
                                            )
 
   final case class ResecureCaptureTerminal(target: CaptureTerminal, zone: Zone, hacker: PlayerSource)
-  final case class FlagCaptured(flag: CaptureFlag)
-  final case class FlagLost(flag: CaptureFlag)
+  final case class FlagCaptured(flag: OwnedFlag)
+  final case class FlagLost(flag: OwnedFlag)
 
   private final case class ProcessCompleteHacks()
 

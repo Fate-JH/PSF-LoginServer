@@ -13,6 +13,7 @@ import net.psforever.objects.avatar.scoring.{CampaignStatistics, ScoreCard, Sess
 import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.inventory.InventoryItem
+import net.psforever.objects.serverobject.flag.base.{FlagType, OwnedFlag}
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mount.Seat
 import net.psforever.objects.serverobject.tube.SpawnTube
@@ -46,7 +47,6 @@ import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.hackable.Hackable
-import net.psforever.objects.serverobject.llu.CaptureFlag
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
 import net.psforever.objects.serverobject.shuttle.OrbitalShuttlePad
@@ -1275,7 +1275,7 @@ class ZoningOperations(
         }
 
       // sync capture flags
-      case llu: CaptureFlag =>
+      case llu: OwnedFlag if llu.ValidFlagType == FlagType.CaptureFlag =>
         // Create LLU
         sendResponse(OCM.apply(llu))
         // Attach it to a player if it has a carrier

@@ -5,12 +5,13 @@ import net.psforever.objects.avatar.Certification
 import net.psforever.objects.ballistics._
 import net.psforever.objects.ce.DeployedItem
 import net.psforever.objects.definition._
-import net.psforever.objects.definition.converter._
+import net.psforever.objects.definition.converter.CaptureFlagConverter
 import net.psforever.objects.equipment._
 import net.psforever.objects.global.{GlobalDefinitionsAmmo, GlobalDefinitionsBuilding, GlobalDefinitionsDeployable, GlobalDefinitionsExoSuit, GlobalDefinitionsImplant, GlobalDefinitionsKit, GlobalDefinitionsMiscellaneous, GlobalDefinitionsProjectile, GlobalDefinitionsTool, GlobalDefinitionsVehicle}
 import net.psforever.objects.locker.LockerContainerDefinition
 import net.psforever.objects.serverobject.dome.ForceDomeDefinition
 import net.psforever.objects.serverobject.doors.DoorDefinition
+import net.psforever.objects.serverobject.flag.base.{FlagDefinition, FlagSocketDefinition, FlagType}
 import net.psforever.objects.serverobject.generator.GeneratorDefinition
 import net.psforever.objects.serverobject.locks.IFFLockDefinition
 import net.psforever.objects.serverobject.mblocker.LockerDefinition
@@ -23,13 +24,12 @@ import net.psforever.objects.serverobject.structures.{AmenityDefinition, Buildin
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminalDefinition
 import net.psforever.objects.serverobject.terminals.implant.ImplantTerminalMechDefinition
 import net.psforever.objects.serverobject.turret.FacilityTurretDefinition
+import net.psforever.objects.serverobject.zipline.GenericTeleportationDefinition
 import net.psforever.objects.vehicles.{InternalTelepadDefinition, Utility}
 import net.psforever.objects.vital.etc.{ShieldAgainstRadiation => _}
 import net.psforever.objects.vital._
 import net.psforever.types.{ExoSuitType, ImplantType, PlanetSideEmpire, Vector3}
 import net.psforever.types._
-import net.psforever.objects.serverobject.llu.{CaptureFlagDefinition, CaptureFlagSocketDefinition}
-import net.psforever.objects.serverobject.zipline.GenericTeleportationDefinition
 
 import scala.annotation.switch
 
@@ -1335,9 +1335,9 @@ object GlobalDefinitions {
 
   val main_terminal = new MainTerminalDefinition(473)
 
-  val llm_socket = new CaptureFlagSocketDefinition()
+  val llm_socket = new FlagSocketDefinition(450, FlagType.CaptureFlag)
 
-  val capture_flag = new CaptureFlagDefinition()
+  val capture_flag = new FlagDefinition(157, FlagType.CaptureFlag)
   capture_flag.Packet = CaptureFlagConverter
 
   val lodestar_repair_terminal = new MedicalTerminalDefinition(461)
@@ -1393,6 +1393,20 @@ object GlobalDefinitions {
   val force_dome_dsp_physics = new ForceDomeDefinition(321)
 
   val force_dome_tech_physics = new ForceDomeDefinition(323)
+
+  val vanu_module_node = new FlagSocketDefinition(936, FlagType.VanuModuleCradle)
+
+  val vanu_module_node_bind = new FlagSocketDefinition(937, FlagType.VanuModuleBind)
+
+  val vanu_module_node_defender = new FlagSocketDefinition(938, FlagType.VanuModuleDefender)
+
+  val vanu_module_node_energy = new FlagSocketDefinition(939, FlagType.VanuModuleEnergy)
+
+  val vanu_module_node_fortifier = new FlagSocketDefinition(930, FlagType.VanuModuleFortifier)
+
+  val vanu_module_node_vehicle = new FlagSocketDefinition(941, FlagType.VanuModuleVehicle)
+
+  val vanu_module_node_weapon = new FlagSocketDefinition(942, FlagType.VanuModuleWeapon)
 
   /*
   Buildings

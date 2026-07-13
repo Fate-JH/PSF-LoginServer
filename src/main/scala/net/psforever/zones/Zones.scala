@@ -13,8 +13,10 @@ import net.psforever.objects.definition.BasicDefinition
 import net.psforever.objects.guid.selector.{NumberSelector, RandomSelector, SpecificSelector}
 import net.psforever.objects.serverobject.dome.{ForceDomeDefinition, ForceDomePhysics}
 import net.psforever.objects.serverobject.doors.{Door, DoorDefinition, SpawnTubeDoor}
+import net.psforever.objects.serverobject.flag.base.FlagSocketDefinition
 import net.psforever.objects.serverobject.generator.Generator
-import net.psforever.objects.serverobject.llu.{CaptureFlagSocket, CaptureFlagSocketDefinition}
+import net.psforever.objects.serverobject.flag.llu.CaptureFlagSocket
+import net.psforever.objects.serverobject.flag.module.VanuModuleNode
 import net.psforever.objects.serverobject.locks.IFFLock
 import net.psforever.objects.serverobject.pad.{VehicleSpawnPad, VehicleSpawnPadDefinition}
 import net.psforever.objects.serverobject.painbox.{Painbox, PainboxDefinition}
@@ -444,7 +446,7 @@ object Zones {
           zoneMap.addLocalObject(
             obj.guid,
             CaptureFlagSocket.Constructor(
-              obj.objectDefinition.asInstanceOf[CaptureFlagSocketDefinition],
+              obj.objectDefinition.asInstanceOf[FlagSocketDefinition],
               obj.position
             ),
             owningBuildingGuid = ownerGuid
@@ -729,6 +731,15 @@ object Zones {
         case "spawn_pad" | "spawn_zone" =>
           zoneMap
             .addLocalObject(obj.guid, VirtualTrainingTeleporter.Constructor(obj.position))
+
+        case objectType if structure.isDefined && objectType.startsWith("vanu_module_node") =>
+          val definition = DefinitionUtil.fromString(objectType).asInstanceOf[FlagSocketDefinition]
+          zoneMap
+            .addLocalObject(
+              obj.guid,
+              VanuModuleNode.Constructor(definition, obj.position),
+              owningBuildingGuid = ownerGuid
+            )
 
         case _ => ()
       }

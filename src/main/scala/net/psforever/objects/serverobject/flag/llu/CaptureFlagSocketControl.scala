@@ -1,5 +1,5 @@
 // Copyright (c) 2020 PSForever
-package net.psforever.objects.serverobject.llu
+package net.psforever.objects.serverobject.flag.llu
 
 import akka.actor.Actor
 import net.psforever.objects.serverobject.affinity.FactionAffinityBehavior

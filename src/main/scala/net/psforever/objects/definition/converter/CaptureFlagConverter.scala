@@ -1,8 +1,8 @@
 package net.psforever.objects.definition.converter
 
 import net.psforever.objects.Default
+import net.psforever.objects.serverobject.flag.base.OwnedFlag
 import net.psforever.objects.serverobject.hackable.Hackable
-import net.psforever.objects.serverobject.llu.CaptureFlag
 import net.psforever.objects.serverobject.structures.Building
 import net.psforever.objects.sourcing.PlayerSource
 import net.psforever.packet.game.objectcreate.{CaptureFlagData, CommonFieldData, CommonFieldDataWithPlacement, PlacementData}
@@ -10,8 +10,8 @@ import net.psforever.types.{PlanetSideEmpire, Vector3}
 
 import scala.util.{Success, Try}
 
-object CaptureFlagConverter extends ObjectCreateConverter[CaptureFlag] {
-  override def ConstructorData(obj : CaptureFlag) : Try[CaptureFlagData] = {
+object CaptureFlagConverter extends ObjectCreateConverter[OwnedFlag]() {
+  override def ConstructorData(obj : OwnedFlag) : Try[CaptureFlagData] = {
     val hackInfo = obj.Owner.asInstanceOf[Building].CaptureTerminal.get.HackedBy match {
       case Some(hackInfo) => hackInfo
       case _ => Hackable.HackInfo(PlayerSource("", PlanetSideEmpire.NEUTRAL, Vector3.Zero), Default.GUID0, 0L, 0L, obj.Faction)
