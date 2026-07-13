@@ -3,6 +3,7 @@ package net.psforever.objects.global
 
 import net.psforever.objects.{GlobalDefinitions, SpawnPoint}
 import net.psforever.objects.avatar.Certification
+import net.psforever.objects.definition.converter.CaptureFlagConverter
 import net.psforever.objects.equipment.EffectTarget
 import net.psforever.objects.geometry.GeometryForm
 import net.psforever.objects.geometry.d3.VolumetricGeometry
@@ -733,6 +734,9 @@ object GlobalDefinitionsMiscellaneous {
     main_terminal.Damageable = false
     main_terminal.Repairable = false
 
+    capture_flag.Name = "capture_flag"
+    capture_flag.Packet = new CaptureFlagConverter
+
     lodestar_repair_terminal.Name = "lodestar_repair_terminal"
     lodestar_repair_terminal.Interval = 1000
     lodestar_repair_terminal.HealAmount = 60
@@ -1022,4 +1026,18 @@ object GlobalDefinitionsMiscellaneous {
     force_dome_tech_physics.ApplyProtectionTo = List(generator, manned_turret)
     force_dome_tech_physics.GeneratorOffset = Vector3(13.001f, -32.612f, 22.59f)
   }
+
+  vanu_module_node.Name = "vanu_module_node"
+
+  vanu_module_node_bind.Name = "vanu_module_node_bind"
+
+  vanu_module_node_defender.Name = "vanu_module_node_defender"
+
+  vanu_module_node_energy.Name = "vanu_module_node_energy"
+
+  vanu_module_node_fortifier.Name = "vanu_module_node_fortifier"
+
+  vanu_module_node_vehicle.Name = "vanu_module_node_vehicle"
+
+  vanu_module_node_weapon.Name = "vanu_module_node_weapon"
 }

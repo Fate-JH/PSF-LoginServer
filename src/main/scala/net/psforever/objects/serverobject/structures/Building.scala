@@ -16,7 +16,8 @@ import scalax.collection.{Graph, GraphEdge}
 import akka.actor.typed.scaladsl.adapter._
 import net.psforever.actors.zone.building.BuildingLogic
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
-import net.psforever.objects.serverobject.llu.{CaptureFlag, CaptureFlagSocket}
+import net.psforever.objects.serverobject.flag.base.OwnedFlag
+import net.psforever.objects.serverobject.flag.llu.CaptureFlagSocket
 import net.psforever.objects.serverobject.structures.participation.{MajorFacilityHackParticipation, NoParticipation, ParticipationLogic, TowerHackParticipation}
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
 import net.psforever.packet.game.packets.{Additional3, BuildingInfoUpdateMessage, DensityLevelUpdateMessage}
@@ -152,7 +153,7 @@ class Building(
       .find(_.Definition == GlobalDefinitions.llm_socket)
       .map(_.asInstanceOf[CaptureFlagSocket])
   }
-  def GetFlag: Option[CaptureFlag] = {
+  def GetFlag: Option[OwnedFlag] = {
     GetFlagSocket match {
       case Some(socket) => socket.captureFlag
       case None         => None

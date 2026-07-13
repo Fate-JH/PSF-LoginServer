@@ -2,12 +2,12 @@
 package net.psforever.services.local.support
 
 import akka.actor.{Actor, ActorContext, ActorRef, Cancellable, Props}
-import net.psforever.login.WorldSession
-import net.psforever.objects.{Default, PlanetSideGameObject, Player}
-import net.psforever.objects.guid.{GUIDTask, TaskWorkflow}
+import net.psforever.objects.{Default, GlobalDefinitions, PlanetSideGameObject, Player}
+import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, TaskWorkflow}
 import net.psforever.objects.serverobject.environment.{EnvironmentAttribute, EnvironmentTrait}
 import net.psforever.objects.serverobject.environment.interaction.InteractWithEnvironment
-import net.psforever.objects.serverobject.llu.CaptureFlag
+import net.psforever.objects.serverobject.flag.base.{FlagType, OwnedFlag}
+import net.psforever.objects.serverobject.flag.llu.CaptureFlagSocket
 import net.psforever.objects.serverobject.structures.{Building, WarpGate}
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
 import net.psforever.objects.zones.Zone
@@ -16,13 +16,15 @@ import net.psforever.packet.game.packets.{CaptureFlagUpdateMessage, ChatMsg, Fla
 import net.psforever.services.ServiceManager
 import net.psforever.services.ServiceManager.{Lookup, LookupResult}
 import net.psforever.services.base.{EventServiceSupport, GenericSupportEnvelopeOnly}
-import net.psforever.services.base.envelope.MessageEnvelope
+import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
 import net.psforever.services.base.message.{GenericObjectAction, SendResponse}
 import net.psforever.services.galaxy.GalaxyAction
 import net.psforever.services.local.LocalAction
 import net.psforever.types.{ChatMessageType, PlanetSideEmpire, PlanetSideGUID, Vector3}
 
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class CaptureFlagSupport(zone: Zone)
   extends EventServiceSupport {
@@ -58,40 +60,17 @@ class CaptureFlagManager(zone: Zone) extends Actor {
     case CaptureFlagManager.MapUpdate() =>
       DoMapUpdate()
 
-    case CaptureFlagManager.SpawnCaptureFlag(capture_terminal, target, hackingFaction) =>
-      val socket = capture_terminal.Owner.asInstanceOf[Building].GetFlagSocket.get
-      // Override CC message when looked at
-      zone.LocalEvents ! MessageEnvelope(
-        zone.id,
-        GenericObjectAction(
-          capture_terminal.GUID,
-          GenericObjectActionEnum.FlagSpawned.id
-        )
-      )
-      // Register LLU object create task and callback to create on clients
-      val flag: CaptureFlag = CaptureFlag.Constructor(
-        socket.Position - Vector3.z(value = 1),
-        socket.Orientation,
-        target,
-        socket.Owner,
-        hackingFaction
-      )
-      // Add the flag as an amenity and track it internally
-      socket.captureFlag = flag
-      TrackFlag(flag)
-      TaskWorkflow.execute(WorldSession.CallBackForTask(
-        GUIDTask.registerObject(zone.GUID, flag),
-        zone.LocalEvents,
-        MessageEnvelope(
-          zone.id,
-          LocalAction.LluSpawned(flag)
-        )
-      ))
-      // Broadcast chat message for LLU spawn
-      val owner = flag.Owner.asInstanceOf[Building]
-      CaptureFlagManager.ChatBroadcast(zone, CaptureFlagChatMessageStrings.CTF_FlagSpawned(owner, flag.Target))
+    case CaptureFlagManager.SpawnCaptureFlag(capture_terminal, target, hacking_faction) =>
+      capture_terminal.Owner.asInstanceOf[Building].GetFlagSocket match {
+        case Some(socket) if socket.captureFlag.isEmpty =>
+          RegisterAndSpawnCaptureFlag(capture_terminal, socket, socket.Position - Vector3.z(value = 1), socket.Orientation, target, hacking_faction)
+        case Some(_) =>
+          // Existing flag; todo what do we do?
+        case _ => ()
+          // No socket, not a LLU-capable facility
+      }
 
-    case CaptureFlagManager.Captured(flag: CaptureFlag) =>
+    case CaptureFlagManager.Captured(flag: OwnedFlag) =>
       val name = flag.Carrier match {
         case Some(carrier) => carrier.Name
         case None => "A soldier"
@@ -99,7 +78,6 @@ class CaptureFlagManager(zone: Zone) extends Actor {
       // Trigger Install sound
       zone.LocalEvents ! MessageEnvelope(
         zone.id,
-        PlanetSideGUID(-1),
         LocalAction.TriggerSound(TriggeredSound.LLUInstall, flag.Target.CaptureTerminal.get.Position, 20, 0.8000001f)
       )
       // Broadcast capture chat message
@@ -107,7 +85,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
       // Despawn flag
       HandleFlagDespawn(flag)
 
-    case CaptureFlagManager.Lost(flag: CaptureFlag, reason: CaptureFlagLostReasonEnum) =>
+    case CaptureFlagManager.Lost(flag: OwnedFlag, reason: CaptureFlagLostReasonEnum) =>
       reason match {
         case CaptureFlagLostReasonEnum.Resecured =>
           CaptureFlagManager.ChatBroadcast(
@@ -132,37 +110,20 @@ class CaptureFlagManager(zone: Zone) extends Actor {
       }
       HandleFlagDespawn(flag)
 
-    case CaptureFlagManager.PickupFlag(flag: CaptureFlag, player: Player) =>
-      flag.Carrier = Some(player)
-      zone.LocalEvents ! MessageEnvelope(
-        zone.id,
-        PlanetSideGUID(-1),
-        SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, 252))
-      )
-      zone.LocalEvents ! MessageEnvelope(
-        zone.id,
-        PlanetSideGUID(-1),
-        LocalAction.TriggerSound(TriggeredSound.LLUPickup, player.Position, 15, volume = 0.8f)
-      )
-      CaptureFlagManager.ChatBroadcast(
-        zone,
-        CaptureFlagChatMessageStrings.CTF_FlagPickedUp(player.Name, player.Faction, flag.Owner.asInstanceOf[Building].Name),
-        fanfare = false
-      )
-
-    case CaptureFlagManager.DropFlag(flag: CaptureFlag) =>
+    case CaptureFlagManager.DropFlag(flag: OwnedFlag) =>
       flag.Carrier match {
         case Some(player: Player) =>
-          val newFlag = flag
+          val zoneid = zone.id
+          val playerPosition = player.Position
           // Set the flag position to where the player is that dropped it
           flag.Position = player.Position
           // Remove attached player from flag
           flag.Carrier = None
           // Send drop packet
-          zone.LocalEvents ! MessageEnvelope(
-            zone.id,
-            PlanetSideGUID(-1),
-            SendResponse(ObjectDetachMessage(player.GUID, flag.GUID, player.Position, 0, 0, 0))
+          zone.LocalEvents ! BundledEnvelope(
+            MessageEnvelope(zoneid, SendResponse(ObjectDetachMessage(player.GUID, flag.GUID, playerPosition, 0, 0, 0))),
+            MessageEnvelope(zoneid, LocalAction.LluSpawned(flag)),
+            MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.LLUDrop, playerPosition, 15, volume = 0.8f))
           )
           // Send dropped chat message
           CaptureFlagManager.ChatBroadcast(
@@ -170,33 +131,84 @@ class CaptureFlagManager(zone: Zone) extends Actor {
             CaptureFlagChatMessageStrings.CTF_FlagDropped(player.Name, player.Faction, flag.Owner.asInstanceOf[Building].Name),
             fanfare = false
           )
-          HandleFlagDespawn(flag)
-          // Register LLU object create task and callback to create on clients
-          val replacementLlu = CaptureFlag.Constructor(
-            newFlag.Position,
-            newFlag.Orientation,
-            newFlag.Target,
-            newFlag.Owner,
-            player.Faction
-          )
-          // Add the flag as an amenity and track it internally
-          val socket = newFlag.Owner.asInstanceOf[Building].GetFlagSocket.get
-          socket.captureFlag = replacementLlu
-          TrackFlag(replacementLlu)
-          TaskWorkflow.execute(WorldSession.CallBackForTask(
-            GUIDTask.registerObject(zone.GUID, replacementLlu),
-            zone.LocalEvents,
-            MessageEnvelope(
-              zone.id,
-              LocalAction.LluSpawned(replacementLlu)
-            )
-          ))
         case _ =>
           log.warn("Tried to drop flag but flag has no carrier")
       }
 
+    case CaptureFlagManager.PickupFlag(flag: OwnedFlag, player: Player) =>
+      flag.Carrier = Some(player)
+      zone.LocalEvents ! BundledEnvelope(
+        MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, 252))),
+        MessageEnvelope(zone.id, LocalAction.TriggerSound(TriggeredSound.LLUPickup, player.Position, 15, volume = 0.8f))
+      )
+      CaptureFlagManager.ChatBroadcast(
+        zone,
+        CaptureFlagChatMessageStrings.CTF_FlagPickedUp(player.Name, player.Faction, flag.Owner.asInstanceOf[Building].Name),
+        fanfare = false
+      )
+
     case _ =>
       log.warn("Received unhandled message")
+  }
+
+  private def RegisterAndSpawnCaptureFlag(
+                                           captureTerminal: CaptureTerminal,
+                                           socket: CaptureFlagSocket,
+                                           position: Vector3,
+                                           orientation: Vector3,
+                                           target: Building,
+                                           hackingFaction: PlanetSideEmpire.Value
+                                         ): Unit = {
+    // Construct new flag
+    val flag = new OwnedFlag(GlobalDefinitions.capture_flag)
+    flag.Position = position
+    flag.Orientation = orientation
+    flag.Target = target
+    flag.Faction = hackingFaction
+    // Register LLU object create task and callback to create on clients
+    TaskWorkflow.execute(
+      TaskBundle(
+        new StraightforwardTask() {
+          private val func: () => Unit = SpawnCaptureFlagBehaviors(captureTerminal.GUID, socket, flag)
+          private val localSocket = socket
+
+          override def description(): String = s"register a ${localSocket.Definition.Name} for socket"
+
+          def action(): Future[Any] = {
+            func()
+            Future(true)
+          }
+        },
+        List(GUIDTask.registerObject(zone.GUID, flag))
+      )
+    )
+  }
+
+  private def SpawnCaptureFlagBehaviors(
+                                         captureTerminalGuid: PlanetSideGUID,
+                                         socket: CaptureFlagSocket,
+                                         flag: OwnedFlag
+                                       )(): Unit = {
+    val zone = socket.Zone
+    val owner = socket.Owner.asInstanceOf[Building]
+    // Add the flag as an amenity
+    socket.Owner.Amenities = flag
+    socket.captureFlag = flag
+    // Track new flag
+    TrackFlag(flag)
+    // 1.Override CC message when looked at, 2.Announce flag spawn
+    zone.LocalEvents ! BundledEnvelope(
+      MessageEnvelope(zone.id, GenericObjectAction(
+        captureTerminalGuid,
+        GenericObjectActionEnum.FlagSpawned.id
+      )),
+      MessageEnvelope(zone.id, LocalAction.LluSpawned(flag))
+    )
+    // Broadcast chat message for LLU spawn
+    CaptureFlagManager.ChatBroadcast(
+      zone,
+      CaptureFlagChatMessageStrings.CTF_FlagSpawned(owner, flag.Target)
+    )
   }
 
   private def DoMapUpdate(): Unit = {
@@ -223,8 +235,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
     galaxyService ! MessageEnvelope("", GalaxyAction.FlagMapUpdate(CaptureFlagUpdateMessage(zone.Number, flagInfo)))
   }
 
-  private def TrackFlag(flag: CaptureFlag): Unit = {
-    flag.Owner.Amenities = flag
+  private def TrackFlag(flag: OwnedFlag): Unit = {
     flags = flags :+ CaptureFlagEntry(flag)
     if (mapUpdateTick.isCancelled) {
       // Start sending map updates periodically
@@ -233,8 +244,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
     }
   }
 
-  private def UntrackFlag(flag: CaptureFlag): Unit = {
-    flag.Owner.RemoveAmenity(flag)
+  private def UntrackFlag(flag: OwnedFlag): Unit = {
     flags = flags.filterNot(x => x.flag eq flag)
     if (flags.isEmpty) {
       mapUpdateTick.cancel()
@@ -242,12 +252,14 @@ class CaptureFlagManager(zone: Zone) extends Actor {
     }
   }
 
-  private def HandleFlagDespawn(flag: CaptureFlag): Unit = {
+  private def HandleFlagDespawn(flag: OwnedFlag): Unit = {
     // Remove the flag as an amenity
-    flag.Owner.asInstanceOf[Building].GetFlagSocket.get.captureFlag = None
+    val flagOwner = flag.Owner.asInstanceOf[Building]
+    flagOwner.GetFlagSocket.get.captureFlag = None
+    flagOwner.RemoveAmenity(flag)
     UntrackFlag(flag)
     // Unregister LLU from clients,
-    zone.LocalEvents ! MessageEnvelope(zone.id, PlanetSideGUID(-1), LocalAction.LluDespawned(flag.GUID, flag.Position))
+    zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.LluDespawned(flag.GUID, flag.Position))
     // Then unregister it from the GUID pool
     TaskWorkflow.execute(GUIDTask.unregisterObject(zone.GUID, flag))
   }
@@ -257,13 +269,13 @@ object CaptureFlagManager {
   sealed trait Command
 
   final case class SpawnCaptureFlag(capture_terminal: CaptureTerminal, target: Building, hackingFaction: PlanetSideEmpire.Value) extends Command
-  final case class PickupFlag(flag: CaptureFlag, player: Player) extends Command
-  final case class DropFlag(flag: CaptureFlag) extends Command
-  final case class Captured(flag: CaptureFlag) extends Command
-  final case class Lost(flag: CaptureFlag, reason: CaptureFlagLostReasonEnum) extends Command
+  final case class PickupFlag(flag: OwnedFlag, player: Player) extends Command
+  final case class DropFlag(flag: OwnedFlag) extends Command
+  final case class Captured(flag: OwnedFlag) extends Command
+  final case class Lost(flag: OwnedFlag, reason: CaptureFlagLostReasonEnum) extends Command
   final case class MapUpdate()
 
-  private case class CaptureFlagEntry(flag: CaptureFlag) {
+  private case class CaptureFlagEntry(flag: OwnedFlag) {
     var currentMessageIndex: Int = 0
   }
 
@@ -284,7 +296,7 @@ object CaptureFlagManager {
     )
   }
 
-  private def ComposeWarningMessage(flag: CaptureFlag, buildingName: String, minutesLeft: Int): String = {
+  private def ComposeWarningMessage(flag: OwnedFlag, buildingName: String, minutesLeft: Int): String = {
     import CaptureFlagChatMessageStrings._
     val carrier = flag.Carrier
     val hasCarrier = carrier.nonEmpty
@@ -313,8 +325,9 @@ object CaptureFlagManager {
     zone
       .GUID(flagGuid)
       .collect {
-        case flag: CaptureFlag
-          if LoseFlagViolentlyToEnvironment(target, Set(EnvironmentAttribute.Water, EnvironmentAttribute.Lava, EnvironmentAttribute.Death)) /*||
+        case flag: OwnedFlag
+          if flag.ValidFlagType == FlagType.CaptureFlag &&
+            LoseFlagViolentlyToEnvironment(target, Set(EnvironmentAttribute.Water, EnvironmentAttribute.Lava, EnvironmentAttribute.Death)) /*||
             LoseFlagViolentlyToWarpGateEnvelope(zone, target)*/ =>
           flag.Destroyed = true
           zone.LocalEvents ! CaptureEnvelope(HackCaptureActor.FlagLost(flag))

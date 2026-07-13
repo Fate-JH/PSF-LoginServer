@@ -4,7 +4,7 @@ package net.psforever.services.local
 import net.psforever.objects.{Default, PlanetSideGameObject, TelepadDeployable, Vehicle}
 import net.psforever.objects.ce.{Deployable, DeployedItem}
 import net.psforever.objects.serverobject.doors.Door
-import net.psforever.objects.serverobject.llu.CaptureFlag
+import net.psforever.objects.serverobject.flag.base.OwnedFlag
 import net.psforever.objects.serverobject.terminals.{ProximityUnit, Terminal}
 import net.psforever.objects.vehicles.Utility
 import net.psforever.objects.zones.Zone
@@ -51,7 +51,7 @@ object LocalAction {
 
   final case class HackObject(target_guid: PlanetSideGUID, unk1: Long, unk2: HackState7) extends IsAHackMessage
 
-  final case class LluSpawned(llu: CaptureFlag) extends SelfRespondingEvent
+  final case class LluSpawned(llu: OwnedFlag) extends SelfRespondingEvent
 
   final case class LluDespawned(
                                  guid: PlanetSideGUID,

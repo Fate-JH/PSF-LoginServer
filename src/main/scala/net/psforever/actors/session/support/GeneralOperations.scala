@@ -5,6 +5,7 @@ import akka.actor.{ActorContext, ActorRef, Cancellable, typed}
 import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.doors.Door
+import net.psforever.objects.serverobject.flag.base.{FlagType, OwnedFlag}
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mblocker.Locker
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
@@ -41,7 +42,6 @@ import net.psforever.objects.equipment._
 import net.psforever.objects.guid._
 import net.psforever.objects.inventory.{Container, InventoryItem}
 import net.psforever.objects.locker.LockerContainer
-import net.psforever.objects.serverobject.llu.CaptureFlag
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.{CommonMessages, PlanetSideServerObject}
 import net.psforever.objects.vehicles._
@@ -472,7 +472,7 @@ class GeneralOperations(
       specialItemSlotGuid = None
       player.Carrying = None
       (continent.GUID(guid) match {
-        case Some(llu: CaptureFlag) => Some((llu, llu.Carrier))
+        case Some(llu: OwnedFlag) if llu.ValidFlagType == FlagType.CaptureFlag => Some((llu, llu.Carrier))
         case _ => None
       }) match {
         case Some((llu, Some(carrier: Player)))
@@ -1291,7 +1291,7 @@ class GeneralOperations(
         sendUseGeneralEntityMessage(captureTerminal, item)
       case _ if specialItemSlotGuid.nonEmpty =>
         continent.GUID(specialItemSlotGuid) match {
-          case Some(llu: CaptureFlag) =>
+          case Some(llu: OwnedFlag) if llu.ValidFlagType == FlagType.CaptureFlag =>
             if (llu.Target.GUID == captureTerminal.Owner.GUID) {
               continent.LocalEvents ! CaptureEnvelope(HackCaptureActor.FlagCaptured(llu))
             } else {
@@ -1533,7 +1533,7 @@ class GeneralOperations(
     recentTeleportAttemptTime = time
   }
 
-  def handleUseCaptureFlag(obj: CaptureFlag): Unit = {
+  def handleUseCaptureFlag(obj: OwnedFlag): Unit = {
     if (player.ZoningRequest != Zoning.Method.None) {
       sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
     }
