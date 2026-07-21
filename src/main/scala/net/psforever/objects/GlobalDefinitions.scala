@@ -1337,8 +1337,7 @@ object GlobalDefinitions {
 
   val llm_socket = new FlagSocketDefinition(450, FlagType.CaptureFlag)
 
-  val capture_flag = new FlagDefinition(157, FlagType.CaptureFlag)
-  capture_flag.Packet = CaptureFlagConverter
+  val capture_flag = new FlagDefinition(157)
 
   val lodestar_repair_terminal = new MedicalTerminalDefinition(461)
 
@@ -1393,6 +1392,8 @@ object GlobalDefinitions {
   val force_dome_dsp_physics = new ForceDomeDefinition(321)
 
   val force_dome_tech_physics = new ForceDomeDefinition(323)
+
+  val vanu_module_canister = new FlagDefinition(objectId = 935)
 
   val vanu_module_node = new FlagSocketDefinition(936, FlagType.VanuModuleCradle)
 

@@ -3,8 +3,7 @@ package net.psforever.objects.serverobject.flag.base
 
 import net.psforever.objects.serverobject.structures.AmenityDefinition
 
-class FlagDefinition(val objectId: Int, val ValidFlagType: FlagType)
-  extends AmenityDefinition(objectId)
-    with DesignatedFlagType {
+class FlagDefinition(val objectId: Int)
+  extends AmenityDefinition(objectId) {
   Name = "flag"
 }

@@ -1027,6 +1027,8 @@ object GlobalDefinitionsMiscellaneous {
     force_dome_tech_physics.GeneratorOffset = Vector3(13.001f, -32.612f, 22.59f)
   }
 
+  vanu_module_canister.Name = "vanu_module_canister"
+
   vanu_module_node.Name = "vanu_module_node"
 
   vanu_module_node_bind.Name = "vanu_module_node_bind"

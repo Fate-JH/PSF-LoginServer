@@ -16,7 +16,7 @@ import net.psforever.objects.serverobject.doors.{Door, DoorDefinition, SpawnTube
 import net.psforever.objects.serverobject.flag.base.FlagSocketDefinition
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.flag.llu.CaptureFlagSocket
-import net.psforever.objects.serverobject.flag.module.VanuModuleNode
+import net.psforever.objects.serverobject.flag.module.{VanuModuleNode, VanuModuleSpawn}
 import net.psforever.objects.serverobject.locks.IFFLock
 import net.psforever.objects.serverobject.pad.{VehicleSpawnPad, VehicleSpawnPadDefinition}
 import net.psforever.objects.serverobject.painbox.{Painbox, PainboxDefinition}
@@ -732,12 +732,20 @@ object Zones {
           zoneMap
             .addLocalObject(obj.guid, VirtualTrainingTeleporter.Constructor(obj.position))
 
-        case objectType if structure.isDefined && objectType.startsWith("vanu_module_node") =>
+        case objectType if structure.isDefined && objectType.equals("vanu_module_node") =>
+          zoneMap
+            .addLocalObject(
+              obj.guid,
+              VanuModuleNode.Constructor(GlobalDefinitions.vanu_module_node, obj.position),
+              owningBuildingGuid = ownerGuid
+            )
+
+        case objectType if structure.isDefined && objectType.startsWith("vanu_module_node_") =>
           val definition = DefinitionUtil.fromString(objectType).asInstanceOf[FlagSocketDefinition]
           zoneMap
             .addLocalObject(
               obj.guid,
-              VanuModuleNode.Constructor(definition, obj.position),
+              VanuModuleSpawn.Constructor(definition, obj.position),
               owningBuildingGuid = ownerGuid
             )
 
