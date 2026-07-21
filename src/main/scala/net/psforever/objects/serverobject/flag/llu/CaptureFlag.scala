@@ -1,7 +1,7 @@
 // Copyright (c) 2021 PSForever
 package net.psforever.objects.serverobject.flag.llu
 
-import net.psforever.objects.serverobject.flag.base.{FlagDefinition, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{FlagDefinition, FlagType, OwnedFlag}
 import net.psforever.objects.serverobject.structures.{AmenityOwner, Building}
 import net.psforever.objects.GlobalDefinitions
 import net.psforever.types.{PlanetSideEmpire, Vector3}
@@ -23,7 +23,7 @@ import net.psforever.types.{PlanetSideEmpire, Vector3}
  */
 object CaptureFlag {
   def apply(tDef: FlagDefinition): OwnedFlag = {
-    new OwnedFlag(tDef)
+    new OwnedFlag(tDef, FlagType.CaptureFlag)
   }
 
   def Constructor(pos: Vector3, ori: Vector3, target: Building, owner: AmenityOwner, faction: PlanetSideEmpire.Value) : OwnedFlag = {

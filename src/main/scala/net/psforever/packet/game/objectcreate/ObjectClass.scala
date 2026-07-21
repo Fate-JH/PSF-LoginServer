@@ -435,6 +435,7 @@ object ObjectClass {
   final val spawn_zone                      = 815
   final val targeting_laser_dispenser       = 851
   final val teleportpad_terminal            = 853
+  final val vanu_module_canister            = 935
 
   // For property overrides
   final val delivererv                = 239
@@ -1370,6 +1371,7 @@ object ObjectClass {
       case ObjectClass.order_terminal                  => DroppedItemData(CommonFieldData.codec_extra, "terminal")
       case ObjectClass.order_terminala                 => DroppedItemData(CommonFieldData.codec_extra, "terminal")
       case ObjectClass.order_terminalb                 => DroppedItemData(CommonFieldData.codec_extra, "terminal")
+      case ObjectClass.vanu_module_canister            => DroppedItemData(VanuModuleCanisterData.codec, "vanu module canister")
       //failure case
       case _ => defaultFailureCodec(objClass)
     }

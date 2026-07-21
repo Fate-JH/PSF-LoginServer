@@ -160,7 +160,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
                                            hackingFaction: PlanetSideEmpire.Value
                                          ): Unit = {
     // Construct new flag
-    val flag = new OwnedFlag(GlobalDefinitions.capture_flag)
+    val flag = new OwnedFlag(GlobalDefinitions.capture_flag, FlagType.CaptureFlag)
     flag.Position = position
     flag.Orientation = orientation
     flag.Target = target
