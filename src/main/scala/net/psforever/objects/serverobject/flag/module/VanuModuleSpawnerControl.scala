@@ -71,9 +71,10 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
                                         ): Unit = {
     // Construct new flag
     val zone = spawner.Zone
-    val flag = new OwnedFlag(GlobalDefinitions.vanu_module_canister, spawner.ValidFlagType)
+    val flag = new VanuModule(GlobalDefinitions.vanu_module_canister, spawner.ValidFlagType)
     flag.Position = position
     flag.Orientation = orientation
+    flag.Owner = spawner.Owner
     // Register object create task and callback to create on clients
     TaskWorkflow.execute(
       TaskBundle(

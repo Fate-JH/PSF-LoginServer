@@ -9,6 +9,7 @@ import net.psforever.objects.{Account, BoomerDeployable, BoomerTrigger, Construc
 import net.psforever.objects.avatar.{Avatar, AvatarBot, PlayerControl, SpecialCarry}
 import net.psforever.objects.ballistics.Projectile
 import net.psforever.objects.ce.{Deployable, DeployedItem}
+import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.definition.{BasicDefinition, KitDefinition, SpecialExoSuitDefinition}
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.equipment.Equipment
@@ -20,6 +21,7 @@ import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.flag.base.{FlagType, OwnedFlag}
+import net.psforever.objects.serverobject.flag.module.VanuModule
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
 import net.psforever.objects.serverobject.locks.IFFLock
@@ -119,9 +121,15 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       }
     }
     ops.fallHeightTracker(pos.z)
-//    if (isCrouching && !player.Crouching) {
-//      //dev stuff goes here
-//    }
+    if (isCrouching && !player.Crouching) {
+      //dev stuff goes here
+      val flag = new VanuModule(GlobalDefinitions.vanu_module, FlagType.VanuModuleEnergy)
+      flag.Position = pos + Vector3.z(value = 1f)
+      flag.Orientation = Vector3(0,0, player.Orientation.z)
+      //flag.Owner = continent.Buildings.values.head
+      flag.GUID = PlanetSideGUID(12000)
+      sendResponse(OCM.apply(flag))
+    }
     player.Position = pos
     player.Velocity = vel
     player.Orientation = Vector3(player.Orientation.x, pitch, yaw)

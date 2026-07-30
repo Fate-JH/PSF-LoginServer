@@ -4,7 +4,7 @@ package net.psforever.objects.definition.converter
 import net.psforever.objects.PlanetSideGameObject
 import net.psforever.packet.PlanetSideGamePacket
 import net.psforever.packet.game.packets.{ObjectCreateDetailedMessage, ObjectCreateMessage}
-import net.psforever.packet.game.objectcreate.ObjectCreateMessageParent
+import net.psforever.packet.game.objectcreate.{DroppedItemData, ObjectCreateMessageParent, PlacementData}
 
 /**
   * Compose an `ObjectCreateMessage` packet or, if requesting and allowing, an `ObjectCreateDetailedMessage` packet.
@@ -49,6 +49,18 @@ object OCM {
       obj.GUID,
       parent,
       definition.Packet.ConstructorData(obj).get
+    )
+  }
+
+  def dropped(obj: PlanetSideGameObject): PlanetSideGamePacket = {
+    val definition = obj.Definition
+    ObjectCreateMessage(
+      definition.ObjectId,
+      obj.GUID,
+      DroppedItemData(
+        PlacementData(obj.Position, obj.Orientation),
+        definition.Packet.ConstructorData(obj).get
+      )
     )
   }
 

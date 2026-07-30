@@ -3,7 +3,7 @@ package net.psforever.objects.global
 
 import net.psforever.objects.{GlobalDefinitions, SpawnPoint}
 import net.psforever.objects.avatar.Certification
-import net.psforever.objects.definition.converter.CaptureFlagConverter
+import net.psforever.objects.definition.converter.{CaptureFlagConverter, VanuModuleCanisterConverter}
 import net.psforever.objects.equipment.EffectTarget
 import net.psforever.objects.geometry.GeometryForm
 import net.psforever.objects.geometry.d3.VolumetricGeometry
@@ -1027,9 +1027,15 @@ object GlobalDefinitionsMiscellaneous {
     force_dome_tech_physics.GeneratorOffset = Vector3(13.001f, -32.612f, 22.59f)
   }
 
+  vanu_module.Name = "vanu_module"
+  vanu_module.Packet = new VanuModuleCanisterConverter
+
   vanu_module_canister.Name = "vanu_module_canister"
+  vanu_module_canister.Packet = new VanuModuleCanisterConverter
 
   vanu_module_node.Name = "vanu_module_node"
+  vanu_module_node.Damageable = false //maybe true?
+  vanu_module_node.Repairable = false
 
   vanu_module_node_bind.Name = "vanu_module_node_bind"
 
@@ -1042,4 +1048,7 @@ object GlobalDefinitionsMiscellaneous {
   vanu_module_node_vehicle.Name = "vanu_module_node_vehicle"
 
   vanu_module_node_weapon.Name = "vanu_module_node_weapon"
+
+  vanumodulebeam.Name = "vanumodulebeam"
+  vanumodulebeam.UseRadius = 1.8115f //this is plain `radius`, not `use_radius`
 }
