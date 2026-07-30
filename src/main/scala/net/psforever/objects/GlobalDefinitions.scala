@@ -9,6 +9,7 @@ import net.psforever.objects.definition.converter.CaptureFlagConverter
 import net.psforever.objects.equipment._
 import net.psforever.objects.global.{GlobalDefinitionsAmmo, GlobalDefinitionsBuilding, GlobalDefinitionsDeployable, GlobalDefinitionsExoSuit, GlobalDefinitionsImplant, GlobalDefinitionsKit, GlobalDefinitionsMiscellaneous, GlobalDefinitionsProjectile, GlobalDefinitionsTool, GlobalDefinitionsVehicle}
 import net.psforever.objects.locker.LockerContainerDefinition
+import net.psforever.objects.serverobject.beam.VanuModuleBeamDefinition
 import net.psforever.objects.serverobject.dome.ForceDomeDefinition
 import net.psforever.objects.serverobject.doors.DoorDefinition
 import net.psforever.objects.serverobject.flag.base.{FlagDefinition, FlagSocketDefinition, FlagType}
@@ -1393,6 +1394,8 @@ object GlobalDefinitions {
 
   val force_dome_tech_physics = new ForceDomeDefinition(323)
 
+  val vanu_module = new FlagDefinition(objectId = 934)
+
   val vanu_module_canister = new FlagDefinition(objectId = 935)
 
   val vanu_module_node = new FlagSocketDefinition(936, FlagType.VanuModuleCradle)
@@ -1408,6 +1411,8 @@ object GlobalDefinitions {
   val vanu_module_node_vehicle = new FlagSocketDefinition(941, FlagType.VanuModuleVehicle)
 
   val vanu_module_node_weapon = new FlagSocketDefinition(942, FlagType.VanuModuleWeapon)
+
+  val vanumodulebeam = new VanuModuleBeamDefinition()
 
   /*
   Buildings

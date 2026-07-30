@@ -109,5 +109,5 @@ class OwnedFlag(private val fDef: FlagDefinition, val ValidFlagType: FlagType)
 
   def InitialSpawnTime: Long = flag.InitialSpawnTime
 
-  def Definition: AmenityDefinition = flag.Definition
+  def Definition: AmenityDefinition = fDef
 }

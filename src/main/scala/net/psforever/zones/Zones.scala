@@ -11,6 +11,7 @@ import io.circe.parser._
 import net.psforever.objects.{GlobalDefinitions, LocalLockerItem, LocalProjectile}
 import net.psforever.objects.definition.BasicDefinition
 import net.psforever.objects.guid.selector.{NumberSelector, RandomSelector, SpecificSelector}
+import net.psforever.objects.serverobject.beam.VanuModuleBeam
 import net.psforever.objects.serverobject.dome.{ForceDomeDefinition, ForceDomePhysics}
 import net.psforever.objects.serverobject.doors.{Door, DoorDefinition, SpawnTubeDoor}
 import net.psforever.objects.serverobject.flag.base.FlagSocketDefinition
@@ -746,6 +747,14 @@ object Zones {
             .addLocalObject(
               obj.guid,
               VanuModuleSpawn.Constructor(definition, obj.position),
+              owningBuildingGuid = ownerGuid
+            )
+
+        case objectType if objectType.startsWith("vanumodulebeam") =>
+          zoneMap
+            .addLocalObject(
+              obj.guid,
+              VanuModuleBeam.Constructor(obj.position, GlobalDefinitions.vanumodulebeam),
               owningBuildingGuid = ownerGuid
             )
 

@@ -1,15 +1,54 @@
 // Copyright (c) 2026 PSForever
 package net.psforever.packet.game.objectcreate
 
+import enumeratum.values.{IntEnum, IntEnumEntry}
 import net.psforever.objects.serverobject.flag.base.FlagType
-import net.psforever.packet.Marshallable
-import scodec.Attempt.{Failure, Successful}
+import net.psforever.packet.{Marshallable, PacketHelpers}
+import net.psforever.types.CavernBenefit
 import scodec.codecs._
-import scodec.{Codec, Err, TransformSyntax}
+import scodec.{Codec, TransformSyntax}
+
+sealed abstract class FlagTypeData(
+                                    val value: Int,
+                                    val flag: Option[FlagType],
+                                    val benefit: Option[CavernBenefit]
+                                  ) extends IntEnumEntry
+
+object FlagTypeData extends IntEnum[FlagTypeData] {
+  case object Empty extends FlagTypeData(value = 1, None, None)
+
+  case object Bind extends FlagTypeData(value = 2, Some(FlagType.VanuModuleBind), None)
+
+  case object Defender extends FlagTypeData(value = 3, Some(FlagType.VanuModuleDefender), Some(CavernBenefit.ShieldModule))
+
+  case object Vehicle extends FlagTypeData(value = 4, Some(FlagType.VanuModuleVehicle), Some(CavernBenefit.VehicleModule))
+
+  case object Weapon extends FlagTypeData(value = 5, Some(FlagType.VanuModuleWeapon), Some(CavernBenefit.EquipmentModule))
+
+  case object Healing extends FlagTypeData(value = 6, None, Some(CavernBenefit.HealthModule))
+
+  case object Pain extends FlagTypeData(value = 7, None, Some(CavernBenefit.PainModule))
+
+  case object BindPoint extends FlagTypeData(value = 8, None, None)
+
+  case object Fortifier extends FlagTypeData(value = 9, Some(FlagType.VanuModuleFortifier), Some(CavernBenefit.SpeedModule))
+
+  lazy val values: IndexedSeq[FlagTypeData] = findValues
+
+  implicit val codec: Codec[FlagTypeData] = PacketHelpers.createIntEnumCodec(this, uint4)
+
+  def fromFlagType(flagType: FlagType): Option[FlagTypeData] = {
+    values.find { entry => entry.flag.contains(flagType) }
+  }
+
+  def fromCavernBenefit(benefit: CavernBenefit): Option[FlagTypeData] = {
+    values.find { entry => entry.benefit.contains(benefit ) }
+  }
+}
 
 final case class VanuModuleCanisterData(
                                          flag: CaptureFlagData,
-                                         module_type: FlagType,
+                                         module_type: FlagTypeData,
                                          unk1: Long,
                                          unk2: Boolean,
                                          unk3: Long,
@@ -21,30 +60,25 @@ final case class VanuModuleCanisterData(
 }
 
 object VanuModuleCanisterData extends Marshallable[VanuModuleCanisterData] {
-  private val module_type_codec: Codec[FlagType] = uint(bits = 4).exmap[FlagType](
-    {
-      case 0 => Successful(FlagType.VanuModuleBind)
-      case 1 => Successful(FlagType.VanuModuleEnergy)
-      case 2 => Successful(FlagType.VanuModuleVehicle)
-      case 3 => Successful(FlagType.VanuModuleWeapon)
-      case 4 => Successful(FlagType.VanuModuleDefender)
-      case 5 => Successful(FlagType.VanuModuleFortifier)
-      case n => Failure(Err(s"unknown or incorrect value for vanu module type - $n -> ?"))
-    },
-    {
-      case FlagType.VanuModuleBind => Successful(0)
-      case FlagType.VanuModuleEnergy => Successful(1)
-      case FlagType.VanuModuleVehicle => Successful(2)
-      case FlagType.VanuModuleWeapon => Successful(3)
-      case FlagType.VanuModuleDefender => Successful(4)
-      case FlagType.VanuModuleFortifier => Successful(5)
-      case n => Failure(Err(s"unknown or incorrect type for vanu module - $n"))
-    }
-  )
+  def apply(
+             flag: CaptureFlagData,
+             module_type: FlagType,
+             unk1: Long,
+             unk2: Boolean,
+             unk3: Long,
+             unk4: Long
+           ): VanuModuleCanisterData = {
+    FlagTypeData
+      .fromFlagType(module_type)
+      .map(ftype => VanuModuleCanisterData(flag, ftype, unk1, unk2, unk3, unk4))
+      .getOrElse {
+        throw new IllegalArgumentException(s"VanuModuleCanisterData can not lookup flag type data for $module_type")
+      }
+  }
 
   implicit val codec: Codec[VanuModuleCanisterData] = (
     ("flag" | CaptureFlagData.codec) ::
-      ("module_type" | module_type_codec) ::
+      ("module_type" | FlagTypeData.codec) ::
       ("unk1" | uint32L) ::
       ("unk2" | bool) ::
       ("unk3" | uint32L) ::

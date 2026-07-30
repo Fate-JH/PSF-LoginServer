@@ -5,6 +5,8 @@ import net.psforever.objects.serverobject.flag.base.{FlagDefinition, FlagType, O
 
 class VanuModule(fDef: FlagDefinition, ValidFlagType: FlagType)
   extends OwnedFlag(fDef, ValidFlagType) {
+  val duration: Long = 1200000L //todo temporary
+
   private var charged: Boolean = false
 
   def Charged: Boolean = charged
