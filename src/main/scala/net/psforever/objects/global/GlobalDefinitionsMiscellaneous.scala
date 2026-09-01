@@ -735,7 +735,7 @@ object GlobalDefinitionsMiscellaneous {
     main_terminal.Repairable = false
 
     capture_flag.Name = "capture_flag"
-    capture_flag.Packet = new CaptureFlagConverter
+    capture_flag.Packet = CaptureFlagConverter
 
     lodestar_repair_terminal.Name = "lodestar_repair_terminal"
     lodestar_repair_terminal.Interval = 1000

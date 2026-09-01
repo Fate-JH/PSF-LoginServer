@@ -7,7 +7,7 @@ import net.psforever.objects.{Default, GlobalDefinitions}
 import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, TaskWorkflow}
 import net.psforever.objects.serverobject.flag.base.OwnedFlag
 import net.psforever.objects.serverobject.structures.Building
-import net.psforever.packet.game.GenericObjectActionEnum
+import net.psforever.packet.game.packets.GenericObjectActionEnum
 import net.psforever.services.avatar.AvatarAction
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
 import net.psforever.services.base.message.GenericObjectAction

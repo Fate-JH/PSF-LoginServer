@@ -11,7 +11,6 @@ import net.psforever.objects.serverobject.terminals.{ProximityUnit, Terminal}
 import net.psforever.objects.{Default, GlobalDefinitions, Player, Session, SimpleItem, Vehicle}
 import net.psforever.packet.PlanetSidePacket
 import net.psforever.packet.game.packets.{ChatMsg, CreateShortcutMessage, DeployableInfo, DeployableObjectsInfoMessage, DeploymentAction, ObjectCreateDetailedMessage, ObjectDeleteMessage, UnuseItemMessage}
-import net.psforever.packet.game.packets
 import net.psforever.packet.game.objectcreate.{ObjectClass, ObjectCreateMessageParent, RibbonBars}
 import net.psforever.services.base.envelope.MessageEnvelope
 import net.psforever.services.base.message.ObjectDelete
