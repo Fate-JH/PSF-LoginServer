@@ -119,6 +119,9 @@ object OrbitalShuttleData extends Marshallable[OrbitalShuttleData] {
     {
       case OrbitalShuttleData(faction, Some(pos)) =>
         Attempt.successful(CommonFieldDataWithPlacement(pos, CommonFieldData(faction)) :: base_variant :: HNil)
+
+      case OrbitalShuttleData(faction, None) =>
+        Attempt.failure(Err("transcoder for orbital shuttle expected position data"))
     }
   )
 }

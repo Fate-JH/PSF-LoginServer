@@ -5,7 +5,7 @@ import akka.actor.ActorRef
 import net.psforever.actors.zone.BuildingActor
 import net.psforever.objects.serverobject.flag.base.OwnedFlag
 import net.psforever.objects.serverobject.structures.{Building, PoweredAmenityControl}
-import net.psforever.packet.game.GenericObjectActionEnum
+import net.psforever.packet.game.packets.GenericObjectActionEnum
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
 import net.psforever.services.base.message.GenericObjectAction
 import net.psforever.services.local.LocalAction

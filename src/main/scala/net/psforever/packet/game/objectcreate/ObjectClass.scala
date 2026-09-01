@@ -1372,7 +1372,6 @@ object ObjectClass {
       case ObjectClass.order_terminal                  => DroppedItemData(CommonFieldData.codec_extra, "terminal")
       case ObjectClass.order_terminala                 => DroppedItemData(CommonFieldData.codec_extra, "terminal")
       case ObjectClass.order_terminalb                 => DroppedItemData(CommonFieldData.codec_extra, "terminal")
-      case ObjectClass.vanu_module_canister            => DroppedItemData(VanuModuleCanisterData.codec, "vanu module canister")
       case ObjectClass.vanu_module                     => ConstructorData(VanuModuleCanisterData.codec, "vanu module")
       case ObjectClass.vanu_module_canister            => ConstructorData(VanuModuleCanisterData.codec, "vanu module canister")
       //failure case

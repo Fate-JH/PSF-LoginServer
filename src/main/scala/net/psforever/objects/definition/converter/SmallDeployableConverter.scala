@@ -1,7 +1,6 @@
 // Copyright (c) 2017 PSForever
 package net.psforever.objects.definition.converter
 
-import net.psforever.objects.Default
 import net.psforever.objects.ce.Deployable
 import net.psforever.objects.equipment.JammableUnit
 import net.psforever.packet.game.objectcreate._
