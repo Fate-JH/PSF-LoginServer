@@ -6,7 +6,7 @@ import net.psforever.objects.{Default, GlobalDefinitions, PlanetSideGameObject, 
 import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, TaskWorkflow}
 import net.psforever.objects.serverobject.environment.{EnvironmentAttribute, EnvironmentTrait}
 import net.psforever.objects.serverobject.environment.interaction.InteractWithEnvironment
-import net.psforever.objects.serverobject.flag.base.{FlagType, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
 import net.psforever.objects.serverobject.flag.llu.CaptureFlagSocket
 import net.psforever.objects.serverobject.structures.{Building, WarpGate}
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
@@ -160,7 +160,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
                                            hackingFaction: PlanetSideEmpire.Value
                                          ): Unit = {
     // Construct new flag
-    val flag = new OwnedFlag(GlobalDefinitions.capture_flag, FlagType.CaptureFlag)
+    val flag = new OwnedFlag(GlobalDefinitions.capture_flag, CarriableFlag.CaptureFlag)
     flag.Position = position
     flag.Orientation = orientation
     flag.Target = target
@@ -326,7 +326,7 @@ object CaptureFlagManager {
       .GUID(flagGuid)
       .collect {
         case flag: OwnedFlag
-          if flag.ValidFlagType == FlagType.CaptureFlag &&
+          if flag.ValidFlagType == CarriableFlag.CaptureFlag &&
             LoseFlagViolentlyToEnvironment(target, Set(EnvironmentAttribute.Water, EnvironmentAttribute.Lava, EnvironmentAttribute.Death)) /*||
             LoseFlagViolentlyToWarpGateEnvelope(zone, target)*/ =>
           flag.Destroyed = true

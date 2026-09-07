@@ -2,7 +2,7 @@ package net.psforever.objects.serverobject.flag.llu
 
 import akka.actor.{ActorContext, Props}
 import net.psforever.objects.GlobalDefinitions
-import net.psforever.objects.serverobject.flag.base.{FlagSocket, FlagSocketDefinition, FlagType}
+import net.psforever.objects.serverobject.flag.base.{FlagSocket, FlagSocketDefinition, CarriableFlag}
 import net.psforever.types.Vector3
 
 
@@ -13,7 +13,7 @@ import net.psforever.types.Vector3
   */
 class CaptureFlagSocket(tDef: FlagSocketDefinition)
   extends FlagSocket {
-  val ValidFlagType: FlagType = FlagType.CaptureFlag
+  val ValidFlagType: CarriableFlag = CarriableFlag.CaptureFlag
 
   def Definition : FlagSocketDefinition = tDef
 }

@@ -1,9 +1,9 @@
 // Copyright (c) 2026 PSForever
 package net.psforever.objects.serverobject.flag.module
 
-import net.psforever.objects.serverobject.flag.base.{FlagDefinition, FlagType, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{FlagDefinition, CarriableFlag, OwnedFlag}
 
-class VanuModule(fDef: FlagDefinition, ValidFlagType: FlagType)
+class VanuModule(fDef: FlagDefinition, ValidFlagType: CarriableFlag)
   extends OwnedFlag(fDef, ValidFlagType) {
   val duration: Long = 1200000L //todo temporary
 

@@ -5,7 +5,7 @@ import akka.actor.{ActorContext, ActorRef, Cancellable, typed}
 import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.doors.Door
-import net.psforever.objects.serverobject.flag.base.{FlagType, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mblocker.Locker
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
@@ -472,7 +472,7 @@ class GeneralOperations(
       specialItemSlotGuid = None
       player.Carrying = None
       (continent.GUID(guid) match {
-        case Some(llu: OwnedFlag) if llu.ValidFlagType == FlagType.CaptureFlag => Some((llu, llu.Carrier))
+        case Some(llu: OwnedFlag) if llu.ValidFlagType == CarriableFlag.CaptureFlag => Some((llu, llu.Carrier))
         case _ => None
       }) match {
         case Some((llu, Some(carrier: Player)))
@@ -1291,7 +1291,7 @@ class GeneralOperations(
         sendUseGeneralEntityMessage(captureTerminal, item)
       case _ if specialItemSlotGuid.nonEmpty =>
         continent.GUID(specialItemSlotGuid) match {
-          case Some(llu: OwnedFlag) if llu.ValidFlagType == FlagType.CaptureFlag =>
+          case Some(llu: OwnedFlag) if llu.ValidFlagType == CarriableFlag.CaptureFlag =>
             if (llu.Target.GUID == captureTerminal.Owner.GUID) {
               continent.LocalEvents ! CaptureEnvelope(HackCaptureActor.FlagCaptured(llu))
             } else {
