@@ -11,7 +11,7 @@ import net.psforever.objects.locker.LockerContainerDefinition
 import net.psforever.objects.serverobject.beam.VanuModuleBeamDefinition
 import net.psforever.objects.serverobject.dome.ForceDomeDefinition
 import net.psforever.objects.serverobject.doors.DoorDefinition
-import net.psforever.objects.serverobject.flag.base.{FlagDefinition, FlagSocketDefinition, FlagType}
+import net.psforever.objects.serverobject.flag.base.{FlagDefinition, FlagSocketDefinition, CarriableFlag}
 import net.psforever.objects.serverobject.generator.GeneratorDefinition
 import net.psforever.objects.serverobject.locks.IFFLockDefinition
 import net.psforever.objects.serverobject.mblocker.LockerDefinition
@@ -1335,7 +1335,7 @@ object GlobalDefinitions {
 
   val main_terminal = new MainTerminalDefinition(473)
 
-  val llm_socket = new FlagSocketDefinition(450, FlagType.CaptureFlag)
+  val llm_socket = new FlagSocketDefinition(450, CarriableFlag.CaptureFlag)
 
   val capture_flag = new FlagDefinition(157)
 
@@ -1397,19 +1397,19 @@ object GlobalDefinitions {
 
   val vanu_module_canister = new FlagDefinition(objectId = 935)
 
-  val vanu_module_node = new FlagSocketDefinition(936, FlagType.VanuModuleCradle)
+  val vanu_module_node = new FlagSocketDefinition(936, CarriableFlag.VanuModuleCradle)
 
-  val vanu_module_node_bind = new FlagSocketDefinition(937, FlagType.VanuModuleBind)
+  val vanu_module_node_bind = new FlagSocketDefinition(937, CarriableFlag.VanuModuleBind)
 
-  val vanu_module_node_defender = new FlagSocketDefinition(938, FlagType.VanuModuleDefender)
+  val vanu_module_node_defender = new FlagSocketDefinition(938, CarriableFlag.VanuModuleDefender)
 
-  val vanu_module_node_energy = new FlagSocketDefinition(939, FlagType.VanuModuleEnergy)
+  val vanu_module_node_energy = new FlagSocketDefinition(939, CarriableFlag.VanuModuleEnergy)
 
-  val vanu_module_node_fortifier = new FlagSocketDefinition(930, FlagType.VanuModuleFortifier)
+  val vanu_module_node_fortifier = new FlagSocketDefinition(930, CarriableFlag.VanuModuleFortifier)
 
-  val vanu_module_node_vehicle = new FlagSocketDefinition(941, FlagType.VanuModuleVehicle)
+  val vanu_module_node_vehicle = new FlagSocketDefinition(941, CarriableFlag.VanuModuleVehicle)
 
-  val vanu_module_node_weapon = new FlagSocketDefinition(942, FlagType.VanuModuleWeapon)
+  val vanu_module_node_weapon = new FlagSocketDefinition(942, CarriableFlag.VanuModuleWeapon)
 
   val vanumodulebeam = new VanuModuleBeamDefinition()
 

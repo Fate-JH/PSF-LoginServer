@@ -20,7 +20,7 @@ import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
-import net.psforever.objects.serverobject.flag.base.{FlagType, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
 import net.psforever.objects.serverobject.flag.module.VanuModule
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
@@ -122,13 +122,18 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     }
     ops.fallHeightTracker(pos.z)
     if (isCrouching && !player.Crouching) {
-      //dev stuff goes here
-      val flag = new VanuModule(GlobalDefinitions.vanu_module, FlagType.VanuModuleEnergy)
+      val flag = new VanuModule(GlobalDefinitions.vanu_module, CarriableFlag.VanuModuleEnergy)
       flag.Position = pos + Vector3.z(value = 1f)
       flag.Orientation = Vector3(0,0, player.Orientation.z)
-      //flag.Owner = continent.Buildings.values.head
+      flag.Owner = sessionLogic.localSector.buildingList.head
       flag.GUID = PlanetSideGUID(12000)
-      sendResponse(OCM.apply(flag))
+      val pkt = OCM.apply(flag)
+      sendResponse(pkt)
+
+//      import scodec.bits._
+//      import net.psforever.actors.net.MiddlewareActor
+//      val hexStr = hex"17f5000000d33e02e 89ae780448304400003e 400000 89ae7804 4 8304400003e0"
+//      ops.sessionLogic.middlewareActor ! MiddlewareActor.Raw(hexStr)
     }
     player.Position = pos
     player.Velocity = vel
@@ -397,7 +402,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
         ops.handleUseTelepadDeployable(obj, equipment, pkt, ops.useRouterTelepadSystem)
       case Some(obj: Utility.InternalTelepad) =>
         ops.handleUseInternalTelepad(obj, pkt, ops.useRouterTelepadSystem)
-      case Some(obj: OwnedFlag) if obj.ValidFlagType == FlagType.CaptureFlag =>
+      case Some(obj: OwnedFlag) if obj.ValidFlagType == CarriableFlag.CaptureFlag =>
         ops.handleUseCaptureFlag(obj)
       case Some(_: WarpGate) =>
         ops.handleUseWarpGate(equipment)
