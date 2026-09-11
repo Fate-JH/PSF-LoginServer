@@ -7,37 +7,72 @@ import net.psforever.objects.{Default, GlobalDefinitions}
 import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, TaskWorkflow}
 import net.psforever.objects.serverobject.flag.base.OwnedFlag
 import net.psforever.objects.serverobject.structures.Building
-import net.psforever.packet.game.packets.GenericObjectActionEnum
+import net.psforever.objects.serverobject.terminals.capture.{CaptureTerminal, CaptureTerminalAwareBehavior}
+import net.psforever.packet.game.packets.{GenericObjectActionEnum, ObjectAttachMessage}
 import net.psforever.services.avatar.AvatarAction
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
-import net.psforever.services.base.message.GenericObjectAction
+import net.psforever.services.base.message.{GenericObjectAction, SendResponse}
 import net.psforever.services.local.LocalAction
-import net.psforever.types.{PlanetSideGUID, Vector3}
+import net.psforever.types.{PlanetSideEmpire, PlanetSideGUID, Vector3}
 
+import scala.annotation.unused
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class VanuModuleSpawnerControl(obj: VanuModuleNode)
-  extends Actor {
+  extends Actor
+    with CaptureTerminalAwareBehavior {
   //private implicit val timeout: Timeout = new Timeout(5000 milliseconds)
 
   private var timeUntilSpawn: Long = 2160000 //ms (6 hours)
   private var spawnTimer: Cancellable = Default.Cancellable
 
-  val receive: Receive = {
-    case VanuModuleSpawnerControl.SetSpawnTimer(time) =>
-      spawnTimer.cancel()
-      timeUntilSpawn = time
-      TryStartSpawnTimer()
+  def CaptureTerminalAwareObject: VanuModuleNode = obj
 
-    case VanuModuleSpawnerControl.SpawnModule =>
-      TrySpawnModule()
+  val receive: Receive = captureTerminalAwareBehaviour
+      .orElse {
+        case VanuModuleSpawnerControl.SetSpawnTimer(time) =>
+          spawnTimer.cancel()
+          timeUntilSpawn = time
+          TryStartSpawnTimer()
 
-    case VanuModuleSpawnerControl.ClearModule =>
-      TryDespawnVanuModule()
+        case VanuModuleSpawnerControl.ClearModule =>
+          TryDespawnVanuModule()
 
-    case _ => ()
+        case VanuModuleSpawnerControl.SpawnModule =>
+          TrySpawnModule()
+
+        case _ => ()
+      }
+
+  override protected def captureTerminalIsHacked(@unused terminal: CaptureTerminal): Unit = {
+    if (terminal.HackedBy.isEmpty) {
+      //our faction identity was manually set, this is not an actual facility hack
+    }
+  }
+
+  override protected def captureTerminalIsResecured(@unused terminal: CaptureTerminal): Unit = {
+    val zone = obj.Zone
+    obj.captureFlag match {
+      case Some(flag: VanuModule)
+        if flag.Faction != terminal.Faction && flag.Zone == zone =>
+        //module is out in the cavern, hack was completed
+        flag.Destroyed = true
+        flag.Carrier match {
+          case Some(carrier) =>
+            flag.Position = carrier.Position + Vector3.z(value = 0.5f)
+            //todo server-side explosion, or damage just to carrier?
+          case None => ()
+            zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.LluSpawned(flag)) //explosion animation
+        }
+        HandleFlagDespawn(flag)
+      case None
+        if terminal.Faction != PlanetSideEmpire.NEUTRAL =>
+        //spawn module attempt
+        TrySpawnModule()
+      case None | Some(_) => () //either module is in another zone, or the defenders resecured a hacked facility
+    }
   }
 
   private def TryStartSpawnTimer(): Unit = {
@@ -56,11 +91,13 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     }
   }
 
-  private def TryDespawnVanuModule(): Unit = {
+  private def TryDespawnVanuModule(): Boolean = {
     obj.captureFlag match {
-      case Some(flag) =>
+      case Some(flag: VanuModule) if !flag.Charged =>
         HandleFlagDespawn(flag)
-      case _ => ()
+        true
+      case _ =>
+        false
     }
   }
 
@@ -71,10 +108,12 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
                                         ): Unit = {
     // Construct new flag
     val zone = spawner.Zone
-    val flag = new VanuModule(GlobalDefinitions.vanu_module_canister, spawner.ValidFlagType)
-    flag.Position = position
+    val flag = new VanuModule(GlobalDefinitions.vanu_module, spawner.ValidFlagType)
+    flag.Zone = spawner.Zone
+    flag.Position = position + Vector3.z(value = 1f)
     flag.Orientation = orientation
     flag.Owner = spawner.Owner
+    flag.Faction = spawner.Faction
     // Register object create task and callback to create on clients
     TaskWorkflow.execute(
       TaskBundle(
@@ -82,7 +121,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
           private val func: () => Unit = OnSpawnBehaviors(spawner.GUID, spawner, flag)
           private val localSocket = spawner
 
-          override def description(): String = s"register a ${localSocket.Definition.Name} for socket"
+          override def description(): String = s"register a ${localSocket.ValidFlagType.value} for socket"
 
           def action(): Future[Any] = {
             func()
@@ -118,6 +157,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     owner.Actor ! BuildingActor.AmenityStateChange(obj)
     // Broadcast chat message for LLU spawn
     //todo ???
+    zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(socket.GUID, flag.GUID, 0))) //todo actual attach index
   }
 
   private def HandleFlagDespawn(flag: OwnedFlag): Unit = {

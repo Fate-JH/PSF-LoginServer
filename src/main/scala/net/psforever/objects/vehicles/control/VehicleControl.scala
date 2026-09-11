@@ -4,7 +4,6 @@ package net.psforever.objects.vehicles.control
 import akka.actor.Cancellable
 import net.psforever.actors.zone.{ShootingRangeTargetSpawner, ZoneActor}
 import net.psforever.objects._
-import net.psforever.objects.avatar.SpecialCarry
 import net.psforever.objects.definition.{VehicleDefinition, WithShields}
 import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.entity.WorldEntity
@@ -19,6 +18,7 @@ import net.psforever.objects.serverobject.damage.{AggravatedBehavior, Damageable
 import net.psforever.objects.serverobject.environment._
 import net.psforever.objects.serverobject.environment.interaction.common.Watery
 import net.psforever.objects.serverobject.environment.interaction.{InteractWithEnvironment, RespondsToZoneEnvironment}
+import net.psforever.objects.serverobject.flag.base.FlagCategory
 import net.psforever.objects.serverobject.hackable.GenericHackables
 import net.psforever.objects.serverobject.mount.{Mountable, MountableBehavior}
 import net.psforever.objects.serverobject.repair.RepairableVehicle
@@ -116,7 +116,7 @@ class VehicleControl(vehicle: Vehicle)
         case wg: WarpGate =>
           Vector3.DistanceSquared(vehicle.Position, wg.Position) < math.pow(wg.Definition.SOIRadius, 2)
         case _ => false
-      } && user.Carrying.contains(SpecialCarry.CaptureFlag) =>
+      } && user.Carrying.contains(FlagCategory.CaptureFlag) =>
       sender() ! Mountable.MountMessages(user, Mountable.CanNotMount(vehicle, mountPoint))
   }
 

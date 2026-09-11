@@ -4,11 +4,11 @@ package net.psforever.actors.session.normal
 import akka.actor.ActorContext
 import net.psforever.actors.session.support.{MountHandlerFunctions, SessionData, SessionMountHandlers}
 import net.psforever.actors.zone.ZoneActor
-import net.psforever.objects.avatar.SpecialCarry
 import net.psforever.objects.{GlobalDefinitions, PlanetSideGameObject, Player, Vehicle, Vehicles}
 import net.psforever.objects.definition.{BasicDefinition, ObjectDefinition}
 import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.serverobject.environment.interaction.ResetAllEnvironmentInteractions
+import net.psforever.objects.serverobject.flag.base.FlagCategory
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.structures.WarpGate
 import net.psforever.objects.serverobject.terminals.implant.ImplantTerminalMech
@@ -314,7 +314,7 @@ class MountHandlerLogic(val ops: SessionMountHandlers, implicit val context: Act
           case wg: WarpGate =>
             Vector3.DistanceSquared(obj.Position, wg.Position) < math.pow(wg.Definition.SOIRadius, 2)
           case _ => false
-          } && tplayer.Carrying.contains(SpecialCarry.CaptureFlag)) {
+          } && tplayer.Carrying.contains(FlagCategory.CaptureFlag)) {
           sendResponse(ChatMsg(ChatMessageType.UNK_224, "@VehicleMount_CaptureFlagWithVehicleInWarpgate"))
         }
 

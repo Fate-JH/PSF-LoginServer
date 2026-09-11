@@ -2,7 +2,6 @@
 package net.psforever.objects.serverobject.pad
 
 import akka.actor.{ActorRef, Cancellable, OneForOneStrategy, Props}
-import net.psforever.objects.avatar.SpecialCarry
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.guid.{GUIDTask, TaskWorkflow}
 import net.psforever.objects.serverobject.affinity.{FactionAffinity, FactionAffinityBehavior}
@@ -531,12 +530,8 @@ object VehicleSpawnControl {
         Some("@SVCP_RemovedFromVehicleQueue_ParentChanged")
       } else if (!vehicle.Seats(0).definition.restriction.test(player)) {
         Some("@SVCP_RemovedFromVehicleQueue_ArmorChanged")
-      } else if (player.Carrying.contains(SpecialCarry.CaptureFlag)) {
-        Some("@SVCP_RemovedFromVehicleQueue_CaptureFlag")
-      } else if (player.Carrying.contains(SpecialCarry.VanuModule)) {
-        Some("@SVCP_RemovedFromVehicleQueue_VanuModule")
-      } else if (player.Carrying.contains(SpecialCarry.MonolithUnit)) {
-        Some("@SVCP_RemovedFromVehicleQueue_MonolithUnit")
+      } else if (player.Carrying.nonEmpty) {
+        Some(s"@SVCP_RemovedFromVehicleQueue_${player.Carrying.get.value}")
       } else if ( player.ZoningRequest == Zoning.Method.Quit) {
         Some("@SVCP_RemovedFromVehicleQueue_Quit")
       } else if ( player.ZoningRequest == Zoning.Method.InstantAction) {

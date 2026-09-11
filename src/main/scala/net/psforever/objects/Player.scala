@@ -2,7 +2,7 @@
 package net.psforever.objects
 
 import net.psforever.objects.avatar.interaction.{InteractWithForceDomeProtection, TriggerOnPlayerRule, WithEntrance, WithGantry, WithLava, WithWater}
-import net.psforever.objects.avatar.{Avatar, LoadoutManager, SpecialCarry}
+import net.psforever.objects.avatar.{Avatar, LoadoutManager}
 import net.psforever.objects.ballistics.InteractWithRadiationClouds
 import net.psforever.objects.ce.{Deployable, InteractWithMines, InteractWithTurrets}
 import net.psforever.objects.definition.{AvatarDefinition, ExoSuitDefinition, SpecialExoSuitDefinition}
@@ -12,6 +12,7 @@ import net.psforever.objects.serverobject.{PlanetSideServerObject, environment}
 import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.serverobject.aura.AuraContainer
 import net.psforever.objects.serverobject.environment.interaction.common.{WithDeath, WithMovementTrigger}
+import net.psforever.objects.serverobject.flag.base.FlagCategory
 import net.psforever.objects.serverobject.interior.InteriorAwareFromInteraction
 import net.psforever.objects.serverobject.mount.MountableEntity
 import net.psforever.objects.vital.resistance.ResistanceProfile
@@ -69,7 +70,7 @@ class Player(var avatar: Avatar)
   private var drawnSlot: Int                         = Player.HandsDownSlot
   private var lastDrawnSlot: Int                     = Player.HandsDownSlot
   private var backpackAccess: Option[PlanetSideGUID] = None
-  private var carrying: Option[SpecialCarry]         = None
+  private var carrying: Option[FlagCategory]         = None
 
   private var facingYawUpper: Float       = 0f
   private var crouching: Boolean          = false
@@ -555,15 +556,15 @@ class Player(var avatar: Avatar)
     VehicleSeated
   }
 
-  def Carrying: Option[SpecialCarry] = carrying
+  def Carrying: Option[FlagCategory] = carrying
 
   //noinspection ScalaUnusedSymbol
-  def Carrying_=(item: SpecialCarry): Option[SpecialCarry] = {
+  def Carrying_=(item: FlagCategory): Option[FlagCategory] = {
     Carrying_=(Some(item))
   }
 
   //noinspection ScalaUnusedSymbol
-  def Carrying_=(item: Option[SpecialCarry]): Option[SpecialCarry] = {
+  def Carrying_=(item: Option[FlagCategory]): Option[FlagCategory] = {
     carrying = item
     Carrying
   }

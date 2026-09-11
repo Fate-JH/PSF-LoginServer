@@ -6,7 +6,7 @@ import akka.actor.{ActorContext, ActorRef, typed}
 import net.psforever.actors.session.{AvatarActor, SessionActor}
 import net.psforever.actors.session.support.{GeneralFunctions, GeneralOperations, SessionData, SessionOutfitHandlers}
 import net.psforever.objects.{Account, BoomerDeployable, BoomerTrigger, ConstructionItem, Default, GlobalDefinitions, LivePlayerList, Player, SensorDeployable, ShieldGeneratorDeployable, SpecialEmp, TelepadDeployable, Tool, TrapDeployable, TurretDeployable, Vehicle}
-import net.psforever.objects.avatar.{Avatar, AvatarBot, PlayerControl, SpecialCarry}
+import net.psforever.objects.avatar.{Avatar, AvatarBot, PlayerControl}
 import net.psforever.objects.ballistics.Projectile
 import net.psforever.objects.ce.{Deployable, DeployedItem}
 import net.psforever.objects.definition.converter.OCM
@@ -20,7 +20,7 @@ import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
-import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
 import net.psforever.objects.serverobject.flag.module.VanuModule
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
@@ -125,15 +125,9 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       val flag = new VanuModule(GlobalDefinitions.vanu_module, CarriableFlag.VanuModuleEnergy)
       flag.Position = pos + Vector3.z(value = 1f)
       flag.Orientation = Vector3(0,0, player.Orientation.z)
-      flag.Owner = sessionLogic.localSector.buildingList.head
       flag.GUID = PlanetSideGUID(12000)
       val pkt = OCM.apply(flag)
       sendResponse(pkt)
-
-//      import scodec.bits._
-//      import net.psforever.actors.net.MiddlewareActor
-//      val hexStr = hex"17f5000000d33e02e 89ae780448304400003e 400000 89ae7804 4 8304400003e0"
-//      ops.sessionLogic.middlewareActor ! MiddlewareActor.Raw(hexStr)
     }
     player.Position = pos
     player.Velocity = vel
@@ -177,7 +171,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       case None => ()
     }
     //llu destruction check
-    if (player.Carrying.contains(SpecialCarry.CaptureFlag)) {
+    if (player.Carrying.contains(FlagCategory.CaptureFlag)) {
       CaptureFlagManager.ReasonToLoseFlagViolently(continent, sessionLogic.general.specialItemSlotGuid, player)
     }
     //

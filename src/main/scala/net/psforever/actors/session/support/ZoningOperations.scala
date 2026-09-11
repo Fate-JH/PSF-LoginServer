@@ -8,12 +8,13 @@ import akka.pattern.ask
 import akka.util.Timeout
 import net.psforever.actors.session.support.SpawnOperations.ActivityQueuedTask
 import net.psforever.login.WorldSession
-import net.psforever.objects.avatar.{BattleRank, DeployableToolbox, SpecialCarry}
+import net.psforever.objects.avatar.{BattleRank, DeployableToolbox}
 import net.psforever.objects.avatar.scoring.{CampaignStatistics, ScoreCard, SessionStatistics}
 import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.inventory.InventoryItem
-import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
+import net.psforever.objects.serverobject.flag.module.VanuModuleNode
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mount.Seat
 import net.psforever.objects.serverobject.tube.SpawnTube
@@ -592,6 +593,14 @@ class ZoningOperations(
           }
           triggerAutomatedTurretFire(turret)
       }
+    //vanu modules
+    continent.Buildings.values
+      .flatMap(_.Amenities)
+      .collect { case obj: VanuModuleNode => obj.captureFlag }
+      .flatten
+      .foreach { module =>
+        sendResponse(OCM.apply(module))
+      }
     //remote projectiles and radiation clouds
     continent.Projectiles.foreach { projectile =>
       sendResponse(OCM.apply(projectile))
@@ -850,7 +859,7 @@ class ZoningOperations(
   }
 
   def handleRecall(): Unit = {
-    if (player.Carrying.contains(SpecialCarry.CaptureFlag)) {
+    if (player.Carrying.contains(FlagCategory.CaptureFlag)) {
       CancelZoningProcessWithDescriptiveReason("cancel")
     }
     else {
@@ -871,7 +880,7 @@ class ZoningOperations(
   }
 
   def handleInstantAction(): Unit = {
-    if (player.Carrying.contains(SpecialCarry.CaptureFlag)) {
+    if (player.Carrying.contains(FlagCategory.CaptureFlag)) {
       CancelZoningProcessWithDescriptiveReason("cancel")
     }
     else {
@@ -884,7 +893,7 @@ class ZoningOperations(
   }
 
   def handleQuit(): Unit = {
-    if (player.Carrying.contains(SpecialCarry.CaptureFlag)) {
+    if (player.Carrying.contains(FlagCategory.CaptureFlag)) {
       CancelZoningProcessWithDescriptiveReason("cancel")
     }
     else {

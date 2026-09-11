@@ -5,7 +5,7 @@ import akka.actor.{ActorContext, ActorRef, Cancellable, typed}
 import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.doors.Door
-import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mblocker.Locker
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
@@ -1541,7 +1541,7 @@ class GeneralOperations(
     specialItemSlotGuid match {
       case None if obj.Faction == player.Faction && player.ZoningRequest == Zoning.Method.None =>
         specialItemSlotGuid = Some(obj.GUID)
-        player.Carrying = SpecialCarry.CaptureFlag
+        player.Carrying = FlagCategory.CaptureFlag
         continent.LocalEvents ! FlagEnvelope(CaptureFlagManager.PickupFlag(obj, player))
       case None =>
         log.warn(s"${player.Faction} player ${player.toString} tried to pick up a ${obj.Faction} LLU -  ${obj.GUID}")

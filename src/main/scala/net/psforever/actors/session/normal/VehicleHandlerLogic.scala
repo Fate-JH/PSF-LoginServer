@@ -5,10 +5,10 @@ import akka.actor.Actor.Receive
 import akka.actor.{ActorContext, ActorRef, typed}
 import net.psforever.actors.session.AvatarActor
 import net.psforever.actors.session.support.{SessionData, SessionVehicleHandlers, VehicleHandlerFunctions}
-import net.psforever.objects.avatar.SpecialCarry
 import net.psforever.objects.{Default, GlobalDefinitions, Player, Vehicle, Vehicles}
 import net.psforever.objects.equipment.{Equipment, JammableMountedWeapons, JammableUnit}
 import net.psforever.objects.guid.{GUIDTask, TaskWorkflow}
+import net.psforever.objects.serverobject.flag.base.FlagCategory
 import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.pad.VehicleSpawnPad
@@ -54,7 +54,7 @@ class VehicleHandlerLogic(val ops: SessionVehicleHandlers, implicit val context:
       player.Velocity = vel
       sessionLogic.updateLocalBlockMap(pos)
       //llu destruction check
-      if (player.Carrying.contains(SpecialCarry.CaptureFlag)) {
+      if (player.Carrying.contains(FlagCategory.CaptureFlag)) {
         continent
           .GUID(player.VehicleSeated)
           .collect { case vehicle: Vehicle =>

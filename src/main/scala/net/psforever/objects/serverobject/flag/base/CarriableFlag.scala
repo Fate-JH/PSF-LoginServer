@@ -17,7 +17,9 @@ object FlagCategory {
 }
 
 /* All flags and vanu modules specifically */
-
+/**
+ * Things that the player can carry that are not stored in the inventory or in holsters.
+ */
 sealed abstract class CarriableFlag(val value: String, val category: FlagCategory)
 
 /** Special enhancement modules generated in cavern facilities to be installed into above ground facilities. */
@@ -46,6 +48,9 @@ object CarriableFlag {
   case object VanuModuleBind extends CarriableFlag(value = "VanuModuleBind", FlagCategory.VanuModuleElement)
   /** Not really a module, don't know what this is */
   case object VanuModuleFortifier extends CarriableFlag(value = "VanuModuleFortifier", FlagCategory.VanuModuleElement)
+
+  /** Non-powered (white) */
+  case object VanuModuleNonPowered extends CarriableModule(value = "VanuModuleNonPowered", VanuModuleType.NonPowered, CavernBenefit.NamelessBenefit)
 
   /** Mysterious MacGuffins tied to the Bending */
   case object MonolithUnit extends CarriableFlag(value = FlagCategory.MonolithUnit.value, FlagCategory.MonolithUnit)

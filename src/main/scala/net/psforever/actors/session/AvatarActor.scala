@@ -10,6 +10,7 @@ import net.psforever.actors.zone.ZoneActor
 import net.psforever.objects.Session
 import net.psforever.objects.avatar.ModePermissions
 import net.psforever.objects.avatar.scoring.{Assist, Death, EquipmentStat, KDAStat, Kill, Life, ScoreCard, SupportActivity}
+import net.psforever.objects.serverobject.flag.base.FlagCategory
 import net.psforever.objects.sourcing.{TurretSource, VehicleSource}
 import net.psforever.packet.game.packets
 import net.psforever.packet.game.packets.{ActionProgressMessage, AvatarStatisticsMessage, AvatarVehicleTimerMessage, BattleExperienceMessage, CharacterInfoMessage, CreateShortcutMessage, DeathStatistic, DisplayedAwardMessage, FavoritesMessage, FriendsResponse, ImplantAction, ItemTransactionResultMessage, PlanetSideZoneID, PlanetsideAttributeMessage, RibbonBarSlot, SessionStatistic, Shortcut}
@@ -36,8 +37,7 @@ import net.psforever.objects.avatar.{
   MemberLists,
   PlayerControl,
   ProgressDecoration,
-  Shortcut => AvatarShortcut,
-  SpecialCarry
+  Shortcut => AvatarShortcut
 }
 import net.psforever.objects.definition._
 import net.psforever.objects.definition.converter.CharacterSelectConverter
@@ -3213,7 +3213,7 @@ class AvatarActor(
     val _session = session.get
     val player   = _session.player
     val gameOpts = Config.app.game.experience.bep
-    val (modifier, msg) = if (player.Carrying.contains(SpecialCarry.RabbitBall)) {
+    val (modifier, msg) = if (player.Carrying.contains(FlagCategory.RabbitBall)) {
       (1.25f, ExperienceType.RabbitBall)
     } else {
       (1f, ExperienceType.Normal)

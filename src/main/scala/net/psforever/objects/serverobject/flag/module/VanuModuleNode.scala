@@ -2,11 +2,15 @@
 package net.psforever.objects.serverobject.flag.module
 
 import akka.actor.{ActorContext, Props}
-import net.psforever.objects.serverobject.flag.base.{FlagSocket, FlagSocketDefinition, CarriableFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagSocket, FlagSocketDefinition}
+import net.psforever.objects.serverobject.terminals.capture.CaptureTerminalAware
+import net.psforever.objects.zones.ZoneAware
 import net.psforever.types.Vector3
 
 class VanuModuleNode(tDef: FlagSocketDefinition)
-  extends FlagSocket {
+  extends FlagSocket
+    with CaptureTerminalAware
+    with ZoneAware {
   def ValidFlagType: CarriableFlag = captureFlag.getOrElse(Definition).ValidFlagType
 
   def Definition : FlagSocketDefinition = tDef

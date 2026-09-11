@@ -32,13 +32,15 @@ trait IsAFlag
   def InitialSpawnTime: Long
 }
 
-class Flag(private val fDef: FlagDefinition, val ValidFlagType: CarriableFlag)
+class Flag(private val fDef: FlagDefinition, validFlagType: CarriableFlag)
     extends PlanetSideGameObject
       with IsAFlag {
   private var faction: PlanetSideEmpire.Value = PlanetSideEmpire.NEUTRAL
   private var carrier: Option[Player] = None
   private var lastTimeCollected: Long = System.currentTimeMillis()
   private val spawnedTime: Long = lastTimeCollected
+
+  def ValidFlagType: CarriableFlag = validFlagType
 
   /**
    * Flags are primarily neutral and act as if aligned with the faction of the player that holds them.
@@ -74,11 +76,13 @@ class Flag(private val fDef: FlagDefinition, val ValidFlagType: CarriableFlag)
   def Definition: FlagDefinition = fDef
 }
 
-class OwnedFlag(private val fDef: FlagDefinition, val ValidFlagType: CarriableFlag)
+class OwnedFlag(private val fDef: FlagDefinition, validFlagType: CarriableFlag)
   extends Amenity
     with IsAFlag {
   private val flag: Flag = new Flag(fDef, ValidFlagType)
   private var target: Building = Building.NoBuilding
+
+  def ValidFlagType: CarriableFlag = validFlagType
 
   /**
    * If a facility spawns a flag, that is the flag's `owner`.
