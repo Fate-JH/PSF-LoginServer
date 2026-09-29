@@ -16,8 +16,8 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
     Charged
   }
 
-  override def ValidFlagType: CarriableFlag = if (charged) {
-    validFlagType
+  override def DisplayFlagType: CarriableFlag = if (charged) {
+    ValidFlagType
   } else {
     CarriableFlag.VanuModuleNonPowered
   }

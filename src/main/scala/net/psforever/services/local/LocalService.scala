@@ -13,7 +13,7 @@ object LocalService {
     Props(
       classOf[GenericEventServiceWithSupport],
       LocalStamp,
-      List(DoorCloserSupport, HackClearSupport, HackCaptureSupport, CaptureFlagSupport(zone))
+      List(DoorCloserSupport, HackClearSupport, HackCaptureSupport, CaptureFlagSupport(zone), VanuModuleSupport(zone))
     )
   }
 }

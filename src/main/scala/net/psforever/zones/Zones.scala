@@ -743,20 +743,20 @@ object Zones {
           zoneMap
             .addLocalObject(obj.guid, VirtualTrainingTeleporter.Constructor(obj.position))
 
-        case objectType if structure.isDefined && objectType.equals("vanu_module_node") =>
-          zoneMap
-            .addLocalObject(
-              obj.guid,
-              VanuModuleNode.Constructor(GlobalDefinitions.vanu_module_node, obj.position),
-              owningBuildingGuid = ownerGuid
-            )
-
         case objectType if structure.isDefined && objectType.startsWith("vanu_module_node_") =>
           val definition = DefinitionUtil.fromString(objectType).asInstanceOf[FlagSocketDefinition]
           zoneMap
             .addLocalObject(
               obj.guid,
               VanuModuleSpawn.Constructor(definition, obj.position),
+              owningBuildingGuid = ownerGuid
+            )
+
+        case objectType if structure.isDefined && objectType.equals("vanu_module_node") =>
+          zoneMap
+            .addLocalObject(
+              obj.guid,
+              VanuModuleNode.Constructor(GlobalDefinitions.vanu_module_node, obj.position),
               owningBuildingGuid = ownerGuid
             )
 

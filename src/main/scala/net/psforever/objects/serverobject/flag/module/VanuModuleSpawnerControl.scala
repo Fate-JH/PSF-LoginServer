@@ -157,7 +157,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     owner.Actor ! BuildingActor.AmenityStateChange(obj)
     // Broadcast chat message for LLU spawn
     //todo ???
-    zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(socket.GUID, flag.GUID, 0))) //todo actual attach index
+    zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(socket.GUID, flag.GUID, 0)))
   }
 
   private def HandleFlagDespawn(flag: OwnedFlag): Unit = {

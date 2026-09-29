@@ -5,7 +5,7 @@ import enumeratum.values.{IntEnum, IntEnumEntry}
 import net.psforever.newcodecs.newcodecs
 import net.psforever.packet.{GamePacketOpcode, Marshallable, PacketHelpers, PlanetSideGamePacket}
 import net.psforever.packet.GamePacketOpcode.Type
-import net.psforever.types.Vector3
+import net.psforever.types.{VanuModuleType, Vector3}
 import scodec.{Attempt, Codec}
 import scodec.bits.BitVector
 import scodec.codecs._
@@ -71,7 +71,25 @@ final case class ModuleInfo(module_type: ModuleIcon, pulse: ModuleIconPulseColor
 object ModuleInfo {
   def apply(module_type: ModuleIcon, pulseGreen: Boolean, u3: Long, pos_xy: Vector3): ModuleInfo = {
     val intCharge: ModuleIconPulseColor = if (pulseGreen) ModuleIconPulseColor.Green else ModuleIconPulseColor.Red
-    new ModuleInfo(module_type, intCharge, u3, u4 = false, u5 = false, pos_xy)
+    ModuleInfo(module_type, intCharge, u3, u4 = false, u5 = false, pos_xy)
+  }
+
+  def apply(moduleType: VanuModuleType, pulseGreen: Boolean, u3: Long, pos_xy: Vector3): ModuleInfo = {
+    val intCharge: ModuleIconPulseColor = if (pulseGreen) ModuleIconPulseColor.Green else ModuleIconPulseColor.Red
+    ModuleInfo(IconForModule(moduleType), intCharge, u3, u4 = false, u5 = false, pos_xy)
+  }
+
+  def IconForModule(moduleType: VanuModuleType): ModuleIcon = {
+    moduleType match {
+      case VanuModuleType.NonPowered => ModuleIcon.NonPowered
+      case VanuModuleType.Speed => ModuleIcon.Speed
+      case VanuModuleType.Defender => ModuleIcon.Defender
+      case VanuModuleType.Vehicle => ModuleIcon.Vehicle
+      case VanuModuleType.Weapon => ModuleIcon.Weapon
+      case VanuModuleType.Healing => ModuleIcon.Healing
+      case VanuModuleType.Pain => ModuleIcon.Pain
+      case _ => ModuleIcon.NonPowered
+    }
   }
 }
 

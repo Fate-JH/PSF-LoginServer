@@ -42,6 +42,8 @@ import net.psforever.objects.serverobject.PlanetSideServerObject
 import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.environment.EnvironmentAttribute
+import net.psforever.objects.serverobject.flag.base.FlagSocketDefinition
+import net.psforever.objects.serverobject.flag.module.VanuModuleNode
 import net.psforever.objects.serverobject.interior.{InteriorAware, Sidedness}
 import net.psforever.objects.serverobject.locks.IFFLock
 import net.psforever.objects.serverobject.pad.VehicleSpawnPad
@@ -59,6 +61,7 @@ import net.psforever.objects.zones.blockmap.{BlockMap, SectorPopulation}
 import net.psforever.packet.game.packets.EmpireBenefitsMessage.{ZoneBenefit, ZoneLock, ZoneLockBenefit, ZoneLockZone}
 import net.psforever.packet.game.packets.{EmpireBenefitsMessage, PropertyOverrideMessage}
 import net.psforever.services.Service
+import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
 import net.psforever.zones.Zones
 
 import java.util.concurrent.atomic.AtomicInteger
@@ -1750,11 +1753,16 @@ object Zone {
           case painbox: Painbox =>
             painbox.Actor ! Service.Startup
         }
+      //vanu module nodes that are spawners (the receptacle cradles are a plain vanu_module_node)
+      buildings.values
+        .flatMap(_.Amenities.filter(_.Definition.isInstanceOf[FlagSocketDefinition]))
+        .collect {
+          case spawner: VanuModuleNode if zone.isACavern =>
+            zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ModuleSpawnerReady(spawner))
+        }
       //the orbital_buildings in sanctuary zones have to establish their shuttle routes
       map.shuttleBays
-        .map {
-          guid(_)
-        }
+        .map(guid(_))
         .collect { case Some(obj: OrbitalShuttlePad) =>
           obj.Actor ! Service.Startup
         }

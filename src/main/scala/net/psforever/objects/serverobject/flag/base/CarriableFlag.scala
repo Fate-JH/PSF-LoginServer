@@ -30,24 +30,20 @@ object CarriableFlag {
   /** The lattice logic unit (LLU) */
   case object CaptureFlag extends CarriableFlag(value = FlagCategory.CaptureFlag.value, FlagCategory.CaptureFlag)
 
-  /** Not really a module, rather the cavity in which a module is stored */
+  /** Not really a module, rather the dais on which a module is installed */
   case object VanuModuleCradle extends CarriableFlag(value = "VanuModuleCradle", FlagCategory.VanuModuleElement)
-  /** Speed module (orange) */
-  case object VanuModuleSpeed extends CarriableModule(value = "VanuModuleSpeed", VanuModuleType.Speed, CavernBenefit.SpeedModule)
   /** Shield module (aqua) */
   case object VanuModuleDefender extends CarriableModule(value = "VanuModuleDefender", VanuModuleType.Defender, CavernBenefit.ShieldModule)
   /** Vehicle module (purple) */
   case object VanuModuleVehicle extends CarriableModule(value = "VanuModuleVehicle", VanuModuleType.Vehicle, CavernBenefit.VehicleModule)
   /** Equipment module (blue) */
   case object VanuModuleWeapon extends CarriableModule(value = "VanuModuleWeapon", VanuModuleType.Weapon, CavernBenefit.EquipmentModule)
-  /** Health module (yellow) */
-  case object VanuModuleEnergy extends CarriableModule(value = "VanuModuleEnergy", VanuModuleType.Healing, CavernBenefit.HealthModule)
   /** Pain module (beige) */
-  case object VanuModulePain extends CarriableModule(value = "VanuModulePain", VanuModuleType.Pain, CavernBenefit.PainModule)
-  /** Not really a module, don't know what this is */
-  case object VanuModuleBind extends CarriableFlag(value = "VanuModuleBind", FlagCategory.VanuModuleElement)
-  /** Not really a module, don't know what this is */
-  case object VanuModuleFortifier extends CarriableFlag(value = "VanuModuleFortifier", FlagCategory.VanuModuleElement)
+  case object VanuModuleBind extends CarriableModule(value = "VanuModuleEnergy", VanuModuleType.Pain, CavernBenefit.PainModule)
+  /** Speed module (orange) */
+  case object VanuModuleEnergy extends CarriableModule(value = "VanuModulePain", VanuModuleType.Speed, CavernBenefit.SpeedModule)
+  /** Healing module (yellow) */
+  case object VanuModuleFortifier extends CarriableModule(value = "VanuModuleFortifier", VanuModuleType.Healing, CavernBenefit.HealthModule)
 
   /** Non-powered (white) */
   case object VanuModuleNonPowered extends CarriableModule(value = "VanuModuleNonPowered", VanuModuleType.NonPowered, CavernBenefit.NamelessBenefit)
@@ -59,7 +55,7 @@ object CarriableFlag {
   case object RabbitBall extends CarriableFlag(value = FlagCategory.RabbitBall.value, FlagCategory.RabbitBall)
 
   private lazy val vanuModules: List[CarriableModule] = List(
-    VanuModuleSpeed, VanuModuleDefender, VanuModuleVehicle, VanuModuleWeapon, VanuModuleEnergy, VanuModulePain
+    VanuModuleBind, VanuModuleDefender, VanuModuleVehicle, VanuModuleWeapon, VanuModuleEnergy, VanuModuleFortifier
   )
   lazy val values: List[CarriableFlag] = List(
     CaptureFlag, VanuModuleBind, VanuModuleFortifier, MonolithUnit, RabbitBall
@@ -80,4 +76,6 @@ object CarriableFlag {
  */
 trait DesignatedFlagType {
   def ValidFlagType: CarriableFlag
+
+  def DisplayFlagType: CarriableFlag = ValidFlagType
 }

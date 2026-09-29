@@ -1399,13 +1399,13 @@ object GlobalDefinitions {
 
   val vanu_module_node = new FlagSocketDefinition(936, CarriableFlag.VanuModuleCradle)
 
-  val vanu_module_node_bind = new FlagSocketDefinition(937, CarriableFlag.VanuModuleBind)
+  val vanu_module_node_bind = new FlagSocketDefinition(937, CarriableFlag.VanuModuleEnergy) /* 'bind' is the speed module spawner/cradle */
 
   val vanu_module_node_defender = new FlagSocketDefinition(938, CarriableFlag.VanuModuleDefender)
 
-  val vanu_module_node_energy = new FlagSocketDefinition(939, CarriableFlag.VanuModuleEnergy)
+  val vanu_module_node_energy = new FlagSocketDefinition(939, CarriableFlag.VanuModuleBind) /* 'energy' is the pain module spawner/cradle */
 
-  val vanu_module_node_fortifier = new FlagSocketDefinition(930, CarriableFlag.VanuModuleFortifier)
+  val vanu_module_node_fortifier = new FlagSocketDefinition(940, CarriableFlag.VanuModuleFortifier)
 
   val vanu_module_node_vehicle = new FlagSocketDefinition(941, CarriableFlag.VanuModuleVehicle)
 
