@@ -93,10 +93,11 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
 
   private def TryDespawnVanuModule(): Boolean = {
     obj.captureFlag match {
-      case Some(flag: VanuModule) if !flag.Charged =>
+      case Some(flag: VanuModule) if flag.Charged != ChargedState.Charged =>
         HandleFlagDespawn(flag)
         true
       case _ =>
+        obj.captureFlag = None
         false
     }
   }
@@ -114,6 +115,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     flag.Orientation = orientation
     flag.Owner = spawner.Owner
     flag.Faction = spawner.Faction
+    flag.Charged = ChargedState.Demo
     // Register object create task and callback to create on clients
     TaskWorkflow.execute(
       TaskBundle(
@@ -134,7 +136,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
   }
 
   private def OnSpawnBehaviors(
-                                captureTerminalGuid: PlanetSideGUID,
+                                socketGuid: PlanetSideGUID,
                                 socket: VanuModuleNode,
                                 flag: OwnedFlag
                               )(): Unit = {
@@ -149,7 +151,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     // 1.Override CC message when looked at, 2.Announce flag spawn
     zone.LocalEvents ! BundledEnvelope(
       MessageEnvelope(zone.id, GenericObjectAction(
-        captureTerminalGuid,
+        socketGuid,
         GenericObjectActionEnum.FlagSpawned.id
       )),
       MessageEnvelope(zone.id, LocalAction.LluSpawned(flag))
@@ -157,36 +159,32 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     owner.Actor ! BuildingActor.AmenityStateChange(obj)
     // Broadcast chat message for LLU spawn
     //todo ???
-    zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(socket.GUID, flag.GUID, 0)))
+    zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(socketGuid, flag.GUID, 0)))
   }
 
   private def HandleFlagDespawn(flag: OwnedFlag): Unit = {
-    // Remove the flag as an amenity
-    flag.Target match {
-      case Building.NoBuilding if flag.Carrier.isEmpty =>
-        HandleFlagDespawnLocal(flag)
-      case Building.NoBuilding => //being carried; must sort that out first
-        val carrier = flag.Carrier.get
-        carrier.Zone.AvatarEvents ! MessageEnvelope(carrier.Name, AvatarAction.DropSpecialItem())
-        context.system.scheduler.scheduleOnce(1000 milliseconds, self, VanuModuleSpawnerControl.ClearModule)
-      case someBuilding =>
-        someBuilding
-          .Amenities
-          .collectFirst { case cradle: VanuModuleNode if cradle.captureFlag.contains(flag) => cradle }
-          .foreach { cradle =>
-            cradle.Actor ! VanuModuleCradleControl.FreeModule
-            context.system.scheduler.scheduleOnce(1000 milliseconds, self, VanuModuleSpawnerControl.ClearModule)
-          }
+    flag match {
+      case module: VanuModule => HandleModuleDespawn(module)
+      case _ => ()
+    }
+  }
+
+  private def HandleModuleDespawn(flag: VanuModule): Unit = {
+    if (flag.Charged != ChargedState.Charged) {
+      flag.Carrier match {
+        case None =>
+          HandleFlagDespawnLocal(flag)
+        case Some(carrier) =>
+          carrier.Zone.AvatarEvents ! MessageEnvelope(carrier.Name, AvatarAction.DropSpecialItem())
+          context.system.scheduler.scheduleOnce(1000 milliseconds, self, VanuModuleSpawnerControl.ClearModule)
+      }
     }
   }
 
   private def HandleFlagDespawnLocal(flag: OwnedFlag): Unit = {
-    val zone = flag.Zone
-    val flagOwner = flag.Owner.asInstanceOf[Building]
-    val socket = flagOwner
-      .Amenities
-      .collectFirst { case cradle: VanuModuleNode if cradle.captureFlag.contains(flag) => cradle }
-    socket.map(_.captureFlag = None)
+    val zone = obj.Zone
+    val flagOwner = obj.Owner.asInstanceOf[Building]
+    obj.captureFlag = None
     flagOwner.RemoveAmenity(flag)
     flagOwner.Actor ! BuildingActor.AmenityStateChange(obj)
     //UntrackFlag(flag)

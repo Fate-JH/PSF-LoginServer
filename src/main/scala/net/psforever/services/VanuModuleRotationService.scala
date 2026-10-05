@@ -58,7 +58,7 @@ class VanuModuleRotationService(
   private var managerEndpoints: Seq[ClassicActorRef] = List()
 
   def start(): Behavior[VanuModuleRotationService.Command] = {
-    timer.startTimerWithFixedDelay(RotateAvailability, RotateAvailability, 10.seconds)
+    timer.startTimerWithFixedDelay(RotateAvailability, RotateAvailability, 60.seconds)
 
     Behaviors
       .receiveMessage[VanuModuleRotationService.Command] {

@@ -21,7 +21,7 @@ import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.VanuModule
+import net.psforever.objects.serverobject.flag.module.{VanuModule, VanuModuleNode}
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
 import net.psforever.objects.serverobject.locks.IFFLock
@@ -396,8 +396,12 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
         ops.handleUseTelepadDeployable(obj, equipment, pkt, ops.useRouterTelepadSystem)
       case Some(obj: Utility.InternalTelepad) =>
         ops.handleUseInternalTelepad(obj, pkt, ops.useRouterTelepadSystem)
-      case Some(obj: OwnedFlag) if obj.ValidFlagType == CarriableFlag.CaptureFlag =>
+      case Some(obj: OwnedFlag) if obj.ValidFlagType.category == FlagCategory.CaptureFlag =>
         ops.handleUseCaptureFlag(obj)
+      case Some(obj: VanuModuleNode) =>
+        obj.captureFlag.foreach(ops.handleUseVanuModuleInitialCollection(_, obj))
+      case Some(obj: OwnedFlag) if obj.ValidFlagType.category == FlagCategory.VanuModule =>
+        ops.handleUseVanuModule(obj)
       case Some(_: WarpGate) =>
         ops.handleUseWarpGate(equipment)
       case Some(obj) =>

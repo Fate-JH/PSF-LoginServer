@@ -4,10 +4,18 @@ package net.psforever.services.local.support
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.{Actor, ActorContext, ActorRef, Props}
-import net.psforever.objects.serverobject.flag.module.{VanuModuleNode, VanuModuleSpawnerControl}
+import net.psforever.objects.Player
+import net.psforever.objects.definition.converter.OCM
+import net.psforever.objects.serverobject.flag.base.OwnedFlag
+import net.psforever.objects.serverobject.flag.module.{VanuModule, VanuModuleNode, VanuModuleSpawnerControl}
 import net.psforever.objects.zones.Zone
+import net.psforever.packet.game.packets.{ObjectAttachMessage, ObjectDetachMessage, TriggeredSound}
+import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
+import net.psforever.services.base.message.SendResponse
 import net.psforever.services.{ServiceManager, VanuModuleRotationService}
 import net.psforever.services.base.{EventServiceSupport, GenericSupportEnvelopeOnly}
+import net.psforever.services.local.LocalAction
+import net.psforever.types.Vector3
 
 case class VanuModuleSupport(zone: Zone)
   extends EventServiceSupport {
@@ -28,6 +36,12 @@ object VanuModuleManager {
   final case class ModuleSpawnerReady(obj: VanuModuleNode) extends Command
 
   final case class ModuleSpawnerUnready(obj: VanuModuleNode) extends Command
+
+  final case class DropFlag(flag: OwnedFlag) extends Command
+
+  final case class PickupFlagFromCradle(flag: OwnedFlag, spawner: VanuModuleNode, player: Player) extends Command
+
+  final case class PickupFlag(flag: OwnedFlag, player: Player) extends Command
 }
 
 class VanuModuleManager(zone: Zone) extends Actor {
@@ -45,15 +59,16 @@ class VanuModuleManager(zone: Zone) extends Actor {
 
   val AddRemoveCradles: Receive = {
     case ModuleSpawnerReady(spawner) =>
+      val spawnerGuid = spawner.GUID
       cradles
-        .find(_.GUID == spawner.GUID)
-        .orElse {
+        .find(_.GUID == spawnerGuid)
+        .getOrElse {
           cradles = cradles :+ spawner
-          None
         }
 
     case ModuleSpawnerUnready(spawner) =>
-      cradles.indexWhere(_.GUID == spawner.GUID) match {
+      val spawnerGuid = spawner.GUID
+      cradles.indexWhere(_.GUID == spawnerGuid) match {
         case -1 => ()
         case index =>
           cradles = cradles.take(index) ++ cradles.drop(index + 1)
@@ -90,6 +105,51 @@ class VanuModuleManager(zone: Zone) extends Actor {
       cradles
         .filter(o => modulesToActivate.contains(o.ValidFlagType) && o.captureFlag.isEmpty)
         .foreach(_.Actor ! VanuModuleSpawnerControl.SpawnModule)
+
+    case PickupFlagFromCradle(flag, spawner, player) =>
+      val zoneid = flag.Zone.id
+      val flagGuid = flag.GUID
+      val playerPosition = player.Position
+      flag.Carrier = Some(player)
+      flag.asInstanceOf[VanuModule].Charged = false
+      flag.Position = Vector3.Zero
+      val flagOcmPacket = OCM.apply(flag)
+      flag.Position = playerPosition
+      zone.LocalEvents ! BundledEnvelope(
+        MessageEnvelope(zoneid, SendResponse(
+          ObjectDetachMessage(spawner.GUID, flagGuid, spawner.Position, 0, 0, 0), /* spawner emits typed module */
+          flagOcmPacket, /* overwrite with nonpowered module, far out of sight */
+          ObjectAttachMessage(player.GUID, flagGuid, 252) /* nonpowered module held by player */
+        )),
+        MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModulePickup, playerPosition, 15, volume = 0.8f))
+      )
+
+    case DropFlag(flag) =>
+      flag.Carrier match {
+        case Some(player: Player) =>
+          val zoneid = zone.id
+          val playerPosition = player.Position
+          flag.Position = player.Position + Vector3.z(value = 0.9f)
+          flag.Carrier = None
+          zone.LocalEvents ! BundledEnvelope(
+            MessageEnvelope(zoneid, SendResponse(ObjectDetachMessage(player.GUID, flag.GUID, playerPosition, 0, 0, 0))),
+            //todo? MessageEnvelope(zoneid, LocalAction.LluSpawned(flag)),
+            MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModuleDrop, playerPosition, 15, volume = 0.8f))
+          )
+        case _ => ()
+      }
+
+    case PickupFlag(flag, player) =>
+      flag.Carrier match {
+        case None =>
+          val zoneid = flag.Zone.id
+          flag.Carrier = Some(player)
+          zone.LocalEvents ! BundledEnvelope(
+            MessageEnvelope(zoneid, SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, 252))),
+            MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModulePickup, player.Position, 15, volume = 0.8f))
+          )
+        case _ => ()
+      }
 
     case _ => ()
   }

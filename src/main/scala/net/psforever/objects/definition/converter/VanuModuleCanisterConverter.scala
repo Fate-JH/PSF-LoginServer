@@ -27,7 +27,7 @@ class VanuModuleCanisterConverter extends ObjectCreateConverter[VanuModule]() {
           )
         ),
         unk = 0L,
-        obj.ValidFlagType match {
+        obj.DisplayFlagType match {
           case cmod: CarriableModule => cmod.module
           case _ => VanuModuleType.Invalid
         }

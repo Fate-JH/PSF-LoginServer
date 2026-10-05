@@ -13,7 +13,7 @@ import net.psforever.services.local.LocalAction
 class VanuModuleCradleControl(obj: VanuModuleNode)
   extends PoweredAmenityControl {
   override def poweredStateLogic: Receive = {
-    case VanuModuleCradleControl.InstallModule(flag) if flag.Charged =>
+    case VanuModuleCradleControl.InstallModule(flag) if flag.Charged == ChargedState.Charged =>
       TryInstallModule(flag, sender())
 
     case VanuModuleCradleControl.FreeModule =>

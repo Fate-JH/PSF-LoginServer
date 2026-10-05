@@ -6,6 +6,7 @@ import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
+import net.psforever.objects.serverobject.flag.module.VanuModuleNode
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mblocker.Locker
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
@@ -23,7 +24,7 @@ import net.psforever.services.avatar.support.GroundEnvelope
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
 import net.psforever.services.base.message.{ObjectDelete, PlanetsideAttribute, SendResponse}
 import net.psforever.services.base.support.RemoverActor
-import net.psforever.services.local.support.{CaptureEnvelope, FlagEnvelope, HackCaptureActor}
+import net.psforever.services.local.support.{CaptureEnvelope, FlagEnvelope, HackCaptureActor, VanuModuleEnvelope, VanuModuleManager}
 import net.psforever.services.local.LocalAction
 
 import scala.collection.mutable
@@ -471,49 +472,71 @@ class GeneralOperations(
     specialItemSlotGuid.foreach { guid =>
       specialItemSlotGuid = None
       player.Carrying = None
-      (continent.GUID(guid) match {
-        case Some(llu: OwnedFlag) if llu.ValidFlagType == CarriableFlag.CaptureFlag => Some((llu, llu.Carrier))
-        case _ => None
-      }) match {
-        case Some((llu, Some(carrier: Player)))
-          if carrier.GUID == player.GUID && !player.isAlive =>
-          player.LastDamage.foreach { damage =>
-            damage
-              .interaction
-              .adversarial
-              .map { _.attacker }
-              .collect {
-                case attacker
-                  if attacker.Faction != player.Faction &&
-                    System.currentTimeMillis() - llu.LastCollectionTime >= Config.app.game.experience.cep.lluSlayerCreditDuration.toMillis =>
-                  continent.AvatarEvents ! MessageEnvelope(
-                    attacker.Name,
-                    AvatarAction.AwardCep(attacker.CharId, Config.app.game.experience.cep.lluSlayerCredit)
-                  )
-                  ToDatabase.reportFacilityCapture(
-                    attacker.CharId,
-                    continent.Number,
-                    llu.Owner.GUID.guid,
-                    Config.app.game.experience.cep.lluSlayerCredit,
-                    expType = "lsc" //three characters - "llu slayer credit"
-                  )
-              }
+      continent.GUID(guid) match {
+        case Some(llu: OwnedFlag) if llu.ValidFlagType.category == FlagCategory.CaptureFlag =>
+          llu.Carrier match {
+            case Some(carrier) => dropLatticeLogicUnit(llu, carrier)
+            case None => failToDropFlag(category = "capture flag")
           }
-          if (!CaptureFlagManager.ReasonToLoseFlagViolently(continent, Some(guid), player)) {
-            continent.LocalEvents ! FlagEnvelope(CaptureFlagManager.DropFlag(llu))
+        case Some(module: OwnedFlag) if module.ValidFlagType.category == FlagCategory.VanuModule =>
+          module.Carrier match {
+            case Some(carrier) => dropVanuModule(module, carrier)
+            case None => failToDropFlag(category = "vanu module")
           }
-        case Some((llu, Some(carrier: Player)))
-          if carrier.GUID == player.GUID &&
-            !CaptureFlagManager.ReasonToLoseFlagViolently(continent, Some(guid), player) =>
-          continent.LocalEvents ! FlagEnvelope(CaptureFlagManager.DropFlag(llu))
-        case Some((_, Some(carrier: Player))) =>
-          log.warn(s"${player.toString} tried to drop LLU, but it is currently held by ${carrier.toString}")
-        case Some((_, None)) =>
-          log.warn(s"${player.toString} tried to drop LLU, but nobody is holding it.")
-        case None =>
-          log.warn(s"${player.toString} tried to drop a special item that wasn't recognized. GUID: $guid")
+        case _ =>
+          log.warn(s"${player.Name} tried to drop a special item that wasn't recognized. GUID: $guid")
       }
     }
+  }
+
+  private def dropLatticeLogicUnit(llu: OwnedFlag, carrier: Player): Unit = {
+    val guid = llu.GUID
+    if (carrier.GUID == player.GUID) {
+      if (!player.isAlive) {
+        player.LastDamage.foreach { damage =>
+          damage
+            .interaction
+            .adversarial
+            .map {
+              _.attacker
+            }
+            .collect {
+              case attacker
+                if attacker.Faction != player.Faction &&
+                  System.currentTimeMillis() - llu.LastCollectionTime >= Config.app.game.experience.cep.lluSlayerCreditDuration.toMillis =>
+                continent.AvatarEvents ! MessageEnvelope(
+                  attacker.Name,
+                  AvatarAction.AwardCep(attacker.CharId, Config.app.game.experience.cep.lluSlayerCredit)
+                )
+                ToDatabase.reportFacilityCapture(
+                  attacker.CharId,
+                  continent.Number,
+                  llu.Owner.GUID.guid,
+                  Config.app.game.experience.cep.lluSlayerCredit,
+                  expType = "lsc" //three characters - "llu slayer credit"
+                )
+            }
+        }
+        if (!CaptureFlagManager.ReasonToLoseFlagViolently(continent, Some(guid), player)) {
+          continent.LocalEvents ! FlagEnvelope(CaptureFlagManager.DropFlag(llu))
+        }
+      }
+    } else {
+      log.warn(s"${player.toString} tried to drop LLU, but it is currently held by ${carrier.Name}")
+    }
+  }
+
+  private def dropVanuModule(module: OwnedFlag, carrier: Player): Unit = {
+    val guid = module.GUID
+    if (carrier.GUID == player.GUID && !CaptureFlagManager.ReasonToLoseFlagViolently(continent, Some(guid), player)) {
+      continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.DropFlag(module))
+    } else {
+      log.warn(s"${player.toString} tried to drop vanu module, but it is currently held by ${carrier.Name}")
+    }
+  }
+
+  private def failToDropFlag(category: String): Unit = {
+    log.warn(s"${player.toString} tried to drop $category, but nobody is holding it.")
   }
 
   def setupProgressChange(rate: Float, finishedAction: () => Unit, stepAction: Float => Boolean): Unit = {
@@ -1541,14 +1564,50 @@ class GeneralOperations(
     specialItemSlotGuid match {
       case None if obj.Faction == player.Faction && player.ZoningRequest == Zoning.Method.None =>
         specialItemSlotGuid = Some(obj.GUID)
-        player.Carrying = FlagCategory.CaptureFlag
+        player.Carrying = obj.ValidFlagType.category
         continent.LocalEvents ! FlagEnvelope(CaptureFlagManager.PickupFlag(obj, player))
       case None =>
-        log.warn(s"${player.Faction} player ${player.toString} tried to pick up a ${obj.Faction} LLU -  ${obj.GUID}")
+        log.warn(s"${player.Faction} player ${player.toString} tried to pick up a ${obj.Faction} LLU - ${obj.GUID}")
       case Some(guid) if guid != obj.GUID =>
         // Ignore duplicate pickup requests
         log.warn(
           s"${player.Faction} player ${player.toString} tried to pick up a ${obj.Faction} LLU, but their special slot already contains $guid"
+        )
+      case _ => ()
+    }
+  }
+
+  def handleUseVanuModuleInitialCollection(obj: OwnedFlag, socket: VanuModuleNode): Unit = {
+    if (player.ZoningRequest != Zoning.Method.None) {
+      sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
+    }
+    specialItemSlotGuid match {
+      case None =>
+        specialItemSlotGuid = Some(obj.GUID)
+        player.Carrying = obj.ValidFlagType.category
+        continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.PickupFlagFromCradle(obj, socket, player))
+      case Some(guid) if guid != obj.GUID =>
+        // Ignore duplicate pickup requests
+        log.warn(
+          s"${player.Faction} player ${player.toString} tried to pick up a ${obj.Faction} vanu module, but their special slot already contains $guid"
+        )
+      case _ => ()
+    }
+  }
+
+  def handleUseVanuModule(obj: OwnedFlag): Unit = {
+    if (player.ZoningRequest != Zoning.Method.None) {
+      sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
+    }
+    specialItemSlotGuid match {
+      case None =>
+        specialItemSlotGuid = Some(obj.GUID)
+        player.Carrying = obj.ValidFlagType.category
+        continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.PickupFlag(obj, player))
+      case Some(guid) if guid != obj.GUID =>
+        // Ignore duplicate pickup requests
+        log.warn(
+          s"${player.Faction} player ${player.toString} tried to pick up a vanu module, but their special slot already contains $guid"
         )
       case _ => ()
     }

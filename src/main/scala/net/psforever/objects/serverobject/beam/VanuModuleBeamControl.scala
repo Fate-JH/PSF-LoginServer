@@ -38,7 +38,7 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
       ()
 
     case CommonMessages.Use(player, Some(module: VanuModule))
-      if subjectOfCharging.isEmpty && !module.Charged =>
+      if subjectOfCharging.isEmpty && !module.Charged.value =>
       //todo charge pose
       subjectOfCharging = Some(player.Name)
       chargeTimer = context.system.scheduler.scheduleOnce(5000 milliseconds, self, VanuModuleBeamControl.ChargeComplete(player, module))
