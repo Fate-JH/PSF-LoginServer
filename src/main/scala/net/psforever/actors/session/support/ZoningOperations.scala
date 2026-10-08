@@ -1292,7 +1292,7 @@ class ZoningOperations(
           continent.LocalEvents ! MessageEnvelope(
             continent.id,
             PlanetSideGUID(-1),
-            SendResponse(ObjectAttachMessage(llu.Carrier.get.GUID, llu.GUID, 252))
+            SendResponse(ObjectAttachMessage(llu.Carrier.get.GUID, llu.GUID, Player.SpecialCarrySlot))
           )
         }
       case _ => ()

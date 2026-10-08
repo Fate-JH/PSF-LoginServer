@@ -618,6 +618,7 @@ class Player(var avatar: Avatar)
 object Player {
   final val LockerSlot: Int    = 5
   final val FreeHandSlot: Int  = 250
+  final val SpecialCarrySlot: Int = 252
   final val HandsDownSlot: Int = 255
 
   final case class BuildDeployable(obj: Deployable, withTool: ConstructionItem)

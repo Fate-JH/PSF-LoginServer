@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import net.psforever.objects.Player
 import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.serverobject.flag.base.OwnedFlag
-import net.psforever.objects.serverobject.flag.module.{VanuModule, VanuModuleNode, VanuModuleSpawnerControl}
+import net.psforever.objects.serverobject.flag.module.{ChargedState, VanuModule, VanuModuleNode, VanuModuleSpawnerControl}
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.game.packets.{ObjectAttachMessage, ObjectDetachMessage, TriggeredSound}
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
@@ -42,6 +42,8 @@ object VanuModuleManager {
   final case class PickupFlagFromCradle(flag: OwnedFlag, spawner: VanuModuleNode, player: Player) extends Command
 
   final case class PickupFlag(flag: OwnedFlag, player: Player) extends Command
+
+  final case class ChargeFlag(flag: VanuModule) extends Command
 }
 
 class VanuModuleManager(zone: Zone) extends Actor {
@@ -112,14 +114,14 @@ class VanuModuleManager(zone: Zone) extends Actor {
       val playerPosition = player.Position
       flag.Carrier = Some(player)
       flag.asInstanceOf[VanuModule].Charged = false
-      flag.Position = Vector3.Zero
+      flag.Position = Vector3.Zero //spawn far out of sight
       val flagOcmPacket = OCM.apply(flag)
       flag.Position = playerPosition
       zone.LocalEvents ! BundledEnvelope(
         MessageEnvelope(zoneid, SendResponse(
           ObjectDetachMessage(spawner.GUID, flagGuid, spawner.Position, 0, 0, 0), /* spawner emits typed module */
-          flagOcmPacket, /* overwrite with nonpowered module, far out of sight */
-          ObjectAttachMessage(player.GUID, flagGuid, 252) /* nonpowered module held by player */
+          flagOcmPacket, /* overwrite with nonpowered module */
+          ObjectAttachMessage(player.GUID, flagGuid, Player.SpecialCarrySlot) /* nonpowered module held by player */
         )),
         MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModulePickup, playerPosition, 15, volume = 0.8f))
       )
@@ -129,10 +131,11 @@ class VanuModuleManager(zone: Zone) extends Actor {
         case Some(player: Player) =>
           val zoneid = zone.id
           val playerPosition = player.Position
-          flag.Position = player.Position + Vector3.z(value = 0.9f)
+          val flagPosition = playerPosition + Vector3.z(value = 0.9f)
+          flag.Position = flagPosition
           flag.Carrier = None
           zone.LocalEvents ! BundledEnvelope(
-            MessageEnvelope(zoneid, SendResponse(ObjectDetachMessage(player.GUID, flag.GUID, playerPosition, 0, 0, 0))),
+            MessageEnvelope(zoneid, SendResponse(ObjectDetachMessage(player.GUID, flag.GUID, flagPosition, 0, 0, 0))),
             //todo? MessageEnvelope(zoneid, LocalAction.LluSpawned(flag)),
             MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModuleDrop, playerPosition, 15, volume = 0.8f))
           )
@@ -145,10 +148,39 @@ class VanuModuleManager(zone: Zone) extends Actor {
           val zoneid = flag.Zone.id
           flag.Carrier = Some(player)
           zone.LocalEvents ! BundledEnvelope(
-            MessageEnvelope(zoneid, SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, 252))),
+            MessageEnvelope(zoneid, SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, Player.SpecialCarrySlot))),
             MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModulePickup, player.Position, 15, volume = 0.8f))
           )
         case _ => ()
+      }
+
+    case ChargeFlag(flag)
+      if flag.Charged == ChargedState.NonPowered =>
+      val zoneid = zone.id
+      flag.Charged = true
+      flag.Owner
+        .Amenities
+        .collectFirst { case o: VanuModuleNode if o.captureFlag.contains(flag) => o }
+        .map(_.captureFlag = None)
+      flag.Carrier match {
+        case Some(player) =>
+          val playerPosition = player.Position
+          flag.Position = Vector3.Zero //spawn far out of sight
+          val flagOcmPacket = OCM.apply(flag)
+          flag.Position = playerPosition
+          zone.LocalEvents ! BundledEnvelope(
+            MessageEnvelope(zoneid, SendResponse(
+              flagOcmPacket, /* overwrite with charged module */
+              ObjectAttachMessage(player.GUID, flag.GUID, Player.SpecialCarrySlot) /* charged module held by player */
+            )),
+            MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModuleStabilized, playerPosition, 15, volume = 0.8f))
+          )
+        case None =>
+          //we would not normally charge flags that are not being carried, but ...
+          zone.LocalEvents ! BundledEnvelope(
+            MessageEnvelope(zoneid, SendResponse(OCM.apply(flag))), /* overwrite with charged module */
+            MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModuleStabilized, flag.Position, 15, volume = 0.8f))
+          )
       }
 
     case _ => ()

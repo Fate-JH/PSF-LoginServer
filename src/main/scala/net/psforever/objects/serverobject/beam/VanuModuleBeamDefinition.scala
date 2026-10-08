@@ -1,6 +1,6 @@
 // Copyright (c) 2026 PSForever
 package net.psforever.objects.serverobject.beam
 
-import net.psforever.objects.serverobject.structures.AmenityDefinition
+import net.psforever.objects.serverobject.terminals.ProximityTerminalDefinition
 
-class VanuModuleBeamDefinition extends AmenityDefinition(objectId = 950)
+class VanuModuleBeamDefinition extends ProximityTerminalDefinition(objectId = 950)

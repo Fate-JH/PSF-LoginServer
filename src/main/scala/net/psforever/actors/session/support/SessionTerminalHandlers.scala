@@ -224,21 +224,27 @@ class SessionTerminalHandlers(
    * @param target the entity that is being considered for terminal operation
    */
   def StartUsingProximityUnit(terminal: Terminal with ProximityUnit, target: PlanetSideGameObject): Unit = {
-    val term_guid = terminal.GUID
+    val termGuid = terminal.GUID
+    val terminalDefinition = terminal.Definition
     if (player.isAlive) {
-      target match {
-        case _: Player =>
-          terminal.Actor ! CommonMessages.Use(player, Some(target))
-        case _: Vehicle =>
-          terminal.Actor ! CommonMessages.Use(player, Some(target))
+      terminalDefinition match {
+        case GlobalDefinitions.vanumodulebeam =>
+          terminal.Actor ! CommonMessages.Use(player, continent.GUID(sessionLogic.general.specialItemSlotGuid))
         case _ =>
-          log.error(
-            s"StartUsingProximityUnit: ${player.Name}, this ${terminal.Definition.Name} can not deal with target $target"
-          )
+          target match {
+            case _: Player =>
+              terminal.Actor ! CommonMessages.Use(player, Some(target))
+            case _: Vehicle =>
+              terminal.Actor ! CommonMessages.Use(player, Some(target))
+            case _ =>
+              log.error(
+                s"StartUsingProximityUnit: ${player.Name}, this ${terminalDefinition.Name} can not deal with target $target"
+              )
+          }
       }
-      terminal.Definition match {
+      terminalDefinition match {
         case GlobalDefinitions.adv_med_terminal | GlobalDefinitions.medical_terminal =>
-          usingMedicalTerminal = Some(term_guid)
+          usingMedicalTerminal = Some(termGuid)
         case _ => ()
       }
     }

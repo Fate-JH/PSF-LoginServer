@@ -138,7 +138,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
     case CaptureFlagManager.PickupFlag(flag: OwnedFlag, player: Player) =>
       flag.Carrier = Some(player)
       zone.LocalEvents ! BundledEnvelope(
-        MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, 252))),
+        MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, Player.SpecialCarrySlot))),
         MessageEnvelope(zone.id, LocalAction.TriggerSound(TriggeredSound.LLUPickup, player.Position, 15, volume = 0.8f))
       )
       CaptureFlagManager.ChatBroadcast(

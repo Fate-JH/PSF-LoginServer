@@ -2,10 +2,13 @@
 package net.psforever.objects.serverobject.beam
 
 import akka.actor.ActorContext
-import net.psforever.objects.serverobject.structures.Amenity
+import net.psforever.objects.serverobject.interior.Sidedness
+import net.psforever.objects.serverobject.terminals.ProximityTerminal
 import net.psforever.types.Vector3
 
-class VanuModuleBeam(mDef: VanuModuleBeamDefinition) extends Amenity {
+class VanuModuleBeam(mDef: VanuModuleBeamDefinition) extends ProximityTerminal(mDef) {
+  WhichSide = Sidedness.InsideOf
+
   override def Definition: VanuModuleBeamDefinition = mDef
 }
 

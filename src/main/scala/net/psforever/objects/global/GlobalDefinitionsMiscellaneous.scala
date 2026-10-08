@@ -1051,4 +1051,8 @@ object GlobalDefinitionsMiscellaneous {
 
   vanumodulebeam.Name = "vanumodulebeam"
   vanumodulebeam.UseRadius = 1.8115f //this is plain `radius`, not `use_radius`
+  vanumodulebeam.Interval = 500
+  vanumodulebeam.TargetValidation += EffectTarget.Category.Player -> EffectTarget.Validation.Player
+  vanumodulebeam.Damageable = false
+  vanumodulebeam.Repairable = false
 }
