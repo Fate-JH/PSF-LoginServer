@@ -16,7 +16,7 @@ import net.psforever.objects.serverobject.{CommonMessages, ServerObject}
 import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
-import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{FlagCategory, OwnedFlag}
 import net.psforever.objects.serverobject.flag.module.VanuModuleNode
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.locks.IFFLock
@@ -319,7 +319,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       case Some(obj: OwnedFlag) if obj.ValidFlagType.category == FlagCategory.CaptureFlag =>
         ops.handleUseCaptureFlag(obj)
       case Some(obj: VanuModuleNode) =>
-        obj.captureFlag.foreach(ops.handleUseVanuModuleInitialCollection(_, obj))
+        ops.handleUseVanuModuleNode(obj)
       case Some(obj: OwnedFlag) if obj.ValidFlagType.category == FlagCategory.VanuModule =>
         ops.handleUseVanuModule(obj)
       case Some(_: WarpGate) =>

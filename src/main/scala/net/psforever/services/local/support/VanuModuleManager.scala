@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import net.psforever.objects.Player
 import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.serverobject.flag.base.OwnedFlag
-import net.psforever.objects.serverobject.flag.module.{ChargedState, VanuModule, VanuModuleNode, VanuModuleSpawnerControl}
+import net.psforever.objects.serverobject.flag.module.{ChargedState, VanuModule, VanuModuleCradleControl, VanuModuleNode, VanuModuleSpawnerControl}
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.game.packets.{ObjectAttachMessage, ObjectDetachMessage, TriggeredSound}
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
@@ -46,6 +46,8 @@ object VanuModuleManager {
   final case class ChargeFlag(flag: VanuModule) extends Command
 
   final case class FlagLost(flag: VanuModule) extends Command
+
+  final case class InstallFlag(flag: VanuModule, cradle: VanuModuleNode) extends Command
 }
 
 class VanuModuleManager(zone: Zone) extends Actor {
@@ -184,6 +186,9 @@ class VanuModuleManager(zone: Zone) extends Actor {
 
     case FlagLost(flag) =>
       () //todo stub
+
+    case InstallFlag(flag, cradle) =>
+      cradle.Actor ! VanuModuleCradleControl.InstallModule(flag)
 
     case _ => ()
   }

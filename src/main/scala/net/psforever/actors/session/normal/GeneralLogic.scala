@@ -399,7 +399,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       case Some(obj: OwnedFlag) if obj.ValidFlagType.category == FlagCategory.CaptureFlag =>
         ops.handleUseCaptureFlag(obj)
       case Some(obj: VanuModuleNode) =>
-        obj.captureFlag.foreach(ops.handleUseVanuModuleInitialCollection(_, obj))
+        ops.handleUseVanuModuleNode(obj)
       case Some(obj: OwnedFlag) if obj.ValidFlagType.category == FlagCategory.VanuModule =>
         ops.handleUseVanuModule(obj)
       case Some(_: WarpGate) =>
