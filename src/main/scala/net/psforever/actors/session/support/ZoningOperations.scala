@@ -14,7 +14,7 @@ import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.inventory.InventoryItem
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.VanuModuleNode
+import net.psforever.objects.serverobject.flag.module.{ChargedState, VanuModule, VanuModuleNode}
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mount.Seat
 import net.psforever.objects.serverobject.tube.SpawnTube
@@ -783,7 +783,7 @@ class ZoningOperations(
         CancelZoningProcess()
         sessionLogic.actionsToCancel()
         sessionLogic.terminals.CancelAllProximityUnits()
-        sessionLogic.general.dropSpecialSlotItem()
+        sessionLogic.general.dropSpecialSlotItemWhenZoning()
         continent.Population ! Zone.Population.Release(avatar)
         spawn.resolveZoningSpawnPointLoad(response, previousZoningType)
     }
@@ -1531,9 +1531,9 @@ class ZoningOperations(
       //transferring a vehicle between spawn points (warp gates) in the same zone
       context.self ! SessionActor.PlayerLoaded(player)
     } else {
+      player.Continent = zoneId //forward-set the continent id to perform tests
       LoadZoneCommonTransferActivity()
       player.VehicleSeated = vehicle.GUID
-      player.Continent = zoneId //forward-set the continent id to perform a test
       interstellarFerryTopLevelGUID = None
 
       TaskWorkflow.execute(taskThenZoneChange(
@@ -1631,6 +1631,13 @@ class ZoningOperations(
     spawn.removeBoomerTriggersFromInventory().foreach(obj => {
       TaskWorkflow.execute(GUIDTask.unregisterObject(continent.GUID, obj))
     })
+    continent.GUID(sessionLogic.general.specialItemSlotGuid)
+      .collectFirst { case flag: VanuModule => flag }
+      .foreach { flag =>
+        spawn.interimSpecialCarryFlag = Some(flag)
+        TaskWorkflow.execute(GUIDTask.unregisterObject(continent.GUID, flag))
+        flag.Continent = continent.id
+      }
     Deployables.Disown(continent, avatar, context.self)
     spawn.drawDeloyableIcon = spawn.RedrawDeployableIcons //important for when SetCurrentAvatar initializes the UI next zone
     sessionLogic.squad.squadSetup = sessionLogic.squad.ZoneChangeSquadSetup
@@ -1842,7 +1849,7 @@ class ZoningOperations(
    *                should already be the driver of the droppod
    * @return a `TaskBundle` message
    */
-  def registerDroppod(vehicle: Vehicle, tplayer: Player): TaskBundle = {
+  private[session] def registerDroppod(vehicle: Vehicle, tplayer: Player): TaskBundle = {
     TaskBundle(
       new StraightforwardTask() {
         private val localDriver   = tplayer
@@ -1859,6 +1866,38 @@ class ZoningOperations(
         }
       },
       List(GUIDTask.registerObject(continent.GUID, vehicle))
+    )
+  }
+
+  /**
+   *
+   * @param flag special carry flag entity that the player should be carrying
+   * @return
+   */
+  private[session] def registerSpecialCarry(flag: OwnedFlag): TaskBundle = {
+    TaskBundle(
+      new StraightforwardTask() {
+        private val localFlag = flag
+        private val localZone = continent
+        private val localSession = sessionLogic
+
+        override def description(): String = s"register special carry flag ${localFlag.Definition.Name}"
+
+        def action(): Future[Any] = {
+          val zoneid = localZone.id
+          val events = localZone.LocalEvents
+          val flagGuid = localFlag.GUID
+
+          localSession.general.specialItemSlotGuid = Some(flagGuid)
+          events ! MessageEnvelope(zoneid, SendResponse(OCM.apply(localFlag)))
+          localFlag.Zone = localZone
+          localFlag.Carrier.foreach { carrier =>
+            events ! MessageEnvelope(zoneid, SendResponse(ObjectAttachMessage(carrier.GUID, flagGuid, Player.SpecialCarrySlot)))
+          }
+          Future(true)
+        }
+      },
+      List(GUIDTask.registerObject(continent.GUID, flag))
     )
   }
 
@@ -2076,6 +2115,7 @@ class ZoningOperations(
     private[session] var prevSpawnPoint: Option[SpawnPoint] = None
     private[session] var interimUngunnedVehicle: Option[PlanetSideGUID] = None
     private[session] var interimUngunnedVehicleSeat: Option[Int] = None
+    private[session] var interimSpecialCarryFlag: Option[OwnedFlag] = None
     /** Upstream message counter<br>
      * Checks for server acknowledgement of the following messages in the following conditions:<br>
      * `PlayerStateMessageUpstream` (infantry)<br>
@@ -2387,7 +2427,7 @@ class ZoningOperations(
           CancelZoningProcess()
           sessionLogic.actionsToCancel()
           sessionLogic.terminals.CancelAllProximityUnits()
-          sessionLogic.general.dropSpecialSlotItem()
+          sessionLogic.general.dropSpecialSlotItemWhenZoning()
           continent.Population ! Zone.Population.Release(avatar)
           resolveZoningSpawnPointLoad(response, previousZoningType)
       }
@@ -2749,11 +2789,13 @@ class ZoningOperations(
           )
       }
 
-      //The transient inter-zone vehicle reference has served its purpose now that the avatar exists in the new zone.
-      //The vehicle branch clears it above, but the infantry/spectator branches did not, so a stale ferry could survive
-      //(e.g. after a droppod or a vehicle transfer that resolved to an on-foot spawn) and misroute the NEXT transfer
-      //into LoadZoneInVehicle against a vehicle absent from the destination zone, crashing the client.
-      //Drop it unconditionally here so subsequent transfers cannot inherit a stale vehicle association.
+      /*
+      The transient inter-zone vehicle reference has served its purpose now that the avatar exists in the new zone.
+      The vehicle branch clears it above, but the infantry/spectator branches did not, so a stale ferry could survive
+      (e.g. after a droppod or a vehicle transfer that resolved to an on-foot spawn) and shunt the NEXT transfer
+      into LoadZoneInVehicle against a vehicle absent from the destination zone, crashing the client.
+      Blank it unconditionally here so subsequent transfers cannot inherit a stale vehicle association.
+       */
       interstellarFerry = None
       continent.Population ! Zone.Population.Spawn(avatar, player, avatarActor, galaxyService)
       avatarActor ! AvatarActor.RefreshPurchaseTimes()
@@ -3559,6 +3601,17 @@ class ZoningOperations(
         case _ => ()
       }
       interstellarFerryTopLevelGUID = None
+      // draw the special carry flag we were transporting from the previous zone (usually a vanu module)
+      spawn.interimSpecialCarryFlag.foreach {
+//        case o: VanuModule if o.Charged != ChargedState.Charged && continent != o.Owner.Zone =>
+//          // module does not enter zone and is consumed relatively quietly
+//          player.Carrying = None
+//          sessionLogic.general.specialItemSlotGuid = None
+//          VanuModuleNode.ThatSpawnedThis(o).ClearModule()
+        case flag =>
+          TaskWorkflow.execute(registerSpecialCarry(flag))
+      }
+      spawn.interimSpecialCarryFlag = None
       if (loadConfZone && sessionLogic.connectionState == 100) {
         configZone(continent)
         loadConfZone = false

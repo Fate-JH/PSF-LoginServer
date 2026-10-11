@@ -44,6 +44,8 @@ object VanuModuleManager {
   final case class PickupFlag(flag: OwnedFlag, player: Player) extends Command
 
   final case class ChargeFlag(flag: VanuModule) extends Command
+
+  final case class FlagLost(flag: VanuModule) extends Command
 }
 
 class VanuModuleManager(zone: Zone) extends Actor {
@@ -158,10 +160,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
       if flag.Charged == ChargedState.NonPowered =>
       val zoneid = zone.id
       flag.Charged = true
-      flag.Owner
-        .Amenities
-        .collectFirst { case o: VanuModuleNode if o.captureFlag.contains(flag) => o }
-        .map(_.captureFlag = None)
+      VanuModuleNode.ThatSpawnedThis(flag).ClearModule()
       flag.Carrier match {
         case Some(player) =>
           val playerPosition = player.Position
@@ -182,6 +181,9 @@ class VanuModuleManager(zone: Zone) extends Actor {
             MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModuleStabilized, flag.Position, 15, volume = 0.8f))
           )
       }
+
+    case FlagLost(flag) =>
+      () //todo stub
 
     case _ => ()
   }
