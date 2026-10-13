@@ -3,6 +3,7 @@ package net.psforever.packet.game.packets
 
 import enumeratum.values.{IntEnum, IntEnumEntry}
 import net.psforever.newcodecs.newcodecs
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, CarriableModule}
 import net.psforever.packet.{GamePacketOpcode, Marshallable, PacketHelpers, PlanetSideGamePacket}
 import net.psforever.packet.GamePacketOpcode.Type
 import net.psforever.types.{VanuModuleType, Vector3}
@@ -79,6 +80,11 @@ object ModuleInfo {
     ModuleInfo(IconForModule(moduleType), intCharge, u3, u4 = false, u5 = false, pos_xy)
   }
 
+  def apply(moduleType: CarriableFlag, pulseGreen: Boolean, u3: Long, pos_xy: Vector3): ModuleInfo = {
+    val intCharge: ModuleIconPulseColor = if (pulseGreen) ModuleIconPulseColor.Green else ModuleIconPulseColor.Red
+    ModuleInfo(IconForModule(moduleType), intCharge, u3, u4 = false, u5 = false, pos_xy)
+  }
+
   def IconForModule(moduleType: VanuModuleType): ModuleIcon = {
     moduleType match {
       case VanuModuleType.NonPowered => ModuleIcon.NonPowered
@@ -88,6 +94,13 @@ object ModuleInfo {
       case VanuModuleType.Weapon => ModuleIcon.Weapon
       case VanuModuleType.Healing => ModuleIcon.Healing
       case VanuModuleType.Pain => ModuleIcon.Pain
+      case _ => ModuleIcon.NonPowered
+    }
+  }
+
+  def IconForModule(moduleType: CarriableFlag): ModuleIcon = {
+    moduleType match {
+      case flag: CarriableModule => IconForModule(flag.module)
       case _ => ModuleIcon.NonPowered
     }
   }

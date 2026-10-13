@@ -3,6 +3,7 @@ package net.psforever.objects.serverobject.flag.module
 
 import akka.actor.{ActorContext, Props}
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagSocket, FlagSocketDefinition}
+import net.psforever.objects.serverobject.structures.AmenityOwner
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminalAware
 import net.psforever.objects.zones.ZoneAware
 import net.psforever.types.Vector3
@@ -32,6 +33,10 @@ object VanuModuleNode {
 
   trait OriginalSpawner {
     def ClearModule(): Option[VanuModule]
+
+    def isInstalled: Boolean
+
+    def GetSpawner: Option[VanuModuleNode]
   }
 
   case class WithModuleInstalled(node: VanuModuleNode, module: VanuModule) extends OriginalSpawner {
@@ -44,18 +49,34 @@ object VanuModuleNode {
           None
       }
     }
+
+    def isInstalled: Boolean = true
+
+    def GetSpawner: Option[VanuModuleNode] = Some(node)
   }
 
   case class WithDifferentModuleInstalled(node: VanuModuleNode) extends OriginalSpawner {
     def ClearModule(): Option[VanuModule] = None
+
+    def isInstalled: Boolean = false
+
+    def GetSpawner: Option[VanuModuleNode] = Some(node)
   }
 
   case class WithoutModuleInstalled(node: VanuModuleNode) extends OriginalSpawner {
     def ClearModule(): Option[VanuModule] = None
+
+    def isInstalled: Boolean = false
+
+    def GetSpawner: Option[VanuModuleNode] = Some(node)
   }
 
   case object NotFound extends OriginalSpawner {
     def ClearModule(): Option[VanuModule] = None
+
+    def isInstalled: Boolean = false
+
+    def GetSpawner: Option[VanuModuleNode] = None
   }
 
   /**
@@ -74,8 +95,11 @@ object VanuModuleNode {
    * @return module node that spawned the module, if it can be determined
    */
   def ThatSpawnedThis(module: VanuModule): OriginalSpawner = {
-    module
-      .Owner
+    ThatSpawnedThis(module, module.Owner)
+  }
+
+  def ThatSpawnedThis(module: VanuModule, mockOwner: AmenityOwner): OriginalSpawner = {
+    mockOwner
       .Amenities
       .collectFirst { case o: VanuModuleNode if o.ValidFlagType == module.ValidFlagType => o }
       .map { o =>

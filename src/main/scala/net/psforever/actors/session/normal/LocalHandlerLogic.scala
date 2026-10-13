@@ -9,10 +9,11 @@ import net.psforever.objects.ce.Deployable
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.vehicles.MountableWeapons
 import net.psforever.objects.{BoomerDeployable, Default, ExplosiveDeployable, TelepadDeployable, Tool, TurretDeployable}
-import net.psforever.packet.game.packets.{ChatMsg, DeployableObjectsInfoMessage, GenericActionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HackMessage, HackState, HackState1, InventoryStateMessage, ObjectAttachMessage, ObjectCreateMessage, ObjectDeleteMessage, ObjectDetachMessage, OrbitalShuttleTimeMsg, PadAndShuttlePair, PlanetsideAttributeMessage, ProximityTerminalUseMessage, TriggerEffectMessage, TriggerSoundMessage, TriggeredSound, VehicleStateMessage}
+import net.psforever.packet.game.packets.{ChatMsg, DeployableObjectsInfoMessage, GenericActionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HackMessage, HackState, HackState1, InventoryStateMessage, ModuleInfo, ObjectAttachMessage, ObjectCreateMessage, ObjectDeleteMessage, ObjectDetachMessage, OrbitalShuttleTimeMsg, PadAndShuttlePair, PlanetsideAttributeMessage, ProximityTerminalUseMessage, TriggerEffectMessage, TriggerSoundMessage, TriggeredSound, VanuModuleUpdateMessage, VehicleStateMessage}
 import net.psforever.services.base.message.SendResponse
 import net.psforever.services.{InterstellarClusterService, Service}
 import net.psforever.services.local.LocalAction
+import net.psforever.services.local.support.VanuModuleUpdate
 import net.psforever.types.{ChatMessageType, SpawnGroup}
 
 object LocalHandlerLogic {
@@ -249,6 +250,13 @@ class LocalHandlerLogic(val ops: SessionLocalHandlers, implicit val context: Act
           token = sessionLogic.zoning.nextSpawnPointToken()
         )
       }
+
+    case VanuModuleUpdate(moduleInfo) =>
+      val playerFaction = player.Faction
+      sendResponse(VanuModuleUpdateMessage(
+        continent.Number,
+        moduleInfo.map { case (icon, faction, time, pos) => ModuleInfo(icon, faction == playerFaction, time, pos) }.toList
+      ))
   }
 
   /* support functions */

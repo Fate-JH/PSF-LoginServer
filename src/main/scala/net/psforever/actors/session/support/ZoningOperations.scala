@@ -29,6 +29,7 @@ import net.psforever.services.avatar.support.{CorpseEnvelope, ReleaseEnvelope}
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
 import net.psforever.services.base.message.{GenericObjectAction, ObjectDelete, PlanetsideAttribute, SendResponse}
 import net.psforever.services.chat.DefaultChannel
+import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -593,14 +594,8 @@ class ZoningOperations(
           }
           triggerAutomatedTurretFire(turret)
       }
-    //vanu modules
-    continent.Buildings.values
-      .flatMap(_.Amenities)
-      .collect { case obj: VanuModuleNode => obj.captureFlag }
-      .flatten
-      .foreach { module =>
-        sendResponse(OCM.apply(module))
-      }
+    //vanu modules (installed, carried, or dropped)
+    continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.WhichModulesToDisplay(name))
     //remote projectiles and radiation clouds
     continent.Projectiles.foreach { projectile =>
       sendResponse(OCM.apply(projectile))
@@ -1635,6 +1630,7 @@ class ZoningOperations(
       .collectFirst { case flag: VanuModule => flag }
       .foreach { flag =>
         spawn.interimSpecialCarryFlag = Some(flag)
+        continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.StopTrackingModule(flag))
         TaskWorkflow.execute(GUIDTask.unregisterObject(continent.GUID, flag))
         flag.Continent = continent.id
       }
@@ -1877,7 +1873,7 @@ class ZoningOperations(
   private[session] def registerSpecialCarry(flag: OwnedFlag): TaskBundle = {
     TaskBundle(
       new StraightforwardTask() {
-        private val localFlag = flag
+        private val localFlag = flag.asInstanceOf[VanuModule]
         private val localZone = continent
         private val localSession = sessionLogic
 
@@ -1889,11 +1885,18 @@ class ZoningOperations(
           val flagGuid = localFlag.GUID
 
           localSession.general.specialItemSlotGuid = Some(flagGuid)
-          events ! MessageEnvelope(zoneid, SendResponse(OCM.apply(localFlag)))
           localFlag.Zone = localZone
-          localFlag.Carrier.foreach { carrier =>
-            events ! MessageEnvelope(zoneid, SendResponse(ObjectAttachMessage(carrier.GUID, flagGuid, Player.SpecialCarrySlot)))
-          }
+          localZone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.TrackModuleInZone(localFlag))
+          val objectCreatePacket = OCM.apply(localFlag)
+          localFlag.Carrier
+            .map { carrier =>
+              events ! MessageEnvelope(zoneid, SendResponse(objectCreatePacket, ObjectAttachMessage(carrier.GUID, flagGuid, Player.SpecialCarrySlot)))
+              Some(carrier)
+            }
+            .orElse {
+              events ! MessageEnvelope(zoneid, SendResponse(objectCreatePacket))
+              None
+            }
           Future(true)
         }
       },
@@ -3603,13 +3606,15 @@ class ZoningOperations(
       interstellarFerryTopLevelGUID = None
       // draw the special carry flag we were transporting from the previous zone (usually a vanu module)
       spawn.interimSpecialCarryFlag.foreach {
-//        case o: VanuModule if o.Charged != ChargedState.Charged && continent != o.Owner.Zone =>
-//          // module does not enter zone and is consumed relatively quietly
-//          player.Carrying = None
-//          sessionLogic.general.specialItemSlotGuid = None
-//          VanuModuleNode.ThatSpawnedThis(o).ClearModule()
-        case flag =>
+        case o: VanuModule if o.Charged != ChargedState.Charged && continent != o.Owner.Zone =>
+          // module does not enter zone and is consumed relatively quietly
+          o.Destroyed = true
+          player.Carrying = None
+          sessionLogic.general.specialItemSlotGuid = None
+          VanuModuleNode.ThatSpawnedThis(o).ClearModule()
+        case flag: VanuModule =>
           TaskWorkflow.execute(registerSpecialCarry(flag))
+        case _ => ()
       }
       spawn.interimSpecialCarryFlag = None
       if (loadConfZone && sessionLogic.connectionState == 100) {

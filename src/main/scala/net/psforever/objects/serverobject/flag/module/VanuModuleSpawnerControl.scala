@@ -13,12 +13,21 @@ import net.psforever.services.avatar.AvatarAction
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
 import net.psforever.services.base.message.{GenericObjectAction, SendResponse}
 import net.psforever.services.local.LocalAction
+import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
 import net.psforever.types.{PlanetSideEmpire, PlanetSideGUID, Vector3}
 
 import scala.annotation.unused
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+
+object VanuModuleSpawnerControl {
+  final case class SetSpawnTimer(time: Long)
+
+  case object SpawnModule
+
+  case object ClearModule
+}
 
 class VanuModuleSpawnerControl(obj: VanuModuleNode)
   extends Actor
@@ -110,10 +119,12 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     // Construct new flag
     val zone = spawner.Zone
     val flag = new VanuModule(GlobalDefinitions.vanu_module, spawner.ValidFlagType)
+    val owner = spawner.Owner.asInstanceOf[Building]
     flag.Zone = spawner.Zone
     flag.Position = position + Vector3.z(value = 1f)
     flag.Orientation = orientation
-    flag.Owner = spawner.Owner
+    flag.Owner = owner
+    flag.Target = owner
     flag.Faction = spawner.Faction
     flag.Charged = ChargedState.Demo
     // Register object create task and callback to create on clients
@@ -138,7 +149,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
   private def OnSpawnBehaviors(
                                 socketGuid: PlanetSideGUID,
                                 socket: VanuModuleNode,
-                                flag: OwnedFlag
+                                flag: VanuModule
                               )(): Unit = {
     val zone = socket.Zone
     val owner = socket.Owner.asInstanceOf[Building]
@@ -160,6 +171,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     // Broadcast chat message for LLU spawn
     //todo ???
     zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(socketGuid, flag.GUID, 0)))
+    zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.SpawnFlag(flag))
   }
 
   private def HandleFlagDespawn(flag: OwnedFlag): Unit = {
@@ -181,7 +193,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     }
   }
 
-  private def HandleFlagDespawnLocal(flag: OwnedFlag): Unit = {
+  private def HandleFlagDespawnLocal(flag: VanuModule): Unit = {
     val zone = obj.Zone
     val flagOwner = obj.Owner.asInstanceOf[Building]
     obj.captureFlag = None
@@ -192,13 +204,6 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.LluDespawned(flag.GUID, flag.Position))
     // Then unregister it from the GUID pool
     TaskWorkflow.execute(GUIDTask.unregisterObject(zone.GUID, flag))
+    zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.DespawnFlag(flag))
   }
-}
-
-object VanuModuleSpawnerControl {
-  final case class SetSpawnTimer(time: Long)
-
-  case object SpawnModule
-
-  case object ClearModule
 }
