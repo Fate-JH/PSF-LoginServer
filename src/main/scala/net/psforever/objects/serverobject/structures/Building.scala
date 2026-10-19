@@ -9,15 +9,16 @@ import net.psforever.objects.serverobject.hackable.Hackable
 import net.psforever.objects.serverobject.painbox.Painbox
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
 import net.psforever.objects.serverobject.tube.SpawnTube
-import net.psforever.objects.zones.Zone
+import net.psforever.objects.zones.{Zone, ZoneType}
 import net.psforever.objects.zones.blockmap.BlockMapEntity
 import net.psforever.types._
 import scalax.collection.{Graph, GraphEdge}
 import akka.actor.typed.scaladsl.adapter._
 import net.psforever.actors.zone.building.BuildingLogic
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
-import net.psforever.objects.serverobject.flag.base.OwnedFlag
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, CarriableModule, OwnedFlag}
 import net.psforever.objects.serverobject.flag.llu.CaptureFlagSocket
+import net.psforever.objects.serverobject.flag.module.VanuModuleNode
 import net.psforever.objects.serverobject.structures.participation.{MajorFacilityHackParticipation, NoParticipation, ParticipationLogic, TowerHackParticipation}
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
 import net.psforever.packet.game.packets.{Additional3, BuildingInfoUpdateMessage, DensityLevelUpdateMessage}
@@ -34,14 +35,14 @@ class Building(
   with BlockMapEntity {
 
   private var faction: PlanetSideEmpire.Value = PlanetSideEmpire.NEUTRAL
-  private var playersInSOI: List[Player]      = List.empty
+  private var playersInSOI: List[Player] = List.empty
   private var participationFunc: ParticipationLogic = NoParticipation
-  var virusId: Long                           = 8 // 8 default = no virus
-  var virusInstalledBy: Option[Int]           = None // faction id
-  var hasCavernLockBenefit: Boolean           = false
+  var virusId: Long = 8 // 8 default = no virus
+  var virusInstalledBy: Option[Int] = None // faction id
+  var hasCavernLockBenefit: Boolean = false
   super.Zone_=(zone)
   super.GUID_=(PlanetSideGUID(building_guid)) //set
-  Invalidate()                                //unset; guid can be used during setup, but does not stop being registered properly later
+  Invalidate() //unset; guid can be used during setup, but does not stop being registered properly later
 
   override def toString: String = name
 
@@ -58,7 +59,7 @@ class Building(
   def IsSubCapitol: Boolean = {
     Neighbours match {
       case Some(buildings: Set[Building]) => buildings.exists(x => Building.Capitols.contains(x.name))
-      case None                           => false
+      case None => false
     }
   }
 
@@ -92,7 +93,7 @@ class Building(
   def AllNeighbours: Option[Set[Building]] = {
     zone.Lattice find this match {
       case Some(x) => Some(x.diSuccessors.map(x => x.toOuter))
-      case None    => None
+      case None => None
     }
   }
 
@@ -101,21 +102,21 @@ class Building(
   def Neighbours: Option[Set[Building]] = {
     AllNeighbours collect {
       case wg: WarpGate if wg.Active => wg
-      case b                         => b
+      case b => b
     }
   }
 
   def ForceDome: Option[ForceDomePhysics] = {
     Amenities.find(_.isInstanceOf[ForceDomePhysics]) match {
       case Some(out: ForceDomePhysics) => Some(out)
-      case _                           => None
+      case _ => None
     }
   }
 
   def NtuSource: Option[NtuContainer] = {
     Amenities.find(_.isInstanceOf[NtuContainer]) match {
       case Some(o: NtuContainer) => Some(o)
-      case _                     => None
+      case _ => None
     }
   }
 
@@ -132,14 +133,14 @@ class Building(
   def Generator: Option[Generator] = {
     Amenities.find(_.isInstanceOf[Generator]) match {
       case Some(obj: Generator) => Some(obj)
-      case _                    => None
+      case _ => None
     }
   }
 
   def CaptureTerminal: Option[CaptureTerminal] = {
     Amenities.find(_.isInstanceOf[CaptureTerminal]) match {
       case Some(term) => Some(term.asInstanceOf[CaptureTerminal])
-      case _          => None
+      case _ => None
     }
   }
 
@@ -153,15 +154,73 @@ class Building(
       .find(_.Definition == GlobalDefinitions.llm_socket)
       .map(_.asInstanceOf[CaptureFlagSocket])
   }
+
   def GetFlag: Option[OwnedFlag] = {
     GetFlagSocket match {
       case Some(socket) => socket.captureFlag
-      case None         => None
+      case None => None
+    }
+  }
+
+  def GetAllModules: Seq[VanuModuleNode] = {
+    Amenities.collect { case obj: VanuModuleNode => obj }
+  }
+
+  def GetAllModules(moduleType: CarriableFlag): Seq[VanuModuleNode] = {
+    Amenities.collect { case obj: VanuModuleNode if obj.ValidFlagType == moduleType => obj }
+  }
+
+  def GetModuleCradles: Set[VanuModuleNode] = {
+    GetAllModules(CarriableFlag.VanuModuleCradle).toSet
+  }
+
+  def GetCavernBenefitsFromModules: Set[CavernBenefit] = {
+    GetModuleCradles
+      .flatMap(_.captureFlag.map(_.ValidFlagType))
+      .collect { case obj: CarriableModule => obj.benefit }
+  }
+
+  def HasCavernLock : Boolean = {
+    if (zone.Info.mood == ZoneType.Continent) {
+      connectedCavern().exists(_.Zone.lockedBy == faction)
+    } else {
+      false
+    }
+  }
+
+  def GetCavernBenefitsFromCavernLock: Set[CavernBenefit] = {
+    if (HasCavernLock) {
+      Set(
+        CavernBenefit.VehicleModule, CavernBenefit.EquipmentModule, CavernBenefit.ShieldModule,
+        CavernBenefit.SpeedModule, CavernBenefit.HealthModule, CavernBenefit.PainModule
+      )
+    } else {
+      Set.empty[CavernBenefit]
+    }
+  }
+
+  def GetApplicableCavernBenefits(generatorState: PlanetSideGeneratorState.Value): Set[CavernBenefit] = {
+    hasCavernLockBenefit = false
+    if (generatorState != PlanetSideGeneratorState.Destroyed && faction != PlanetSideEmpire.NEUTRAL && !CaptureTerminalIsHacked) {
+      val fromCaveLock = GetCavernBenefitsFromCavernLock
+      if (fromCaveLock.nonEmpty) {
+        hasCavernLockBenefit = true
+        fromCaveLock
+      } else {
+        val fromModules = GetCavernBenefitsFromModules ++ friendlyFunctionalNeighborhood().flatMap(_.GetCavernBenefitsFromModules)
+        if (fromModules.nonEmpty) {
+          fromModules
+        } else {
+          Set(CavernBenefit.None)
+        }
+      }
+    } else {
+      Set(CavernBenefit.None)
     }
   }
 
   def HackableAmenities: List[Amenity with Hackable] = {
-    Amenities.filter(x => x.isInstanceOf[Hackable]).map(x => x.asInstanceOf[Amenity with Hackable])
+    Amenities.collect { case x: Amenity with Hackable => x }
   }
 
   def CaptureTerminalIsHacked: Boolean = {
@@ -209,22 +268,10 @@ class Building(
       val o = Amenities.collect({ case tube: SpawnTube if !tube.Destroyed => tube })
       (o.nonEmpty, false) //TODO poll pain field strength
     }
-    val cavernBenefit: Set[CavernBenefit] = if (
-      generatorState != PlanetSideGeneratorState.Destroyed &&
-        faction != PlanetSideEmpire.NEUTRAL && !CaptureTerminalIsHacked &&
-        connectedCavern().exists(_.Zone.lockedBy == faction)
-    ) {
-      hasCavernLockBenefit = true
-      Set(CavernBenefit.VehicleModule, CavernBenefit.EquipmentModule, CavernBenefit.ShieldModule,
-          CavernBenefit.SpeedModule, CavernBenefit.HealthModule, CavernBenefit.PainModule)
-    } else {
-      hasCavernLockBenefit = false
-      Set(CavernBenefit.None)
-    }
+    val cavernBenefits: Set[CavernBenefit] = GetApplicableCavernBenefits(generatorState)
     val (installedVirus, installedByFac) = if (virusId == 8)  {
       (8, None)
-    }
-    else {
+    } else {
       (virusId.toInt, Some(Additional3(inform_defenders=true, virusInstalledBy.getOrElse(3))))
     }
     val forceDomeActive = ForceDome.exists(_.Energized)
@@ -243,7 +290,7 @@ class Building(
       spawnTubesNormal,
       forceDomeActive,
       latticeConnectedFacilityBenefits(),
-      cavernBenefit,
+      cavernBenefits,
       unk4 = Nil,
       unk5 = 0,
       unk6 = false,
@@ -337,10 +384,10 @@ class Building(
         } else {
           self pathUntil (_.Definition.LatticeLinkBenefit == wantedBenefit) match {
             case Some(_) => found = true
-            case None    => ;
+            case None    => ()
           }
         }
-      case None => ;
+      case None => ()
     }
     found
   }

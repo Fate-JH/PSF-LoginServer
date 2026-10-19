@@ -3,18 +3,25 @@ package net.psforever.objects.serverobject.flag.module
 
 import akka.actor.ActorRef
 import net.psforever.actors.zone.BuildingActor
-import net.psforever.objects.serverobject.flag.base.OwnedFlag
+import net.psforever.objects.Player
 import net.psforever.objects.serverobject.structures.{Building, PoweredAmenityControl}
-import net.psforever.packet.game.packets.{GenericObjectActionEnum, ObjectAttachMessage}
+import net.psforever.packet.game.packets.GenericObjectActionEnum
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
-import net.psforever.services.base.message.{GenericObjectAction, SendResponse}
+import net.psforever.services.base.message.GenericObjectAction
 import net.psforever.services.local.LocalAction
+import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
+
+object VanuModuleCradleControl {
+  final case class InstallModule(flag: VanuModule, player: Player)
+
+  case object FreeModule
+}
 
 class VanuModuleCradleControl(obj: VanuModuleNode)
   extends PoweredAmenityControl {
   override def poweredStateLogic: Receive = {
-    case VanuModuleCradleControl.InstallModule(flag) if flag.Charged == ChargedState.Charged =>
-      TryInstallModule(flag, sender())
+    case VanuModuleCradleControl.InstallModule(flag, player) =>
+      obj.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.InstallFlagIntoCradle(flag, obj, player))
 
     case VanuModuleCradleControl.FreeModule =>
       TryFreeModuleFromCradle(sender())
@@ -30,19 +37,6 @@ class VanuModuleCradleControl(obj: VanuModuleNode)
 
   override def powerTurnOffCallback(): Unit = {
     TryFreeModuleFromCradle()
-  }
-
-  private def TryInstallModule(flag: OwnedFlag, replyTo: ActorRef): Unit = {
-    obj.captureFlag.getOrElse {
-      val zone = obj.Zone
-      obj.captureFlag = flag
-      flag.Target = obj.Owner.asInstanceOf[Building]
-      flag.Carrier = None
-      val msg = BuildingActor.AmenityStateChange(obj)
-      obj.Owner.Actor ! msg
-      replyTo ! msg
-      zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(obj.GUID, flag.GUID, 0)))
-    }
   }
 
   private def TryFreeModuleFromCradle(): Boolean = {
@@ -70,10 +64,4 @@ class VanuModuleCradleControl(obj: VanuModuleNode)
       replyTo ! BuildingActor.AmenityStateChange(obj)
     }
   }
-}
-
-object VanuModuleCradleControl {
-  final case class InstallModule(flag: VanuModule)
-
-  case object FreeModule
 }

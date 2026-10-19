@@ -249,6 +249,8 @@ class Zone(info: DefinedZoneInfo, val map: ZoneMap) {
   private var timeOfDayOrigin: Long = 0
   private var timeOfDaySpeed: Float = 10.0f
 
+  def Info: DefinedZoneInfo = info
+
   /**
     * When the zone has completed initializing, this will be the future.
     * @see `init(ActorContext)`

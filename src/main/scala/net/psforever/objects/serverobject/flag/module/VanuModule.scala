@@ -1,7 +1,8 @@
 // Copyright (c) 2026 PSForever
 package net.psforever.objects.serverobject.flag.module
 
-import net.psforever.objects.serverobject.flag.base.{FlagDefinition, CarriableFlag, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagDefinition, OwnedFlag}
+import net.psforever.types.PlanetSideEmpire
 
 sealed abstract class ChargedState(val value: Boolean)
 
@@ -32,6 +33,8 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
     }
     Charged
   }
+
+  override def Faction: PlanetSideEmpire.Value = Carrier.map(_.Faction).getOrElse(super.Faction)
 
   override def DisplayFlagType: CarriableFlag = if (charged != ChargedState.NonPowered) {
     ValidFlagType

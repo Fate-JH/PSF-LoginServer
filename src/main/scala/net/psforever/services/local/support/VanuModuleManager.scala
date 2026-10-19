@@ -4,23 +4,27 @@ package net.psforever.services.local.support
 import akka.actor.typed.receptionist.Receptionist
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.{Actor, ActorContext, ActorRef, Cancellable, Props}
-import net.psforever.objects.{Default, Player}
+import net.psforever.actors.zone.BuildingActor
+import net.psforever.objects.{Default, GlobalDefinitions, Player}
 import net.psforever.objects.definition.converter.OCM
+import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, TaskWorkflow}
 import net.psforever.objects.serverobject.beam.VanuModuleBeam
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.{ChargedState, VanuModule, VanuModuleCradleControl, VanuModuleNode, VanuModuleSpawnerControl}
+import net.psforever.objects.serverobject.flag.module.{ChargedState, VanuModule, VanuModuleNode, VanuModuleSpawnerControl}
 import net.psforever.objects.serverobject.structures.Building
 import net.psforever.objects.zones.Zone
-import net.psforever.packet.game.packets.{ObjectAttachMessage, ObjectDetachMessage, TriggeredSound}
+import net.psforever.packet.game.packets.{GenericObjectActionEnum, ObjectAttachMessage, ObjectDetachMessage, TriggeredSound}
+import net.psforever.services.avatar.AvatarAction
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
-import net.psforever.services.base.message.{SelfRespondingEvent, SendResponse}
+import net.psforever.services.base.message.{GenericObjectAction, SelfRespondingEvent, SendResponse}
 import net.psforever.services.{ServiceManager, VanuModuleRotationService}
 import net.psforever.services.base.{EventServiceSupport, GenericSupportEnvelopeOnly}
 import net.psforever.services.local.LocalAction
-import net.psforever.types.{PlanetSideEmpire, Vector3}
+import net.psforever.types.{PlanetSideEmpire, PlanetSideGUID, Vector3}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 case class VanuModuleSupport(zone: Zone)
@@ -57,7 +61,7 @@ object VanuModuleManager {
 
   final case class DropFlag(flag: OwnedFlag) extends Command
 
-  final case class PickupFlagFromCradle(flag: OwnedFlag, spawner: VanuModuleNode, player: Player) extends Command
+  final case class PickupFlagFromCradle(flag: VanuModule, spawner: VanuModuleNode, player: Player) extends Command
 
   final case class PickupFlag(flag: OwnedFlag, player: Player) extends Command
 
@@ -67,7 +71,7 @@ object VanuModuleManager {
 
   final case class FlagLost(flag: VanuModule) extends Command
 
-  final case class InstallFlag(flag: VanuModule, cradle: VanuModuleNode) extends Command
+  final case class InstallFlagIntoCradle(flag: VanuModule, cradle: VanuModuleNode, player: Player) extends Command
 
   private case object DisplayVanuModuleIconsInZone extends Command
 }
@@ -121,7 +125,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
     case VanuModuleRotationService.CurrentModulesAvailable(currentlyAvailableModules) =>
       cradles
         .filter(o => currentlyAvailableModules.contains(o.ValidFlagType) && o.captureFlag.isEmpty)
-        .foreach(_.Actor ! VanuModuleSpawnerControl.SpawnModule)
+        .foreach(TrySpawnModuleInCradle)
       context.become(standardRotation)
 
     case _ => ()
@@ -134,10 +138,10 @@ class VanuModuleManager(zone: Zone) extends Actor {
       val modulesToClear = previousModuleSet.diff(modulesToActivate)
       cradles
         .filter(o => modulesToClear.contains(o.ValidFlagType) && o.captureFlag.nonEmpty)
-        .foreach(_.Actor ! VanuModuleSpawnerControl.ClearModule)
+        .foreach(TryDespawnModuleAssociatedWithCradle)
       cradles
         .filter(o => modulesToActivate.contains(o.ValidFlagType) && o.captureFlag.isEmpty)
-        .foreach(_.Actor ! VanuModuleSpawnerControl.SpawnModule)
+        .foreach(TrySpawnModuleInCradle)
 
     case TrackModuleInZone(module) =>
       TrackModule(module)
@@ -171,19 +175,27 @@ class VanuModuleManager(zone: Zone) extends Actor {
         zone.LocalEvents ! MessageEnvelope(channel, SendResponse(outputList))
       }
 
-      case SpawnFlag(flag: VanuModule) =>
+    case DisplayVanuModuleIconsInZone =>
+      UpdateVanuModuleIcons()
+      if (trackedModules.isEmpty) {
+        vanuModuleUpdateTimer.cancel()
+        vanuModuleUpdateTimer = Default.Cancellable
+      }
+
+    case SpawnFlag(flag: VanuModule) =>
       TrackModule(flag)
 
-      case DespawnFlag(flag: VanuModule) =>
+    case DespawnFlag(flag: VanuModule) =>
       UntrackModule(flag)
 
     case PickupFlagFromCradle(flag, spawner, player) =>
       val zoneid = flag.Zone.id
       val flagGuid = flag.GUID
       val playerPosition = player.Position
+      player.Carrying = flag.ValidFlagType.category
       flag.Carrier = Some(player)
       flag.Target = Building.NoBuilding
-      flag.asInstanceOf[VanuModule].Charged = false
+      flag.Charged = false
       flag.Position = Vector3.Zero //spawn far out of sight, at first
       val flagOcmPacket = OCM.apply(flag)
       flag.Position = playerPosition
@@ -213,7 +225,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
 
     case PickupFlag(flag, player) =>
       flag.Carrier match {
-        case None =>
+        case None if !flag.Destroyed =>
           val zoneid = flag.Zone.id
           flag.Carrier = Some(player)
           zone.LocalEvents ! BundledEnvelope(
@@ -255,20 +267,110 @@ class VanuModuleManager(zone: Zone) extends Actor {
           )
       }
 
-    case FlagLost(_) =>
-      () //todo stub
+    case FlagLost(flag) =>
+      HandleFlagDespawnLocal(flag)
 
-    case InstallFlag(flag, cradle) =>
-      cradle.Actor ! VanuModuleCradleControl.InstallModule(flag)
-
-    case DisplayVanuModuleIconsInZone =>
-      UpdateVanuModuleIcons()
-      if (trackedModules.isEmpty) {
-        vanuModuleUpdateTimer.cancel()
-        vanuModuleUpdateTimer = Default.Cancellable
+    case InstallFlagIntoCradle(flag, cradle, player) =>
+      cradle.captureFlag.getOrElse {
+        val zone = cradle.Zone
+        val owner = cradle.Owner.asInstanceOf[Building]
+        player.Carrying = None
+        flag.Target = owner
+        flag.Carrier = None
+        cradle.captureFlag = flag
+        cradle.Owner.Actor ! BuildingActor.AmenityStateChange(cradle)
+        zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(cradle.GUID, flag.GUID, 0)))
       }
 
     case _ => ()
+  }
+
+  private def TrySpawnModuleInCradle(spawner: VanuModuleNode): Unit = {
+    spawner.captureFlag match {
+      case None =>
+        // Construct new flag
+        val zone = spawner.Zone
+        val flag = new VanuModule(GlobalDefinitions.vanu_module, spawner.ValidFlagType)
+        val position = spawner.Position
+        val orientation = spawner.Orientation
+        flag.Zone = zone
+        flag.Position = position + Vector3.z(value = 1f)
+        flag.Orientation = orientation
+        flag.Charged = ChargedState.Demo
+        // Register object create task and callback to create on clients
+        TaskWorkflow.execute(
+          TaskBundle(
+            new StraightforwardTask() {
+              private val func: (PlanetSideGUID, VanuModuleNode, VanuModule) => Unit = OnSpawnBehaviors
+              private val localFlag = flag
+              private val localSocket = spawner
+
+              override def description(): String = s"register a ${localSocket.ValidFlagType.value} for socket"
+
+              def action(): Future[Any] = {
+                func(localSocket.GUID, localSocket, localFlag)
+                Future(true)
+              }
+            },
+            List(GUIDTask.registerObject(zone.GUID, flag))
+          )
+        )
+      case _ => ()
+    }
+  }
+
+  private def OnSpawnBehaviors(
+                                socketGuid: PlanetSideGUID,
+                                socket: VanuModuleNode,
+                                flag: VanuModule
+                              ): Unit = {
+    val zone = socket.Zone
+    val owner = socket.Owner.asInstanceOf[Building]
+    flag.Target = owner
+    owner.Amenities = flag
+    socket.captureFlag = flag
+    TrackModule(flag)
+    zone.LocalEvents ! BundledEnvelope(
+      MessageEnvelope(zone.id, GenericObjectAction(
+        socketGuid,
+        GenericObjectActionEnum.FlagSpawned.id
+      )),
+      MessageEnvelope(zone.id, LocalAction.LluSpawned(flag))
+    )
+    owner.Actor ! BuildingActor.AmenityStateChange(socket)
+    //todo broadcast chat message for module spawn?
+    zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(socketGuid, flag.GUID, 0)))
+  }
+
+  private def TryDespawnModuleAssociatedWithCradle(cradle: VanuModuleNode): Unit = {
+    cradle.captureFlag match {
+      case Some(flag: VanuModule) if flag.Charged != ChargedState.Charged =>
+        flag.Carrier match {
+          case None =>
+            HandleFlagDespawnLocal(cradle, flag)
+          case Some(carrier) =>
+            carrier.Zone.AvatarEvents ! MessageEnvelope(carrier.Name, AvatarAction.DropSpecialItem())
+            context.system.scheduler.scheduleOnce(1000 milliseconds, self, VanuModuleSpawnerControl.ClearModule)
+        }
+      case _ =>
+        cradle.captureFlag = None
+    }
+  }
+
+  private def HandleFlagDespawnLocal(cradle: VanuModuleNode, flag: VanuModule): Unit = {
+    val flagOwner = cradle.Owner.asInstanceOf[Building]
+    cradle.captureFlag = None
+    flagOwner.Actor ! BuildingActor.AmenityStateChange(cradle)
+    flagOwner.RemoveAmenity(flag)
+    HandleFlagDespawnLocal(flag)
+  }
+
+  private def HandleFlagDespawnLocal(flag: VanuModule): Unit = {
+    val zone = flag.Zone
+    flag.Destroyed = true
+    UntrackModule(flag)
+    zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.LluDespawned(flag.GUID, flag.Position))
+    TaskWorkflow.execute(GUIDTask.unregisterObject(zone.GUID, flag))
   }
 
   private def TrackModule(module: VanuModule): Unit = {

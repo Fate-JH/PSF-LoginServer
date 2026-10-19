@@ -8,6 +8,7 @@ import net.psforever.actors.commands.NtuCommand
 import net.psforever.actors.zone.{BuildingActor, BuildingControlDetails, ZoneActor}
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
+import net.psforever.objects.serverobject.flag.module.VanuModuleNode
 import net.psforever.objects.serverobject.generator.{Generator, GeneratorControl}
 import net.psforever.objects.serverobject.resourcesilo.ResourceSiloControl
 import net.psforever.objects.serverobject.structures.{Amenity, Building}
@@ -117,6 +118,9 @@ case object MajorFacilityLogic
           .Amenities
           .filter(amenity => applicable.contains(amenity.Definition))
           .foreach { _.Actor ! msg }
+      case _: VanuModuleNode =>
+        // Request all buildings update their map data to refresh lattice linked benefits
+        details.building.Zone.actor ! ZoneActor.ZoneMapUpdate()
       case _ =>
         details.galaxyService ! MessageEnvelope("", GalaxyAction.MapUpdate(details.building.infoUpdateMessage()))
     }

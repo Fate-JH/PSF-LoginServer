@@ -6,7 +6,7 @@ import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.{VanuModule, VanuModuleNode}
+import net.psforever.objects.serverobject.flag.module.{ChargedState, VanuModule, VanuModuleNode}
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mblocker.Locker
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
@@ -1609,14 +1609,14 @@ class GeneralOperations(
   }
 
   def handleUseVanuModuleNode(obj: VanuModuleNode): Unit = {
-    if (obj.ValidFlagType == CarriableFlag.VanuModuleCradle) {
-      continent.GUID(specialItemSlotGuid) match {
-        case Some(flag: VanuModule) =>
-          handleUseVanuModuleInstallation(flag, obj)
-        case _ => ()
-      }
-    } else {
-      obj.captureFlag.foreach(handleUseVanuModuleInitialCollection(_, obj))
+    obj.captureFlag
+      .orElse(continent.GUID(specialItemSlotGuid))
+      .collect { case v: VanuModule => v } match {
+      case Some(flag) if obj.ValidFlagType == CarriableFlag.VanuModuleCradle =>
+        handleUseVanuModuleInstallation(flag, obj) //put in cradle
+      case Some(flag) =>
+        handleUseVanuModuleInitialCollection(flag, obj) //take from spawner
+      case None => ()
     }
   }
 
@@ -1624,19 +1624,19 @@ class GeneralOperations(
     if (player.ZoningRequest != Zoning.Method.None) {
       sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
     }
-    if (obj.Target == Building.NoBuilding && cradle.captureFlag.isEmpty) { // can be installed in first place
+    if (obj.Target == Building.NoBuilding && obj.Charged == ChargedState.Charged && cradle.captureFlag.isEmpty) { // can be installed in first place
       specialItemSlotGuid match {
-        case Some(guid) if guid == obj.GUID && player.Carrying.contains(obj.ValidFlagType.category) =>
+        case Some(guid)
+          if guid == obj.GUID && player.Carrying.contains(obj.ValidFlagType.category) =>
           specialItemSlotGuid = None
-          player.Carrying = None
         case _ =>
           () // player was not carrying this flag
       }
-      continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.InstallFlag(obj, cradle))
+      continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.InstallFlagIntoCradle(obj, cradle, player))
     }
   }
 
-  private def handleUseVanuModuleInitialCollection(obj: OwnedFlag, socket: VanuModuleNode): Unit = {
+  private def handleUseVanuModuleInitialCollection(obj: VanuModule, socket: VanuModuleNode): Unit = {
     if (player.ZoningRequest != Zoning.Method.None) {
       sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
     }
