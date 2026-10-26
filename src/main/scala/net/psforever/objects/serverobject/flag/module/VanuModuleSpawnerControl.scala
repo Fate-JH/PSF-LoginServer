@@ -42,7 +42,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
           case None => ()
             zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.LluSpawned(flag)) //explosion animation
         }
-        zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.FlagLost(flag))
+        zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ModuleLost(flag))
       case None
         if terminal.Faction != PlanetSideEmpire.NEUTRAL =>
         //spawn module attempt

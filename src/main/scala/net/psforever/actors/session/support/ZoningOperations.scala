@@ -14,7 +14,7 @@ import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.inventory.InventoryItem
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.{ChargedState, VanuModule, VanuModuleNode}
+import net.psforever.objects.serverobject.flag.module.{ModuleChargeState, VanuModule, VanuModuleNode}
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mount.Seat
 import net.psforever.objects.serverobject.tube.SpawnTube
@@ -3606,7 +3606,7 @@ class ZoningOperations(
       interstellarFerryTopLevelGUID = None
       // draw the special carry flag we were transporting from the previous zone (usually a vanu module)
       spawn.interimSpecialCarryFlag.foreach {
-        case o: VanuModule if o.Charged != ChargedState.Charged && continent != o.Owner.Zone =>
+        case o: VanuModule if o.Charged != ModuleChargeState.Charged && continent != o.Owner.Zone =>
           // module does not enter zone and is consumed relatively quietly
           o.Destroyed = true
           player.Carrying = None

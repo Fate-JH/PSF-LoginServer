@@ -10,6 +10,7 @@ import net.psforever.objects.vital.Vitality
 import net.psforever.objects.vital.etc.VanuModuleBeamReason
 import net.psforever.objects.vital.interaction.DamageInteraction
 import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
+import net.psforever.types.Vector3
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -65,7 +66,7 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
         VanuModuleBeamControl.ChargingInterval,
         VanuModuleBeamControl.ChargeOngoing(player, module, VanuModuleBeamControl.ChargingInterval, System.currentTimeMillis() + VanuModuleBeamControl.ChargingDuration)
       )
-      beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.StartChargingFlag(module, beam, player))
+      beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.StartChargingModule(module, beam, player))
       context.become(chargingBehavior)
 
     //todo bfr imprinting? might be a separate beam
@@ -109,16 +110,17 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
         //goto finish charging module next
         RetimeRecontextEvent(player.Name, interval, VanuModuleBeamControl.ChargeComplete(player, module))
 
-      case VanuModuleBeamControl.ChargeOngoing(_, _, _, _) =>
+      case VanuModuleBeamControl.ChargeOngoing(player, module, _, _) =>
         //failed conditions to continue charging
         RemoveUser()
+        beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.StopChargingModule(module, beam, player))
         context.become(beforeChargingBehavior)
 
       case VanuModuleBeamControl.ChargeComplete(player, module)
         if PlayerModuleChargingTests(player, module) =>
         //actually charge module
         RemoveUser()
-        beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ChargeFlag(module))
+        beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ChargeComplete(module, beam, player))
         RetimeRecontextEvent(player.Name, VanuModuleBeamControl.ProtectionDuration, VanuModuleBeamControl.ExpiredInteractionProtection(player.Name))
         context.become(beforeChargingBehavior)
 
@@ -148,7 +150,8 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
   }
 
   private def PlayerModuleChargingTests(player: Player, module: VanuModule): Boolean = {
-    player.isAlive && !module.Charged.value && !module.Destroyed && module.Carrier.contains(player)
+    player.isAlive && Vector3.DistanceSquared(player.Position.xy, beam.Position.xy) < 2 * math.pow(beam.Definition.UseRadius, 2) &&
+      !module.Charged.value && !module.Destroyed && module.Carrier.contains(player)
   }
 
   private def HardStopCurrentEvent(label: String): Unit = {

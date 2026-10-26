@@ -17,11 +17,12 @@ import shapeless.{::, HNil}
 final case class Additional1(unk1: String, unk2: Int, unk3: Long)
 
 /**
-  * na
-  * @param unk1 na
-  * @param unk2 na
-  */
-final case class Additional2(unk1: Int, unk2: Long)
+ * Temporary cavern-related benefits originating from Vanu modules installed in a major facility's Vanu module cradles.
+ * The time indicates how long the module connected to this benefit will remain installed (existing while installed).
+ * @param benefit benefit from an installed module
+ * @param time_remaining how long until the installed module expires (ms)
+ */
+final case class CavernBenefitsFromModule(benefit: CavernBenefit, time_remaining: Long)
 
 /**
   * Used for building information window on map. Tells the empire who installed the virus which one
@@ -71,7 +72,11 @@ final case class Additional3(inform_defenders: Boolean, installed_by_id: Int)
   *                       any non-zero value will cause the cavern module icon (yellow) to appear;
   *                       proper module values cause the cavern module icon to render green;
   *                       all benefits will report as due to a "Cavern Lock"
-  * @param unk4 na
+  * @param module_benefits cavern benefits from modules installed in this facility;
+  *                        any non-zero value will cause the cavern module icon (yellow) to appear;
+  *                        proper module values cause the cavern module icon to render green;
+  *                        modules have a time limit on their installation existence,
+  *                        and the timer next to the benefit reports that (displayed as hh:mm)
   * @param unk5 na
   * @param unk6 na
   * @param virus_id id of virus installed. value != 8 causes the next field to be defined.
@@ -100,7 +105,7 @@ final case class BuildingInfoUpdateMessage(
     force_dome_active: Boolean,
     lattice_benefit: Set[LatticeBenefit],
     cavern_benefit: Set[CavernBenefit],
-    unk4: List[Additional2],
+    module_benefits: List[CavernBenefitsFromModule],
     unk5: Long,
     unk6: Boolean,
     virus_id: Int,
@@ -126,10 +131,23 @@ object BuildingInfoUpdateMessage extends Marshallable[BuildingInfoUpdateMessage]
   /**
     * A `Codec` for a set of additional fields.
     */
-  private val additional2_codec: Codec[Additional2] = (
-    ("unk1" | uint4L) ::
-      ("unk2" | uint32L)
-  ).as[Additional2]
+  private val moduleBenefitsCodec: Codec[CavernBenefitsFromModule] = (
+    ("benefit" | uint4) ::
+      ("time_remaining" | uint32L)
+  ).xmap[CavernBenefitsFromModule](
+    {
+      case benefitIndex :: time :: HNil =>
+        CavernBenefit.values.find(_.value == benefitIndex) match {
+          case Some(benefit) =>
+            CavernBenefitsFromModule(benefit, time)
+          case None =>
+            CavernBenefitsFromModule(CavernBenefit.None, time)
+        }
+    }, {
+      case CavernBenefitsFromModule(benefit, time) =>
+        (Math.log(benefit.value) / Math.log(2)).toInt :: time :: HNil
+    }
+  )
 
   /**
     * A `Codec` for a set of additional fields.
@@ -193,7 +211,7 @@ object BuildingInfoUpdateMessage extends Marshallable[BuildingInfoUpdateMessage]
         ("force_dome_active" | bool) ::
         ("lattice_benefit" | latticeBenefitCodec) ::
         ("cavern_benefit" | cavernBenefitCodec) ::
-        ("unk4" | listOfN(uint4L, additional2_codec)) ::
+        ("module_benefits" | listOfN(uint4L, moduleBenefitsCodec)) ::
         ("unk5" | uint32L) ::
         ("unk6" | bool) ::
         (("virus_id" | uint4L) >>:~ { virus_id =>

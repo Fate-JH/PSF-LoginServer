@@ -18,10 +18,10 @@ import net.psforever.actors.zone.building.BuildingLogic
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, CarriableModule, OwnedFlag}
 import net.psforever.objects.serverobject.flag.llu.CaptureFlagSocket
-import net.psforever.objects.serverobject.flag.module.VanuModuleNode
+import net.psforever.objects.serverobject.flag.module.{VanuModule, VanuModuleNode}
 import net.psforever.objects.serverobject.structures.participation.{MajorFacilityHackParticipation, NoParticipation, ParticipationLogic, TowerHackParticipation}
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
-import net.psforever.packet.game.packets.{Additional3, BuildingInfoUpdateMessage, DensityLevelUpdateMessage}
+import net.psforever.packet.game.packets.{Additional3, BuildingInfoUpdateMessage, CavernBenefitsFromModule, DensityLevelUpdateMessage}
 import net.psforever.util.Config
 
 class Building(
@@ -162,60 +162,42 @@ class Building(
     }
   }
 
-  def GetAllModules: Seq[VanuModuleNode] = {
+  def GetAllModuleReceptacles: Seq[VanuModuleNode] = {
     Amenities.collect { case obj: VanuModuleNode => obj }
   }
 
-  def GetAllModules(moduleType: CarriableFlag): Seq[VanuModuleNode] = {
+  def GetAllModuleReceptacles(moduleType: CarriableFlag): Seq[VanuModuleNode] = {
     Amenities.collect { case obj: VanuModuleNode if obj.ValidFlagType == moduleType => obj }
   }
 
   def GetModuleCradles: Set[VanuModuleNode] = {
-    GetAllModules(CarriableFlag.VanuModuleCradle).toSet
+    GetAllModuleReceptacles(CarriableFlag.VanuModuleCradle).toSet
   }
 
-  def GetCavernBenefitsFromModules: Set[CavernBenefit] = {
+  def GetCavernBenefitsFromModules(): Set[CavernBenefit] = {
     GetModuleCradles
       .flatMap(_.captureFlag.map(_.ValidFlagType))
       .collect { case obj: CarriableModule => obj.benefit }
   }
 
-  def HasCavernLock : Boolean = {
-    if (zone.Info.mood == ZoneType.Continent) {
+  def HasCavernLock: Boolean = {
+    zone.Info.mood == ZoneType.Continent &&
+      Generator.forall(_.Condition != PlanetSideGeneratorState.Destroyed) &&
+      faction != PlanetSideEmpire.NEUTRAL &&
+      !CaptureTerminalIsHacked &&
       connectedCavern().exists(_.Zone.lockedBy == faction)
-    } else {
-      false
-    }
   }
 
   def GetCavernBenefitsFromCavernLock: Set[CavernBenefit] = {
     if (HasCavernLock) {
+      hasCavernLockBenefit = true
       Set(
         CavernBenefit.VehicleModule, CavernBenefit.EquipmentModule, CavernBenefit.ShieldModule,
         CavernBenefit.SpeedModule, CavernBenefit.HealthModule, CavernBenefit.PainModule
       )
     } else {
+      hasCavernLockBenefit = false
       Set.empty[CavernBenefit]
-    }
-  }
-
-  def GetApplicableCavernBenefits(generatorState: PlanetSideGeneratorState.Value): Set[CavernBenefit] = {
-    hasCavernLockBenefit = false
-    if (generatorState != PlanetSideGeneratorState.Destroyed && faction != PlanetSideEmpire.NEUTRAL && !CaptureTerminalIsHacked) {
-      val fromCaveLock = GetCavernBenefitsFromCavernLock
-      if (fromCaveLock.nonEmpty) {
-        hasCavernLockBenefit = true
-        fromCaveLock
-      } else {
-        val fromModules = GetCavernBenefitsFromModules ++ friendlyFunctionalNeighborhood().flatMap(_.GetCavernBenefitsFromModules)
-        if (fromModules.nonEmpty) {
-          fromModules
-        } else {
-          Set(CavernBenefit.None)
-        }
-      }
-    } else {
-      Set(CavernBenefit.None)
     }
   }
 
@@ -268,7 +250,22 @@ class Building(
       val o = Amenities.collect({ case tube: SpawnTube if !tube.Destroyed => tube })
       (o.nonEmpty, false) //TODO poll pain field strength
     }
-    val cavernBenefits: Set[CavernBenefit] = GetApplicableCavernBenefits(generatorState)
+    val (cavernBenefitsFromLock, cavernBenefitsFromModules): (Set[CavernBenefit], List[CavernBenefitsFromModule]) = {
+      if (generatorState != PlanetSideGeneratorState.Destroyed && faction != PlanetSideEmpire.NEUTRAL && !CaptureTerminalIsHacked) {
+        //val curr: Long = System.currentTimeMillis()
+        val modules = GetModuleCradles.flatMap(_.captureFlag)
+        val durationOfBenefitsFromModules = modules.collect { case module: VanuModule =>
+          CavernBenefitsFromModule(module.ValidFlagType.asInstanceOf[CarriableModule].benefit, 1L/*module.duration - (curr - module.start)*/)
+        }
+        val benefitsLock = GetCavernBenefitsFromCavernLock
+        val applicableBenefitsLock = benefitsLock.diff(durationOfBenefitsFromModules.map(_.benefit))
+        hasCavernLockBenefit = benefitsLock.nonEmpty
+        (applicableBenefitsLock, durationOfBenefitsFromModules.toList)
+      } else {
+        hasCavernLockBenefit = false
+        (Set(CavernBenefit.None), Nil)
+      }
+    }
     val (installedVirus, installedByFac) = if (virusId == 8)  {
       (8, None)
     } else {
@@ -290,8 +287,8 @@ class Building(
       spawnTubesNormal,
       forceDomeActive,
       latticeConnectedFacilityBenefits(),
-      cavernBenefits,
-      unk4 = Nil,
+      cavernBenefitsFromLock,
+      cavernBenefitsFromModules,
       unk5 = 0,
       unk6 = false,
       installedVirus,

@@ -5,9 +5,10 @@ import akka.actor.Actor.Receive
 import akka.actor.{ActorContext, ActorRef, typed}
 import net.psforever.actors.session.AvatarActor
 import net.psforever.actors.session.support.{GalaxyHandlerFunctions, SessionData, SessionGalaxyHandlers}
-import net.psforever.packet.game.packets.{BroadcastWarpgateUpdateMessage, FriendsResponse, HotSpotUpdateMessage, ZoneInfoMessage, ZonePopulationUpdateMessage, HotSpotInfo => PacketHotSpotInfo}
+import net.psforever.packet.game.packets.{BroadcastWarpgateUpdateMessage, FriendsResponse, HotSpotUpdateMessage, ModuleInfo, VanuModuleUpdateMessage, ZoneInfoMessage, ZonePopulationUpdateMessage, HotSpotInfo => PacketHotSpotInfo}
 import net.psforever.services.base.envelope.MessageEnvelope
 import net.psforever.services.galaxy.GalaxyAction
+import net.psforever.services.local.support.VanuModuleUpdate
 import net.psforever.types.{MemberAction, PlanetSideEmpire}
 
 object GalaxyHandlerLogic {
@@ -91,5 +92,12 @@ class GalaxyHandlerLogic(val ops: SessionGalaxyHandlers, implicit val context: A
       val popNC = zone.Players.count(_.faction == PlanetSideEmpire.NC)
       val popVS = zone.Players.count(_.faction == PlanetSideEmpire.VS)
       sendResponse(ZonePopulationUpdateMessage(zone.Number, 414, 138, popTR, 138, popNC, 138, popVS, 138, 0))
+
+    case VanuModuleUpdate(toZone, moduleInfo) =>
+      val playerFaction = player.Faction
+      sendResponse(VanuModuleUpdateMessage(
+        toZone,
+        moduleInfo.map { case (icon, faction, time, pos) => ModuleInfo(icon, faction == playerFaction, time, pos) }.toList
+      ))
   }
 }

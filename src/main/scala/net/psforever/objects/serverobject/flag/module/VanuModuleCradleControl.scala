@@ -1,15 +1,13 @@
 // Copyright (c) 2026 PSForever
 package net.psforever.objects.serverobject.flag.module
 
-import akka.actor.ActorRef
-import net.psforever.actors.zone.BuildingActor
 import net.psforever.objects.Player
-import net.psforever.objects.serverobject.structures.{Building, PoweredAmenityControl}
-import net.psforever.packet.game.packets.GenericObjectActionEnum
-import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
-import net.psforever.services.base.message.GenericObjectAction
-import net.psforever.services.local.LocalAction
+import net.psforever.objects.serverobject.structures.{Amenity, PoweredAmenityControl}
+import net.psforever.objects.serverobject.terminals.capture.{CaptureTerminal, CaptureTerminalAware, CaptureTerminalAwareBehavior}
 import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
+import net.psforever.types.PlanetSideEmpire
+
+import scala.annotation.unused
 
 object VanuModuleCradleControl {
   final case class InstallModule(flag: VanuModule, player: Player)
@@ -18,50 +16,43 @@ object VanuModuleCradleControl {
 }
 
 class VanuModuleCradleControl(obj: VanuModuleNode)
-  extends PoweredAmenityControl {
-  override def poweredStateLogic: Receive = {
+  extends PoweredAmenityControl
+    with CaptureTerminalAwareBehavior {
+  def CaptureTerminalAwareObject: Amenity with CaptureTerminalAware = obj
+
+  def poweredStateLogic: Receive = captureTerminalAwareBehaviour.orElse {
     case VanuModuleCradleControl.InstallModule(flag, player) =>
-      obj.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.InstallFlagIntoCradle(flag, obj, player))
+      obj.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.InstallModuleIntoCradle(obj, flag, player))
 
     case VanuModuleCradleControl.FreeModule =>
-      TryFreeModuleFromCradle(sender())
+      TryFreeModuleFromCradle()
 
     case _ => ()
   }
 
-  override def unpoweredStateLogic: Receive = {
+  def unpoweredStateLogic: Receive = {
     case _ => ()
   }
 
-  override def powerTurnOnCallback(): Unit = { /* nothing */ }
+  def powerTurnOnCallback(): Unit = { /* nothing */ }
 
-  override def powerTurnOffCallback(): Unit = {
+  def powerTurnOffCallback(): Unit = {
     TryFreeModuleFromCradle()
   }
 
-  private def TryFreeModuleFromCradle(): Boolean = {
-    obj.captureFlag match {
-      case Some(flag) =>
-        obj.captureFlag = None
-        flag.Target = Building.NoBuilding
-        val zone = obj.Zone
-        zone.LocalEvents ! BundledEnvelope(
-          MessageEnvelope(zone.id, GenericObjectAction(
-            obj.GUID,
-            GenericObjectActionEnum.FlagSpawned.id
-          )),
-          MessageEnvelope(zone.id, LocalAction.LluSpawned(flag))
-        )
-        obj.Owner.Actor ! BuildingActor.AmenityStateChange(obj)
-        true
-      case _ =>
-        false
+  override def captureTerminalIsResecured(terminal: CaptureTerminal): Unit = {
+    if (terminal.Faction == PlanetSideEmpire.NEUTRAL) {
+      TryFreeModuleFromCradle()
     }
   }
 
-  private def TryFreeModuleFromCradle(replyTo: ActorRef): Unit = {
-    if (TryFreeModuleFromCradle()) {
-      replyTo ! BuildingActor.AmenityStateChange(obj)
+  override protected def captureTerminalIsHacked(@unused terminal: CaptureTerminal): Unit = {
+    TryFreeModuleFromCradle()
+  }
+
+  private def TryFreeModuleFromCradle(): Unit = {
+    obj.captureFlag.foreach { _ =>
+      obj.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.FreeModuleFromCradle(obj))
     }
   }
 }
