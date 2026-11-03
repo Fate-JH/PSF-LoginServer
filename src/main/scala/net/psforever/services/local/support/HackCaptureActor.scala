@@ -69,7 +69,7 @@ class HackCaptureActor extends Actor {
       }
       hackedObjects = hackedObjects.filterNot(_.target == target) :+ HackCaptureActor.HackEntry(target, zone, unk1, unk2, duration, startTime)
       RestartTimer()
-      NotifyHackStateChange(target, isResecured = false)
+      NotifyHackStateChange(target, isResecured = false, target.Faction, target.Faction)
       TrySpawnCaptureFlag(target)
 
     case HackCaptureActor.ProcessCompleteHacks() =>
@@ -91,12 +91,12 @@ class HackCaptureActor extends Actor {
           case Some(llu) if llu.Destroyed =>
             // LLU was destroyed while in the field. Send resecured notifications
             terminal.Zone.LocalEvents ! FlagEnvelope(CaptureFlagManager.Lost(llu, CaptureFlagLostReasonEnum.FlagLost))
-            NotifyHackStateChange(terminal, isResecured = true)
+            NotifyHackStateChange(terminal, isResecured = true, terminal.Faction, terminal.Faction)
 
           case Some(llu) =>
             // LLU was not delivered in time. Send resecured notifications
             terminal.Zone.LocalEvents ! FlagEnvelope(CaptureFlagManager.Lost(llu, CaptureFlagLostReasonEnum.TimedOut))
-            NotifyHackStateChange(terminal, isResecured = true)
+            NotifyHackStateChange(terminal, isResecured = true, terminal.Faction, terminal.Faction)
 
           case _ =>
             // Timed hack finished (or neutral LLU base with no neighbour as timed hack), capture the base
@@ -128,7 +128,7 @@ class HackCaptureActor extends Actor {
       building.GetFlag.collect {
         case flag: OwnedFlag => target.Zone.LocalEvents ! CaptureFlagManager.Lost(flag, CaptureFlagLostReasonEnum.Resecured)
       }
-      NotifyHackStateChange(target, isResecured = true)
+      NotifyHackStateChange(target, isResecured = true, target.Faction, target.Faction)
       building.Participation.RewardFacilityCapture(
         target.Faction,
         HackCaptureActor.GetAttackingFaction(building, faction),
@@ -178,7 +178,7 @@ class HackCaptureActor extends Actor {
         val terminal = owner.CaptureTerminal.get
         log.info(s"FlagLost: ${flag.Carrier.map(_.Name).getOrElse("")} the flag carrier screwed up the capture for ${flag.Target.Name} and the LLU has been lost")
         terminal.Actor ! CommonMessages.ClearHack()
-        NotifyHackStateChange(terminal, isResecured = true)
+        NotifyHackStateChange(terminal, isResecured = true, terminal.Faction, terminal.Faction)
         RestartTimer() // If there's hacked objects left in the list restart the timer with the shortest hack time left
       }
       if (found.isEmpty) {
@@ -207,7 +207,7 @@ class HackCaptureActor extends Actor {
       case Some((owner, Some(flag), Some(neighbours))) if neighbours.nonEmpty && hackingFaction != flag.Faction =>
         log.info(s"$hackingFaction is overriding the ongoing LLU hack of facility ${owner.Name} by ${flag.Faction}")
         terminal.Zone.LocalEvents ! FlagEnvelope(CaptureFlagManager.Lost(flag, CaptureFlagLostReasonEnum.Ended))
-        NotifyHackStateChange(terminal, isResecured = false)
+        NotifyHackStateChange(terminal, isResecured = false, terminal.Faction, terminal.Faction)
         RestartTimer()
         spawnCaptureFlag(neighbours, terminal, hackingFaction)
         true
@@ -241,7 +241,9 @@ class HackCaptureActor extends Actor {
 
   private def NotifyHackStateChange(
                                      terminal: CaptureTerminal,
-                                     isResecured: Boolean
+                                     isResecured: Boolean,
+                                     fromFaction: PlanetSideEmpire.Value,
+                                     toFaction: PlanetSideEmpire.Value
                                    ): Unit = {
     val attributeValue = HackCaptureActor.GetHackUpdateAttributeValue(terminal, isResecured)
     // Notify all clients that CC has had its hack state changed
@@ -255,7 +257,7 @@ class HackCaptureActor extends Actor {
     )
     val owner = terminal.Owner.asInstanceOf[Building]
     // Notify parent building that state has changed
-    owner.Actor ! BuildingActor.AmenityStateChange(terminal, Some(isResecured))
+    owner.Actor ! BuildingActor.AmenityStateChange(terminal, Some((isResecured, fromFaction, toFaction)))
     // If major facility, check NTU
     owner.CaptureTerminal
       .map(_.HackedBy)
@@ -280,6 +282,7 @@ class HackCaptureActor extends Actor {
     val zone = building.Zone
     val events = zone.LocalEvents
     val messages: ArrayBuffer[MessageEnvelope] = ArrayBuffer()
+    NotifyHackStateChange(terminal, isResecured = true, terminal.Faction, hackedByFaction)
     if (building.NtuLevel > 0) {
       building.virusId = 8
       building.virusInstalledBy = None
@@ -321,7 +324,6 @@ class HackCaptureActor extends Actor {
     } else {
       log.info("Base hack completed, but base was out of NTU.")
     }
-    NotifyHackStateChange(terminal, isResecured = true)
     // todo: this appears to be the way to reset the base warning lights after the hack finishes but it doesn't seem to work.
     messages.append(MessageEnvelope(zone.id, LocalAction.HackClear(building.GUID, 3212836864L, HackState7.Unk8)))
     events ! BundledEnvelope(messages)
@@ -351,10 +353,11 @@ class HackCaptureActor extends Actor {
       () => {
         if (buildingIterator.hasNext) {
           val building = buildingIterator.next()
+          val originalFaction = building.Faction
           val terminal = building.CaptureTerminal.get
           val buildingActor = building.Actor
           buildingActor ! BuildingActor.SetFaction(faction)
-          buildingActor ! BuildingActor.AmenityStateChange(terminal, Some(false))
+          buildingActor ! BuildingActor.AmenityStateChange(terminal, Some((false, originalFaction, faction)))
           buildingActor ! BuildingActor.MapUpdate()
         }
         else {

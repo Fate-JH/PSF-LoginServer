@@ -4,6 +4,7 @@ import akka.actor.typed.scaladsl.ActorContext
 import net.psforever.actors.commands.NtuCommand
 import net.psforever.actors.zone.{BuildingActor, BuildingControlDetails}
 import net.psforever.objects.serverobject.structures.{Amenity, Building}
+import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
 import net.psforever.types.PlanetSideEmpire
 
 object CavernModuleFacilityLogic extends BuildingLogic {
@@ -19,14 +20,22 @@ object CavernModuleFacilityLogic extends BuildingLogic {
   def amenityStateChange(details: BuildingWrapper, entity: Amenity, data: Option[Any]): Behavior[BuildingActor.Command] =
     CavernFacilityLogic.amenityStateChange(details, entity, data)
 
-  def powerOff(details: BuildingWrapper): Behavior[BuildingActor.Command] =
+  def powerOff(details: BuildingWrapper): Behavior[BuildingActor.Command] = {
+    //cavern facilities do not formally use power subsystems (but just in case!)
+    val building = details.building
+    building.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ModuleFacilityLost(building))
     CavernFacilityLogic.powerOff(details)
+  }
 
   def powerOn(details: BuildingWrapper): Behavior[BuildingActor.Command] =
     CavernFacilityLogic.powerOn(details)
 
-  def ntuDepleted(details: BuildingWrapper): Behavior[BuildingActor.Command] =
+  def ntuDepleted(details: BuildingWrapper): Behavior[BuildingActor.Command] = {
+    //cavern facilities do not formally use ntu (but just in case!)
+    val building = details.building
+    building.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ModuleFacilityLost(building))
     CavernFacilityLogic.ntuDepleted(details)
+  }
 
   def suppliedWithNtu(details: BuildingWrapper): Behavior[BuildingActor.Command] =
     CavernFacilityLogic.suppliedWithNtu(details)
@@ -40,10 +49,11 @@ object CavernModuleFacilityLogic extends BuildingLogic {
    * @return the next behavior for this control agency messaging system
    */
   def setFactionTo(details: BuildingWrapper, faction: PlanetSideEmpire.Value): Behavior[BuildingActor.Command] = {
-    val beforeFaction = details.building.Faction
+    val building = details.building
+    val beforeFaction = building.Faction
     val out = CavernFacilityLogic.setFactionTo(details, faction)
-    if (beforeFaction == PlanetSideEmpire.NEUTRAL) {
-      //todo alert module spawn control
+    if (beforeFaction != building.Faction) {
+      building.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ModuleFacilityLost(building))
     }
     out
   }

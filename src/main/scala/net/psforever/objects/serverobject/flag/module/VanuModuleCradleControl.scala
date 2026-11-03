@@ -7,8 +7,6 @@ import net.psforever.objects.serverobject.terminals.capture.{CaptureTerminal, Ca
 import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
 import net.psforever.types.PlanetSideEmpire
 
-import scala.annotation.unused
-
 object VanuModuleCradleControl {
   final case class InstallModule(flag: VanuModule, player: Player)
 
@@ -37,17 +35,32 @@ class VanuModuleCradleControl(obj: VanuModuleNode)
   def powerTurnOnCallback(): Unit = { /* nothing */ }
 
   def powerTurnOffCallback(): Unit = {
-    TryFreeModuleFromCradle()
+    TryDestroyModuleInCradle()
   }
 
   override def captureTerminalIsResecured(terminal: CaptureTerminal): Unit = {
-    if (terminal.Faction == PlanetSideEmpire.NEUTRAL) {
-      TryFreeModuleFromCradle()
+    //if the module is no longer faction-aligned with the cradle/facility, destroy it; no freebies
+    //if the facility has gone neutral, destroy it regardless of faction-alignment
+    obj.captureFlag.collect { case flag: VanuModule
+      if flag.Faction != obj.Faction || terminal.Faction == PlanetSideEmpire.NEUTRAL =>
+      TryDestroyModuleInCradle(flag)
     }
   }
 
+  /*
   override protected def captureTerminalIsHacked(@unused terminal: CaptureTerminal): Unit = {
     TryFreeModuleFromCradle()
+  }
+  */
+
+  private def TryDestroyModuleInCradle(): Unit = {
+    obj.captureFlag.collect { case module: VanuModule =>
+      TryDestroyModuleInCradle(module)
+    }
+  }
+
+  private def TryDestroyModuleInCradle(module: VanuModule): Unit = {
+    obj.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ModuleLost(module))
   }
 
   private def TryFreeModuleFromCradle(): Unit = {

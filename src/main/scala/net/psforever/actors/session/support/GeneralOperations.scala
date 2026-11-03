@@ -543,7 +543,6 @@ class GeneralOperations(
   }
 
   private def dropVanuModule(module: OwnedFlag): Unit = {
-    val guid = module.GUID
     module.Carrier match {
       case Some(carrier) if carrier.GUID == player.GUID =>
         specialItemSlotGuid = None
@@ -1613,10 +1612,21 @@ class GeneralOperations(
       .orElse(continent.GUID(specialItemSlotGuid))
       .collect { case v: VanuModule => v } match {
       case Some(flag) if obj.ValidFlagType == CarriableFlag.VanuModuleCradle =>
-        handleUseVanuModuleInstallation(flag, obj) //put in cradle
+        handleUseVanuModuleCradle(flag, obj)
       case Some(flag) =>
-        handleUseVanuModuleInitialCollection(flag, obj) //take from spawner
+        handleUseVanuModuleCollection(flag, obj) //take from cradle
       case None => ()
+    }
+  }
+
+  private def handleUseVanuModuleCradle(obj: VanuModule, cradle: VanuModuleNode): Unit = {
+    cradle.captureFlag match {
+      case Some(flag)
+        if (flag eq obj) && cradle.Owner.asInstanceOf[Building].CaptureTerminalIsHacked =>
+        handleUseVanuModuleCollection(obj, cradle) //remove from cradle
+      case None =>
+        handleUseVanuModuleInstallation(obj, cradle) //put in cradle
+      case _ => ()
     }
   }
 
@@ -1636,7 +1646,7 @@ class GeneralOperations(
     }
   }
 
-  private def handleUseVanuModuleInitialCollection(obj: VanuModule, socket: VanuModuleNode): Unit = {
+  private def handleUseVanuModuleCollection(obj: VanuModule, socket: VanuModuleNode): Unit = {
     if (player.ZoningRequest != Zoning.Method.None) {
       sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
     }
@@ -1662,7 +1672,7 @@ class GeneralOperations(
       case None =>
         specialItemSlotGuid = Some(obj.GUID)
         player.Carrying = obj.ValidFlagType.category
-        continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.PickUpModule(obj, player))
+        continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.PickUpModule(obj.asInstanceOf[VanuModule], player))
       case Some(guid) if guid != obj.GUID =>
         // Ignore duplicate pickup requests
         log.warn(

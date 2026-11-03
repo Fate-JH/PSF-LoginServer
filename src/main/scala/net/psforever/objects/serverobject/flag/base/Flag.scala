@@ -95,15 +95,19 @@ class OwnedFlag(private val fDef: FlagDefinition, validFlagType: CarriableFlag)
     target
   }
 
+  override def Faction: PlanetSideEmpire.Value = flag.Faction
   override def Faction_=(newFaction: PlanetSideEmpire.Value): PlanetSideEmpire.Value = {
     flag.Faction_=(newFaction)
-    super.Faction_=(newFaction)
   }
 
   override def Position: Vector3 = flag.Position
   override def Position_=(vec: Vector3): Vector3 = {
     flag.Position_=(vec)
-    super.Position_=(vec)
+  }
+
+  override def Orientation: Vector3 = flag.Position
+  override def Orientation_=(vec: Vector3): Vector3 = {
+    flag.Orientation_=(vec)
   }
 
   def Carrier: Option[Player] = flag.Carrier

@@ -42,10 +42,11 @@ case object CavernFacilityLogic
         val building = details.building
         // Notify amenities that listen for CC hack state changes, e.g. wall turrets to dismount seated players
         data match {
-          case Some(isResecured: Boolean) =>
+          case Some((isResecured: Boolean, fromFaction: PlanetSideEmpire.Value, toFaction: PlanetSideEmpire.Value)) =>
+            val msg = CaptureTerminalAwareBehavior.ComposeStatusChangeMessage(terminal, isResecured, fromFaction, toFaction)
             //pass hack information to amenities
             building.Amenities.filter(x => x.isInstanceOf[CaptureTerminalAware]).foreach(amenity => {
-              amenity.Actor ! CaptureTerminalAwareBehavior.TerminalStatusChanged(terminal, isResecured)
+              amenity.Actor ! msg
             })
           case _ =>
             log(details).warn("CaptureTerminal AmenityStateChange was received with no attached data.")

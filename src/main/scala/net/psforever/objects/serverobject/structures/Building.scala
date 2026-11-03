@@ -201,6 +201,26 @@ class Building(
     }
   }
 
+  def latticeConnectedModuleBenefits(): Set[CavernBenefit] = {
+    val genState = Generator match {
+      case Some(obj) => obj.Condition
+      case _         => PlanetSideGeneratorState.Normal
+    }
+    if (genState == PlanetSideGeneratorState.Destroyed ||
+      Faction == PlanetSideEmpire.NEUTRAL ||
+      CaptureTerminalIsHacked
+    ) {
+      Set()
+    } else {
+      friendlyFunctionalNeighborhood()
+        .flatMap(_.GetModuleCradles)
+        .flatMap(_.captureFlag)
+        .collect { case module: VanuModule =>
+          module.ValidFlagType.asInstanceOf[CarriableModule].benefit
+        }
+    }
+  }
+
   def HackableAmenities: List[Amenity with Hackable] = {
     Amenities.collect { case x: Amenity with Hackable => x }
   }
@@ -252,15 +272,26 @@ class Building(
     }
     val (cavernBenefitsFromLock, cavernBenefitsFromModules): (Set[CavernBenefit], List[CavernBenefitsFromModule]) = {
       if (generatorState != PlanetSideGeneratorState.Destroyed && faction != PlanetSideEmpire.NEUTRAL && !CaptureTerminalIsHacked) {
-        //val curr: Long = System.currentTimeMillis()
+        //benefits from local modules (guaranteed)
+        val curr: Long = System.currentTimeMillis()
         val modules = GetModuleCradles.flatMap(_.captureFlag)
-        val durationOfBenefitsFromModules = modules.collect { case module: VanuModule =>
-          CavernBenefitsFromModule(module.ValidFlagType.asInstanceOf[CarriableModule].benefit, 1L/*module.duration - (curr - module.start)*/)
-        }
+        val (benefitsFromModules, durationOfBenefitsFromModules) = modules.collect { case module: VanuModule =>
+          val benefit = module.ValidFlagType.asInstanceOf[CarriableModule].benefit
+          val remainingTime = module.GetRemainingExpirationTime(curr, defaultTime = 100800000L) //28h 00m
+          (benefit, CavernBenefitsFromModule(benefit, remainingTime))
+        }.unzip
+        //benefits from modules from other facilities (exclude local module benefits)
+        val benefitsOther = latticeConnectedModuleBenefits()
+        val durationOfBenefitsFromOther = benefitsOther
+          .diff(benefitsFromModules)
+          .map(CavernBenefitsFromModule(_, 359940000L)) //99h 59m
+        //benefits from cavern lock (excluding previous benefits)
         val benefitsLock = GetCavernBenefitsFromCavernLock
-        val applicableBenefitsLock = benefitsLock.diff(durationOfBenefitsFromModules.map(_.benefit))
         hasCavernLockBenefit = benefitsLock.nonEmpty
-        (applicableBenefitsLock, durationOfBenefitsFromModules.toList)
+        (
+          benefitsLock.diff(benefitsFromModules ++ benefitsOther),
+          (durationOfBenefitsFromModules ++ durationOfBenefitsFromOther).toList
+        )
       } else {
         hasCavernLockBenefit = false
         (Set(CavernBenefit.None), Nil)

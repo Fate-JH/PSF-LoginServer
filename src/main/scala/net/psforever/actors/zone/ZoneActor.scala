@@ -12,7 +12,7 @@ import net.psforever.types.{PlanetSideEmpire, PlanetSideGUID, PlanetSideGenerato
 import akka.actor.typed.scaladsl.adapter._
 import net.psforever.objects.avatar.scoring.Kill
 import net.psforever.objects.serverobject.affinity.FactionAffinity
-import net.psforever.objects.serverobject.terminals.capture.CaptureTerminalAwareBehavior
+import net.psforever.objects.serverobject.terminals.capture.{CaptureTerminalAwareBehavior, TerminalStatusAction}
 import net.psforever.objects.serverobject.turret.FacilityTurret
 import net.psforever.objects.sourcing.SourceEntry
 import net.psforever.objects.vital.{InGameActivity, InGameHistory}
@@ -109,10 +109,11 @@ class ZoneActor(
           case Some(_: WarpGate) => ()
             //warp gates are controlled by game logic and are better off not restored via the database
           case Some(b) =>
-            if ((b.Faction = PlanetSideEmpire(building.factionId)) != PlanetSideEmpire.NEUTRAL) {
+            val toFaction = PlanetSideEmpire(building.factionId)
+            if ((b.Faction = toFaction) != PlanetSideEmpire.NEUTRAL) {
               b.Neighbours.getOrElse(Nil).foreach(_.Actor ! BuildingActor.AlertToFactionChange(b))
               b.CaptureTerminal.collect { terminal =>
-                val msg = CaptureTerminalAwareBehavior.TerminalStatusChanged(terminal, isResecured = true)
+                val msg = CaptureTerminalAwareBehavior.TerminalStatusChanged(terminal, TerminalStatusAction.Resecured)
                 b.Amenities.collect { case turret: FacilityTurret => turret.Actor ! msg }
               }
             }

@@ -15,8 +15,8 @@ object ModuleChargeState {
 
 class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
   extends OwnedFlag(fDef, validFlagType) {
-  var start: Long = 0L
-  var duration: Long = 1200000L //todo temporary
+  private var end: Long = Long.MaxValue
+  private var expirationEnd: Long = Long.MaxValue
 
   private var charged: ModuleChargeState = ModuleChargeState.NonPowered
 
@@ -36,11 +36,79 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
     Charged
   }
 
+  def SpawnFaction: PlanetSideEmpire.Value = super.Faction
+
   override def Faction: PlanetSideEmpire.Value = Carrier.map(_.Faction).getOrElse(super.Faction)
 
   override def DisplayFlagType: CarriableFlag = if (charged != ModuleChargeState.NonPowered) {
     ValidFlagType
   } else {
     CarriableFlag.VanuModuleNonPowered
+  }
+
+  def SetTime(durationTime: Long): Unit = {
+    SetTime(durationTime, System.currentTimeMillis())
+  }
+
+  def SetTime(durationTime: Long, startTime: Long = System.currentTimeMillis()): Unit = {
+    try {
+      end = startTime + durationTime
+    } catch {
+      case _: Exception =>
+        end = Long.MaxValue
+    }
+  }
+
+  def isDurationSet: Boolean = {
+    end < Long.MaxValue
+  }
+
+  def GetRemainingTimeAlive(): Long = {
+    GetRemainingTimeAlive(defaultTime = Long.MaxValue)
+  }
+
+  def GetRemainingTimeAlive(defaultTime: Long): Long = {
+    if (Destroyed) {
+      0L
+    } else if (isDurationSet) {
+      math.max(end - System.currentTimeMillis(), 0L)
+    } else {
+      defaultTime
+    }
+  }
+
+  def SetExpirationTime(durationTime: Long): Unit = {
+    SetExpirationTime(durationTime, System.currentTimeMillis())
+  }
+
+  def SetExpirationTime(durationTime: Long, startTime: Long): Unit = {
+    try {
+      expirationEnd = startTime + durationTime
+    } catch {
+      case _: Exception =>
+        expirationEnd = Long.MaxValue
+    }
+  }
+
+  def isExpirationDurationSet: Boolean = {
+    expirationEnd < Long.MaxValue
+  }
+
+  def GetRemainingExpirationTime(): Long = {
+    GetRemainingExpirationTime(System.currentTimeMillis(), defaultTime = Long.MaxValue)
+  }
+
+  def GetRemainingExpirationTime(defaultTime: Long): Long = {
+    GetRemainingExpirationTime(System.currentTimeMillis(), defaultTime)
+  }
+
+  def GetRemainingExpirationTime(curr: Long, defaultTime: Long): Long = {
+    if (Destroyed) {
+      0L
+    } else if (isExpirationDurationSet) {
+      math.max(expirationEnd - curr, 0L)
+    } else {
+      defaultTime
+    }
   }
 }

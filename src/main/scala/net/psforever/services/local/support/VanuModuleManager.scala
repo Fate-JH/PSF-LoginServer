@@ -11,7 +11,7 @@ import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, Ta
 import net.psforever.objects.serverobject.beam.VanuModuleBeam
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.{ModuleChargeState, VanuModule, VanuModuleNode, VanuModuleSpawnerControl}
+import net.psforever.objects.serverobject.flag.module.{ModuleChargeState, VanuModule, VanuModuleNode}
 import net.psforever.objects.serverobject.structures.Building
 import net.psforever.objects.zones.Zone
 import net.psforever.packet.game.packets.{GenericObjectActionEnum, ObjectAttachMessage, ObjectDetachMessage, TriggeredSound}
@@ -48,7 +48,7 @@ final case class VanuModuleUpdate(
                                  ) extends SelfRespondingEvent
 
 object VanuModuleManager {
-  final val FlagHoverHeight: Vector3 = Vector3.z(value = 1.8f)
+  final val FlagHoverHeight: Vector3 = Vector3.z(value = 1.05f)
 
   trait Command
 
@@ -66,7 +66,7 @@ object VanuModuleManager {
 
   final case class PickupModuleFromCradle(spawner: VanuModuleNode, player: Player) extends Command
 
-  final case class PickUpModule(flag: OwnedFlag, player: Player) extends Command
+  final case class PickUpModule(flag: VanuModule, player: Player) extends Command
 
   final case class StartChargingModule(module: VanuModule, beam: VanuModuleBeam, player: Player) extends Command
 
@@ -77,6 +77,8 @@ object VanuModuleManager {
   final case class ChargeModule(module: VanuModule) extends Command
 
   final case class ModuleLost(module: VanuModule) extends Command
+
+  final case class ModuleFacilityLost(facility: Building) extends Command
 
   final case class InstallModuleIntoCradle(cradle: VanuModuleNode, module: VanuModule, player: Player) extends Command
 
@@ -170,15 +172,11 @@ class VanuModuleManager(zone: Zone) extends Actor {
     case PickUpModule(flag, player) =>
       pickUpModule(flag, player)
 
-    case StartChargingModule(module, _, player) =>
-      //todo charge pose
-      module.Charged = ModuleChargeState.Charging
-      player.Actor ! Damageable.MakeInvulnerable
+    case StartChargingModule(module, beam, player) =>
+      startChargingModule(module, beam, player)
 
-    case StopChargingModule(module, _, player) =>
-      //todo undo charge pose
-      module.Charged = ModuleChargeState.NonPowered
-      player.Actor ! Damageable.MakeVulnerable
+    case StopChargingModule(module, beam, player) =>
+      stopChargingModule(module, beam, player)
 
     case ChargeComplete(module, beam, player) =>
       chargeComplete(module, beam, player)
@@ -188,7 +186,10 @@ class VanuModuleManager(zone: Zone) extends Actor {
       chargeModule(flag)
 
     case ModuleLost(flag) =>
-      handleFlagDespawnLocal(flag)
+      moduleLost(flag)
+
+    case ModuleFacilityLost(facility) =>
+      moduleFacilityLost(facility)
 
     case InstallModuleIntoCradle(cradle, flag, player) =>
       installModuleIntoCradle(cradle, flag, player)
@@ -205,8 +206,8 @@ class VanuModuleManager(zone: Zone) extends Actor {
       .find(_.GUID == spawnerGuid)
       .getOrElse {
         cradles = cradles :+ spawner
+        spawner.captureFlag.collect { case o: VanuModule => trackModule(o) }
       }
-    spawner.captureFlag.collect { case o: VanuModule => trackModule(o) }
   }
 
   private def removeSpawner(spawner: VanuModuleNode): Unit = {
@@ -215,8 +216,8 @@ class VanuModuleManager(zone: Zone) extends Actor {
       case -1 => ()
       case index =>
         cradles = cradles.take(index) ++ cradles.drop(index + 1)
+        spawner.captureFlag.collect { case o: VanuModule => untrackModule(o) }
     }
-    spawner.captureFlag.collect { case o: VanuModule => untrackModule(o) }
   }
 
   private def rotationHasOccurred(previousModules: Seq[CarriableFlag], currentlyAvailableModules: Seq[CarriableFlag]): Unit = {
@@ -233,7 +234,6 @@ class VanuModuleManager(zone: Zone) extends Actor {
 
   private def whichModulesToDisplay(channel: String): Unit = {
     val outputList = trackedModules
-      .filterNot(_.Destroyed)
       .flatMap { flag =>
         val objectCreatePacket = OCM.apply(flag)
         flag.Carrier
@@ -244,7 +244,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
             } else {
               VanuModuleNode.ThatSpawnedThis(flag, flag.Target)
             }
-            if (results.isInstalled) {
+            if (results.hasModuleInstalled) {
               results.GetSpawner.map(o => ObjectAttachMessage(o.GUID, flag.GUID, 0))
             } else {
               None
@@ -259,6 +259,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
   }
 
   private def displayVanuModuleIconsInZone(): Unit = {
+    retireExpiredModules()
     updateVanuModuleIcons()
     if (trackedModules.isEmpty) {
       vanuModuleUpdateTimer.cancel()
@@ -266,8 +267,21 @@ class VanuModuleManager(zone: Zone) extends Actor {
     }
   }
 
-  private def pickupModuleFromCradle(spawner: VanuModuleNode, player: Player): Unit = {
-    spawner.captureFlag match {
+  private def retireExpiredModules(): Unit = {
+    val (modulesToContinue, modulesToRetire) = trackedModules.partition(isFunctionalModule)
+    trackedModules = modulesToContinue
+    modulesToRetire.foreach { module =>
+      val cradleFromModule = VanuModuleNode.ThatContainsThis(module)
+      if (cradleFromModule.hasModuleInstalled) {
+        cradleFromModule.GetSpawner.foreach((cradle: VanuModuleNode) => tryDespawnModuleAssociatedWithCradle(cradle, module))
+      } else {
+        handleFlagDespawnIfCarried(module)
+      }
+    }
+  }
+
+  private def pickupModuleFromCradle(cradle: VanuModuleNode, player: Player): Unit = {
+    cradle.captureFlag match {
       case Some(flag: VanuModule) =>
         val zoneid = flag.Zone.id
         val flagGuid = flag.GUID
@@ -275,15 +289,20 @@ class VanuModuleManager(zone: Zone) extends Actor {
         player.Carrying = flag.ValidFlagType.category
         flag.Carrier = Some(player)
         flag.Target = Building.NoBuilding
-        flag.Charged = false
+        if (flag.Charged == ModuleChargeState.Charged) {
+          flag.Faction = player.Faction
+        } else {
+          flag.Charged = false //if not explicitly charged, set to uncharged (false)
+        }
         flag.Position = Vector3.Zero //spawn far out of sight, at first
+        flag.SetTime(durationTime = 900000L) //(ms; or, 15 minutes)
         val flagOcmPacket = OCM.apply(flag)
         flag.Position = playerPosition
         zone.LocalEvents ! BundledEnvelope(
           MessageEnvelope(zoneid, SendResponse(
-            ObjectDetachMessage(spawner.GUID, flagGuid, spawner.Position, 0, 0, 0), /* spawner emits typed module */
-            flagOcmPacket, /* overwrite with nonpowered module */
-            ObjectAttachMessage(player.GUID, flagGuid, Player.SpecialCarrySlot) /* nonpowered module held by player */
+            ObjectDetachMessage(cradle.GUID, flagGuid, cradle.Position, 0, 0, 0), /* cradle emits module */
+            flagOcmPacket, /* overwrite with concealed module */
+            ObjectAttachMessage(player.GUID, flagGuid, Player.SpecialCarrySlot) /* module held by player */
           )),
           MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModulePickup, playerPosition, 15, volume = 0.8f))
         )
@@ -309,22 +328,39 @@ class VanuModuleManager(zone: Zone) extends Actor {
     }
   }
 
-  private def pickUpModule(flag: OwnedFlag, player: Player): Unit = {
+  private def pickUpModule(flag: VanuModule, player: Player): Unit = {
+    lazy val isFunctional = isFunctionalModule(flag)
     flag.Carrier match {
-      case None if !flag.Destroyed =>
+      case None if isFunctional =>
         val zoneid = flag.Zone.id
         flag.Carrier = Some(player)
         zone.LocalEvents ! BundledEnvelope(
           MessageEnvelope(zoneid, SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, Player.SpecialCarrySlot))),
           MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModulePickup, player.Position, 15, volume = 0.8f))
         )
+      case None if !isFunctional =>
+        flag.Destroyed = true
+        moduleLost(flag)
       case _ => ()
     }
+  }
+
+  private def startChargingModule(module: VanuModule, @unused beam: VanuModuleBeam, player: Player): Unit = {
+    //todo charge pose
+    module.Charged = ModuleChargeState.Charging
+    player.Actor ! Damageable.MakeInvulnerable
+  }
+
+  private def stopChargingModule(module: VanuModule, @unused beam: VanuModuleBeam, player: Player): Unit = {
+    //todo undo charge pose
+    module.Charged = ModuleChargeState.NonPowered
+    player.Actor ! Damageable.MakeVulnerable
   }
 
   private def chargeComplete(module: VanuModule, @unused beam: VanuModuleBeam, player: Player): Unit = {
     val zoneid = zone.id
     module.Charged = true
+    module.SetTime(durationTime = 900000L) //(ms; or, 15 minutes)
     VanuModuleNode.ThatSpawnedThis(module).ClearModule()
     val playerPosition = player.Position
     module.Position = Vector3.Zero //spawn far out of sight
@@ -369,26 +405,58 @@ class VanuModuleManager(zone: Zone) extends Actor {
     }
   }
 
+  private def moduleLost(module: VanuModule): Unit = {
+    VanuModuleNode
+      .ThatSpawnedThis(module)
+      .GetSpawner
+      .map { cradle =>
+        tryDespawnModuleAssociatedWithCradle(cradle, module)
+        cradle
+      }
+      .getOrElse(handleFlagDespawnIfCarried(module))
+  }
+
+  private def moduleFacilityLost(facility: Building): Unit = {
+    val (compromisedModules, retainedModules) = trackedModules.partition { module =>
+      module.Owner == facility && module.SpawnFaction != facility.Faction
+    }
+    trackedModules = retainedModules
+    compromisedModules.foreach { module =>
+      module.Destroyed = true
+      moduleLost(module)
+    }
+  }
+
   private def installModuleIntoCradle(cradle: VanuModuleNode, flag: VanuModule, player: Player): Unit = {
-    cradle.captureFlag.getOrElse {
-      val zone = cradle.Zone
-      val owner = cradle.Owner.asInstanceOf[Building]
-      val flagPosition = cradle.Position + FlagHoverHeight
-      val flagOrientation = cradle.Orientation
-      flag.Position = flagPosition
-      flag.Orientation = flagOrientation
-      player.Carrying = None
-      flag.Target = owner
-      flag.Carrier = None
-      cradle.captureFlag = flag
-      cradle.Owner.Actor ! BuildingActor.AmenityStateChange(cradle)
-      zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(cradle.GUID, flag.GUID, 0)))
+    if (isFunctionalModule(flag)) {
+      cradle.captureFlag.getOrElse {
+        val zone = cradle.Zone
+        val owner = cradle.Owner.asInstanceOf[Building]
+        val flagPosition = cradle.Position + FlagHoverHeight
+        val flagOrientation = cradle.Orientation
+        if (!flag.isExpirationDurationSet) {
+          //only set the first installation, lasts until end of module's life
+          flag.SetExpirationTime(durationTime = 100800000L) //(ms; or, 28 hours)
+        }
+        flag.SetTime(Long.MaxValue) //deactivates
+        flag.Position = flagPosition
+        flag.Orientation = flagOrientation
+        flag.Faction = cradle.Faction
+        player.Carrying = None
+        flag.Target = owner
+        flag.Carrier = None
+        cradle.captureFlag = flag
+        cradle.Owner.Actor ! BuildingActor.AmenityStateChange(cradle)
+        zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(cradle.GUID, flag.GUID, 0)))
+      }
+    } else {
+      moduleLost(flag)
     }
   }
 
   private def freeModuleFromCradle(cradle: VanuModuleNode): Unit = {
     cradle.captureFlag match {
-      case Some(flag) =>
+      case Some(flag: VanuModule) =>
         val zone = cradle.Zone
         val flagPosition = cradle.Position + FlagHoverHeight
         val flagOrientation = cradle.Orientation
@@ -396,6 +464,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
         flag.Target = Building.NoBuilding
         flag.Position = flagPosition
         flag.Orientation = flagOrientation
+        flag.SetTime(durationTime = 900000L) //(ms; or, 15 minutes)
         zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(ObjectDetachMessage(cradle.GUID, flag.GUID, flagPosition, 0, 0, flagOrientation.z)))
         cradle.Owner.Actor ! BuildingActor.AmenityStateChange(cradle)
       case _ => ()
@@ -419,7 +488,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
     }
   }
 
-  private def registerVanuModuleAssociatedWithSpawner(spawner: VanuModuleNode, flag: VanuModule) = {
+  private def registerVanuModuleAssociatedWithSpawner(spawner: VanuModuleNode, flag: VanuModule): TaskBundle = {
     // Register object create task and callback to create on clients
     TaskBundle(
       new StraightforwardTask() {
@@ -448,6 +517,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
     flag.Target = owner
     owner.Amenities = flag
     socket.captureFlag = flag
+    flag.Faction = socket.Faction
     trackModule(flag)
     zone.LocalEvents ! BundledEnvelope(
       MessageEnvelope(zone.id, GenericObjectAction(
@@ -463,33 +533,42 @@ class VanuModuleManager(zone: Zone) extends Actor {
 
   private def tryDespawnModuleAssociatedWithCradle(cradle: VanuModuleNode): Unit = {
     cradle.captureFlag match {
-      case Some(flag: VanuModule) if flag.Charged != ModuleChargeState.Charged =>
-        flag.Carrier match {
-          case None =>
-            handleFlagDespawnLocal(cradle, flag)
-          case Some(carrier) =>
-            carrier.Zone.AvatarEvents ! MessageEnvelope(carrier.Name, AvatarAction.DropSpecialItem())
-            context.system.scheduler.scheduleOnce(1000 milliseconds, self, VanuModuleSpawnerControl.ClearModule)
-        }
-      case _ =>
-        cradle.captureFlag = None
+      case Some(flag: VanuModule) => tryDespawnModuleAssociatedWithCradle(cradle, flag)
+      case _ => ()
     }
   }
 
-  private def handleFlagDespawnLocal(cradle: VanuModuleNode, flag: VanuModule): Unit = {
-    val flagOwner = cradle.Owner.asInstanceOf[Building]
+  private def tryDespawnModuleAssociatedWithCradle(cradle: VanuModuleNode, module: VanuModule): Unit = {
+    val cradleOwner = cradle.Owner
     cradle.captureFlag = None
-    flagOwner.Actor ! BuildingActor.AmenityStateChange(cradle)
-    flagOwner.RemoveAmenity(flag)
-    handleFlagDespawnLocal(flag)
+    cradleOwner.RemoveAmenity(module)
+    cradleOwner.Actor ! BuildingActor.AmenityStateChange(cradle)
+    handleFlagDespawnIfCarried(module)
+  }
+
+  private def handleFlagDespawnIfCarried(module: VanuModule): Unit = {
+    module.Carrier match {
+      case Some(carrier) =>
+        module.Position = carrier.Position + FlagHoverHeight
+        carrier.Zone.AvatarEvents ! MessageEnvelope(carrier.Name, AvatarAction.DropSpecialItem())
+        context.system.scheduler.scheduleOnce(1000 milliseconds, self, ModuleLost(module))
+      case None =>
+        handleFlagDespawnLocal(module)
+    }
   }
 
   private def handleFlagDespawnLocal(flag: VanuModule): Unit = {
     val zone = flag.Zone
-    flag.Destroyed = true
-    untrackModule(flag)
-    zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.LluDespawned(flag.GUID, flag.Position))
-    TaskWorkflow.execute(GUIDTask.unregisterObject(zone.GUID, flag))
+    if (flag.Destroyed) {
+      untrackModule(flag)
+      zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(OCM.apply(flag))) //explosion
+      //todo cause explosion damage
+      context.system.scheduler.scheduleOnce(500 milliseconds, self, ModuleLost(flag))
+      flag.Destroyed = false //reset
+    } else {
+      zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.LluDespawned(flag.GUID, flag.Position))
+      TaskWorkflow.execute(GUIDTask.unregisterObject(zone.GUID, flag))
+    }
   }
 
   private def trackModule(module: VanuModule): Unit = {
@@ -520,8 +599,11 @@ class VanuModuleManager(zone: Zone) extends Actor {
 
   private def updateVanuModuleIcons(): Unit = {
     val outputList = trackedModules
-      .filterNot(_.Destroyed)
       .map { module => (module.DisplayFlagType, module.Faction, 0L, module.Position.xy) }
     galaxyService ! MessageEnvelope("", VanuModuleUpdate(zone.Number, outputList))
+  }
+
+  private def isFunctionalModule(module: VanuModule): Boolean = {
+    module.GetRemainingTimeAlive() > 0L && module.GetRemainingExpirationTime() > 0L
   }
 }

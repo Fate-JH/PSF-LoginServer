@@ -26,7 +26,7 @@ class VanuModuleCanisterConverter extends ObjectCreateConverter[VanuModule]() {
             guid = Default.GUID0
           )
         ),
-        unk = 0L,
+        unk = 0L, //obj.GetRemainingTimeAlive(), //todo is this field anything?
         obj.DisplayFlagType match {
           case cmod: CarriableModule => cmod.module
           case _ => VanuModuleType.Invalid
