@@ -24,7 +24,7 @@ class VanuModuleSpawnerControl(obj: VanuModuleNode)
     val zone = obj.Zone
     obj.captureFlag match {
       case Some(flag: VanuModule)
-        if terminal.Faction != flag.SpawnFaction || terminal.Faction == PlanetSideEmpire.NEUTRAL =>
+        if terminal.Faction != flag.FlagFaction || terminal.Faction == PlanetSideEmpire.NEUTRAL =>
         zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ModuleLost(flag))
       case _ =>
         ()

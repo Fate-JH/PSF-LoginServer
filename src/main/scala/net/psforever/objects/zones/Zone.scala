@@ -105,6 +105,7 @@ class Zone(info: DefinedZoneInfo, val map: ZoneMap) {
         def mood: ZoneType = ZoneType.Continent
         def map: MapInfo = null
         def aliases: AliasLookup = ZoneInfo.defaultAliases
+        def moduleRoamingLimit: Int = 0
       },
       map
     )

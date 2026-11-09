@@ -30,6 +30,7 @@ trait DefinedZoneInfo {
   def map: MapInfo
   def mood: ZoneType
   def aliases: AliasLookup
+  def moduleRoamingLimit: Int
 }
 
 sealed abstract class ZoneInfo(
@@ -38,7 +39,8 @@ sealed abstract class ZoneInfo(
     val id: String,
     val map: MapInfo,
     val mood: ZoneType,
-    val aliases: AliasLookup = ZoneInfo.defaultAliases
+    val aliases: AliasLookup = ZoneInfo.defaultAliases,
+    val moduleRoamingLimit: Int = 0
 ) extends IntEnumEntry with DefinedZoneInfo
 
 case object ZoneInfo extends IntEnum[ZoneInfo] {
@@ -50,7 +52,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Solsar",
         id = "z1",
         map = MapInfo.Map01,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Hossin
@@ -59,7 +62,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Hossin",
         id = "z2",
         map = MapInfo.Map02,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Cyssor
@@ -68,7 +72,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Cyssor",
         id = "z3",
         map = MapInfo.Map03,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Ishundar
@@ -77,7 +82,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Ishundar",
         id = "z4",
         map = MapInfo.Map04,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Forseral
@@ -86,7 +92,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Forseral",
         id = "z5",
         map = MapInfo.Map05,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Ceryshen
@@ -95,7 +102,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Ceryshen",
         id = "z6",
         map = MapInfo.Map06,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Esamir
@@ -104,7 +112,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Esamir",
         id = "z7",
         map = MapInfo.Map07,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Oshur
@@ -113,7 +122,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Oshur",
         id = "z8",
         map = MapInfo.Map08,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Searhus
@@ -122,7 +132,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Searhus",
         id = "z9",
         map = MapInfo.Map09,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object Amerish
@@ -131,7 +142,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Amerish",
         id = "z10",
         map = MapInfo.Map10,
-        mood = ZoneType.Continent
+        mood = ZoneType.Continent,
+        moduleRoamingLimit = 99
       )
 
   case object NcSanctuary
@@ -257,7 +269,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Supai",
         id = "c1",
         map = MapInfo.Ugd01,
-        mood = ZoneType.Cavern
+        mood = ZoneType.Cavern,
+        moduleRoamingLimit = 3
       )
 
   case object Hunhau
@@ -266,7 +279,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Hunhau",
         id = "c2",
         map = MapInfo.Ugd02,
-        mood = ZoneType.Cavern
+        mood = ZoneType.Cavern,
+        moduleRoamingLimit = 3
       )
 
   case object Adlivun
@@ -275,7 +289,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Adlivun",
         id = "c3",
         map = MapInfo.Ugd03,
-        mood = ZoneType.Cavern
+        mood = ZoneType.Cavern,
+        moduleRoamingLimit = 3
       )
 
   case object Byblos
@@ -284,7 +299,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Byblos",
         id = "c4",
         map = MapInfo.Ugd04,
-        mood = ZoneType.Cavern
+        mood = ZoneType.Cavern,
+        moduleRoamingLimit = 3
       )
 
   case object Annwn
@@ -293,7 +309,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Annwn",
         id = "c5",
         map = MapInfo.Ugd05,
-        mood = ZoneType.Cavern
+        mood = ZoneType.Cavern,
+        moduleRoamingLimit = 3
       )
 
   case object Drugaskan
@@ -302,7 +319,8 @@ case object ZoneInfo extends IntEnum[ZoneInfo] {
         name = "Drugaskan",
         id = "c6",
         map = MapInfo.Ugd06,
-        mood = ZoneType.Cavern
+        mood = ZoneType.Cavern,
+        moduleRoamingLimit = 3
       )
 
   case object Extinction

@@ -2,6 +2,7 @@
 package net.psforever.services.local.support
 
 import akka.actor.{Actor, ActorContext, ActorRef, Cancellable, Props}
+import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.{Default, GlobalDefinitions, PlanetSideGameObject, Player}
 import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, TaskWorkflow}
 import net.psforever.objects.serverobject.environment.{EnvironmentAttribute, EnvironmentTrait}
@@ -12,12 +13,12 @@ import net.psforever.objects.serverobject.structures.{Building, WarpGate}
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
 import net.psforever.objects.zones.Zone
 import net.psforever.objects.zones.interaction.InteractsWithZone
-import net.psforever.packet.game.packets.{CaptureFlagUpdateMessage, ChatMsg, FlagInfo, GenericObjectActionEnum, ObjectAttachMessage, ObjectDetachMessage, TriggeredSound}
+import net.psforever.packet.game.packets.{CaptureFlagUpdateMessage, ChatMsg, FlagInfo, GenericObjectActionEnum, ObjectAttachMessage, ObjectDetachMessage, TriggerSoundMessage, TriggeredSound}
 import net.psforever.services.ServiceManager
 import net.psforever.services.ServiceManager.{Lookup, LookupResult}
 import net.psforever.services.base.{EventServiceSupport, GenericSupportEnvelopeOnly}
 import net.psforever.services.base.envelope.{BundledEnvelope, MessageEnvelope}
-import net.psforever.services.base.message.{GenericObjectAction, SendResponse}
+import net.psforever.services.base.message.{GenericObjectAction, ObjectDelete, SendResponse}
 import net.psforever.services.galaxy.GalaxyAction
 import net.psforever.services.local.LocalAction
 import net.psforever.types.{ChatMessageType, PlanetSideEmpire, PlanetSideGUID, Vector3}
@@ -119,11 +120,15 @@ class CaptureFlagManager(zone: Zone) extends Actor {
           flag.Position = player.Position
           // Remove attached player from flag
           flag.Carrier = None
+          player.Carrying = None
           // Send drop packet
           zone.LocalEvents ! BundledEnvelope(
-            MessageEnvelope(zoneid, SendResponse(ObjectDetachMessage(player.GUID, flag.GUID, playerPosition, 0, 0, 0))),
-            MessageEnvelope(zoneid, LocalAction.LluSpawned(flag)),
-            MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.LLUDrop, playerPosition, 15, volume = 0.8f))
+            MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.LLUDrop, playerPosition, 15, volume = 0.8f)),
+            MessageEnvelope(zoneid, SendResponse(
+              ObjectDetachMessage(player.GUID, flag.GUID, playerPosition, 0, 0, 0),
+              OCM.apply(flag),
+            )),
+            MessageEnvelope(player.Name, LocalAction.PlayerDropsFlag(flag.GUID))
           )
           // Send dropped chat message
           CaptureFlagManager.ChatBroadcast(
@@ -136,10 +141,13 @@ class CaptureFlagManager(zone: Zone) extends Actor {
       }
 
     case CaptureFlagManager.PickupFlag(flag: OwnedFlag, player: Player) =>
+      val flagCategory = flag.ValidFlagType.category
       flag.Carrier = Some(player)
+      player.Carrying = Some(flagCategory)
       zone.LocalEvents ! BundledEnvelope(
+        MessageEnvelope(zone.id, LocalAction.TriggerSound(TriggeredSound.LLUPickup, player.Position, 15, volume = 0.8f)),
         MessageEnvelope(zone.id, SendResponse(ObjectAttachMessage(player.GUID, flag.GUID, Player.SpecialCarrySlot))),
-        MessageEnvelope(zone.id, LocalAction.TriggerSound(TriggeredSound.LLUPickup, player.Position, 15, volume = 0.8f))
+        MessageEnvelope(player.Name, LocalAction.PlayerCollectsFlag(flagCategory, flag.GUID))
       )
       CaptureFlagManager.ChatBroadcast(
         zone,
@@ -190,6 +198,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
                                          flag: OwnedFlag
                                        )(): Unit = {
     val zone = socket.Zone
+    val zoneid = zone.id
     val owner = socket.Owner.asInstanceOf[Building]
     // Add the flag as an amenity
     socket.Owner.Amenities = flag
@@ -198,11 +207,9 @@ class CaptureFlagManager(zone: Zone) extends Actor {
     TrackFlag(flag)
     // 1.Override CC message when looked at, 2.Announce flag spawn
     zone.LocalEvents ! BundledEnvelope(
-      MessageEnvelope(zone.id, GenericObjectAction(
-        captureTerminalGuid,
-        GenericObjectActionEnum.FlagSpawned.id
-      )),
-      MessageEnvelope(zone.id, LocalAction.LluSpawned(flag))
+      MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.LLUMaterialize, flag.Position, 20, volume=0.8000001f)),
+      MessageEnvelope(zoneid, GenericObjectAction(captureTerminalGuid, GenericObjectActionEnum.FlagSpawned.id)),
+      MessageEnvelope(zoneid, SendResponse(OCM.apply(flag)))
     )
     // Broadcast chat message for LLU spawn
     CaptureFlagManager.ChatBroadcast(
@@ -258,8 +265,19 @@ class CaptureFlagManager(zone: Zone) extends Actor {
     flagOwner.GetFlagSocket.get.captureFlag = None
     flagOwner.RemoveAmenity(flag)
     UntrackFlag(flag)
+    val deleteMsgs = flag.Carrier match {
+      case Some(carrier) =>
+        flag.Carrier = None
+        carrier.Carrying = None
+        List(MessageEnvelope(zone.id, ObjectDelete(flag.GUID)), MessageEnvelope(carrier.Name, LocalAction.PlayerDropsFlag(flag.GUID)))
+      case None =>
+        List(MessageEnvelope(zone.id, ObjectDelete(flag.GUID)))
+    }
     // Unregister LLU from clients,
-    zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.LluDespawned(flag.GUID, flag.Position))
+    zone.LocalEvents ! BundledEnvelope(
+      MessageEnvelope(zone.id, SendResponse(TriggerSoundMessage(TriggeredSound.LLUDeconstruct, flag.Position, unk=20, volume=0.8000001f))) +:
+      deleteMsgs
+    )
     // Then unregister it from the GUID pool
     TaskWorkflow.execute(GUIDTask.unregisterObject(zone.GUID, flag))
   }

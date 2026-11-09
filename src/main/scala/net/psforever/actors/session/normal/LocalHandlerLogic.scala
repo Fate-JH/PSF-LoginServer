@@ -9,7 +9,7 @@ import net.psforever.objects.ce.Deployable
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.vehicles.MountableWeapons
 import net.psforever.objects.{BoomerDeployable, Default, ExplosiveDeployable, TelepadDeployable, Tool, TurretDeployable}
-import net.psforever.packet.game.packets.{ChatMsg, DeployableObjectsInfoMessage, GenericActionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HackMessage, HackState, HackState1, InventoryStateMessage, ObjectAttachMessage, ObjectCreateMessage, ObjectDeleteMessage, ObjectDetachMessage, OrbitalShuttleTimeMsg, PadAndShuttlePair, PlanetsideAttributeMessage, ProximityTerminalUseMessage, TriggerEffectMessage, TriggerSoundMessage, TriggeredSound, VehicleStateMessage}
+import net.psforever.packet.game.packets.{ChatMsg, DeployableObjectsInfoMessage, GenericActionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HackMessage, HackState, HackState1, InventoryStateMessage, ObjectAttachMessage, ObjectDeleteMessage, ObjectDetachMessage, OrbitalShuttleTimeMsg, PadAndShuttlePair, PlanetsideAttributeMessage, ProximityTerminalUseMessage, TriggerEffectMessage, TriggerSoundMessage, VehicleStateMessage}
 import net.psforever.services.base.message.SendResponse
 import net.psforever.services.{InterstellarClusterService, Service}
 import net.psforever.services.local.LocalAction
@@ -154,22 +154,18 @@ class LocalHandlerLogic(val ops: SessionLocalHandlers, implicit val context: Act
     case LocalAction.GenericActionMessage(actionNumber) =>
       sendResponse(GenericActionMessage(actionNumber))
 
-    case LocalAction.LluSpawned(llu) =>
-      // Create LLU on client
-      sendResponse(ObjectCreateMessage(
-        llu.Definition.ObjectId,
-        llu.GUID,
-        llu.Definition.Packet.ConstructorData(llu).get
-      ))
-      sendResponse(TriggerSoundMessage(TriggeredSound.LLUMaterialize, llu.Position, unk=20, volume=0.8000001f))
+    case LocalAction.PlayerCollectsFlag(_, flagGuid) =>
+      sessionLogic.general.specialItemSlotGuid.orElse {
+        sessionLogic.general.specialItemSlotGuid = Some(flagGuid)
+        sessionLogic.general.lastEntityInteractedWith = None
+        Some(flagGuid)
+      }
 
-    case LocalAction.LluDespawned(lluGuid, position) =>
-      sendResponse(TriggerSoundMessage(TriggeredSound.LLUDeconstruct, position, unk=20, volume=0.8000001f))
-      sendResponse(ObjectDeleteMessage(lluGuid, unk1=0))
-      // If the player was holding the LLU, remove it from their tracked special item slot
-      sessionLogic.general.specialItemSlotGuid.collect { case guid if guid == lluGuid =>
+    case LocalAction.PlayerDropsFlag(flagGuid) =>
+      sessionLogic.general.specialItemSlotGuid.collect { case guid if guid == flagGuid =>
         sessionLogic.general.specialItemSlotGuid = None
-        player.Carrying = None
+        sessionLogic.general.lastEntityInteractedWith = None
+        None
       }
 
     case LocalAction.ProximityTerminalEffect(object_guid, true) =>

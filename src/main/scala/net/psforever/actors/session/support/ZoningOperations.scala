@@ -14,7 +14,7 @@ import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.inventory.InventoryItem
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.{ModuleChargeState, VanuModule, VanuModuleNode}
+import net.psforever.objects.serverobject.flag.module.VanuModule
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mount.Seat
 import net.psforever.objects.serverobject.tube.SpawnTube
@@ -1865,45 +1865,6 @@ class ZoningOperations(
     )
   }
 
-  /**
-   *
-   * @param flag special carry flag entity that the player should be carrying
-   * @return
-   */
-  private[session] def registerSpecialCarry(flag: OwnedFlag): TaskBundle = {
-    TaskBundle(
-      new StraightforwardTask() {
-        private val localFlag = flag.asInstanceOf[VanuModule]
-        private val localZone = continent
-        private val localSession = sessionLogic
-
-        override def description(): String = s"register special carry flag ${localFlag.Definition.Name}"
-
-        def action(): Future[Any] = {
-          val zoneid = localZone.id
-          val events = localZone.LocalEvents
-          val flagGuid = localFlag.GUID
-
-          localSession.general.specialItemSlotGuid = Some(flagGuid)
-          localFlag.Zone = localZone
-          localZone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.TrackModuleInZone(localFlag))
-          val objectCreatePacket = OCM.apply(localFlag)
-          localFlag.Carrier
-            .map { carrier =>
-              events ! MessageEnvelope(zoneid, SendResponse(objectCreatePacket, ObjectAttachMessage(carrier.GUID, flagGuid, Player.SpecialCarrySlot)))
-              Some(carrier)
-            }
-            .orElse {
-              events ! MessageEnvelope(zoneid, SendResponse(objectCreatePacket))
-              None
-            }
-          Future(true)
-        }
-      },
-      List(GUIDTask.registerObject(continent.GUID, flag))
-    )
-  }
-
   def propertyOverrideManagerLoadOverrides(manager: ActorRef): Unit = {
     ask(manager, PropertyOverrideManager.GetOverridesMessage)(Timeout(2.seconds)).onComplete {
       case Success(overrides: List[Any]) =>
@@ -3605,18 +3566,14 @@ class ZoningOperations(
       }
       interstellarFerryTopLevelGUID = None
       // draw the special carry flag we were transporting from the previous zone (usually a vanu module)
-      spawn.interimSpecialCarryFlag.foreach {
-        case o: VanuModule if o.Charged != ModuleChargeState.Charged && continent != o.Owner.Zone =>
-          // module does not enter zone and is consumed relatively quietly
-          o.Destroyed = true
-          player.Carrying = None
-          sessionLogic.general.specialItemSlotGuid = None
-          VanuModuleNode.ThatSpawnedThis(o).ClearModule()
+      spawn.interimSpecialCarryFlag.collect {
         case flag: VanuModule =>
-          TaskWorkflow.execute(registerSpecialCarry(flag))
-        case _ => ()
+          continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.NewModuleInZone(flag, player))
+        case flag =>
+          log.warn(s"special carry flag ${flag.ValidFlagType.category} attempted to be migrate, but was caught during zoning")
       }
       spawn.interimSpecialCarryFlag = None
+      sessionLogic.general.specialItemSlotGuid = None
       if (loadConfZone && sessionLogic.connectionState == 100) {
         configZone(continent)
         loadConfZone = false

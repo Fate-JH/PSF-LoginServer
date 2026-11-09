@@ -36,7 +36,7 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
     Charged
   }
 
-  def SpawnFaction: PlanetSideEmpire.Value = super.Faction
+  def FlagFaction: PlanetSideEmpire.Value = super.Faction
 
   override def Faction: PlanetSideEmpire.Value = Carrier.map(_.Faction).getOrElse(super.Faction)
 

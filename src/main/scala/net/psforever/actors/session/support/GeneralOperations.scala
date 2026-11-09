@@ -195,6 +195,7 @@ class GeneralOperations(
   private[session] var heightLast: Float = 0f
   private[session] var heightTrend: Boolean = false //up = true, down = false
   private[session] var heightHistory: Float = 0f
+  private[session] var lastEntityInteractedWith: Option[PlanetSideGUID] = None
   private[session] var progressBarUpdate: Cancellable = Default.Cancellable
   private var charSavedTimer: Cancellable = Default.Cancellable
 
@@ -1590,20 +1591,18 @@ class GeneralOperations(
     if (player.ZoningRequest != Zoning.Method.None) {
       sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
     }
-    // LLU can normally only be picked up the faction that owns it
     specialItemSlotGuid match {
-      case None if obj.Faction == player.Faction && player.ZoningRequest == Zoning.Method.None =>
-        specialItemSlotGuid = Some(obj.GUID)
-        player.Carrying = obj.ValidFlagType.category
+      case None if obj.Faction == player.Faction =>
+        // LLU can normally only be picked up the faction that owns it
+        lastEntityInteractedWith = Some(obj.GUID)
         continent.LocalEvents ! FlagEnvelope(CaptureFlagManager.PickupFlag(obj, player))
-      case None =>
-        log.warn(s"${player.Faction} player ${player.toString} tried to pick up a ${obj.Faction} LLU - ${obj.GUID}")
       case Some(guid) if guid != obj.GUID =>
-        // Ignore duplicate pickup requests
         log.warn(
-          s"${player.Faction} player ${player.toString} tried to pick up a ${obj.Faction} LLU, but their special slot already contains $guid"
-        )
-      case _ => ()
+          s"${player.Faction} player ${player.Name} tried to pick up a ${obj.Faction} LLU, but their special slot already contains ${continent.GUID(guid)}")
+      case _ if lastEntityInteractedWith.contains(obj.GUID) =>
+        () // Ignore duplicate pickup requests
+      case _ =>
+        log.warn(s"${player.Faction} player ${player.Name} tried to pick up a ${obj.Faction} LLU - ${obj.GUID} - but could not")
     }
   }
 
@@ -1612,9 +1611,9 @@ class GeneralOperations(
       .orElse(continent.GUID(specialItemSlotGuid))
       .collect { case v: VanuModule => v } match {
       case Some(flag) if obj.ValidFlagType == CarriableFlag.VanuModuleCradle =>
-        handleUseVanuModuleCradle(flag, obj)
+        handleUseVanuModuleCradle(flag, obj) //put or take from cradle
       case Some(flag) =>
-        handleUseVanuModuleCollection(flag, obj) //take from cradle
+        handleUseVanuModuleCollection(flag, obj) //take from spawner
       case None => ()
     }
   }
@@ -1623,8 +1622,10 @@ class GeneralOperations(
     cradle.captureFlag match {
       case Some(flag)
         if (flag eq obj) && cradle.Owner.asInstanceOf[Building].CaptureTerminalIsHacked =>
+        lastEntityInteractedWith = Some(obj.GUID)
         handleUseVanuModuleCollection(obj, cradle) //remove from cradle
       case None =>
+        lastEntityInteractedWith = Some(obj.GUID)
         handleUseVanuModuleInstallation(obj, cradle) //put in cradle
       case _ => ()
     }
@@ -1636,12 +1637,12 @@ class GeneralOperations(
     }
     if (obj.Target == Building.NoBuilding && obj.Charged == ModuleChargeState.Charged && cradle.captureFlag.isEmpty) { // can be installed in first place
       specialItemSlotGuid match {
-        case Some(guid)
-          if guid == obj.GUID && player.Carrying.contains(obj.ValidFlagType.category) =>
-          specialItemSlotGuid = None
+        case Some(guid) if guid == obj.GUID && player.Carrying.contains(obj.ValidFlagType.category) =>
+          ()
         case _ =>
           () // player was not carrying this flag
       }
+      lastEntityInteractedWith = Some(obj.GUID)
       continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.InstallModuleIntoCradle(cradle, obj, player))
     }
   }
@@ -1652,15 +1653,14 @@ class GeneralOperations(
     }
     specialItemSlotGuid match {
       case None =>
-        specialItemSlotGuid = Some(obj.GUID)
-        player.Carrying = obj.ValidFlagType.category
+        lastEntityInteractedWith = Some(obj.GUID)
         continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.PickupModuleFromCradle(socket, player))
-      case Some(guid) if guid != obj.GUID =>
-        // Ignore duplicate pickup requests
+      case Some(guid) if !lastEntityInteractedWith.contains(guid) =>
         log.warn(
-          s"${player.Faction} player ${player.toString} tried to pick up a ${obj.Faction} vanu module, but their special slot already contains $guid"
+          s"${player.Faction} player ${player.Name} tried to pick up a ${obj.Faction} vanu module, but their special slot already contains ${continent.GUID(guid)}"
         )
-      case _ => ()
+      case _ =>
+        () // Ignore duplicate pickup requests
     }
   }
 
@@ -1670,15 +1670,14 @@ class GeneralOperations(
     }
     specialItemSlotGuid match {
       case None =>
-        specialItemSlotGuid = Some(obj.GUID)
-        player.Carrying = obj.ValidFlagType.category
+        lastEntityInteractedWith = Some(obj.GUID)
         continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.PickUpModule(obj.asInstanceOf[VanuModule], player))
-      case Some(guid) if guid != obj.GUID =>
-        // Ignore duplicate pickup requests
+      case Some(guid) if !lastEntityInteractedWith.contains(guid) =>
         log.warn(
-          s"${player.Faction} player ${player.toString} tried to pick up a vanu module, but their special slot already contains $guid"
+          s"${player.Faction} player ${player.Name} tried to pick up a vanu module, but their special slot already contains ${continent.GUID(guid)}"
         )
-      case _ => ()
+      case _ =>
+        () // Ignore duplicate pickup requests
     }
   }
 
