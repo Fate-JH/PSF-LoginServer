@@ -81,16 +81,6 @@ object VanuModuleNode {
   }
 
   /**
-   * Trace back a Vanu module to the spawner that produced it originally.
-   * @see [[ThatSpawnedThis(VanuModule*, AmenityOwner*)]]
-   * @param module vanu module being sought
-   * @return module node that spawned the module, if it can be determined
-   */
-  def ThatSpawnedThis(module: VanuModule): FoundModuleCradle = {
-    ThatSpawnedThis(module, module.Owner)
-  }
-
-  /**
    * Trace back a Vanu module to the spawner that produced it originally.<br>
    * This should not work if the module has already been charged
    * as the spawning cradle's knowledge of the module will be blanked
@@ -103,11 +93,10 @@ object VanuModuleNode {
    * @see `Building.Amenities`
    * @see `VanuModuleNode.ValidFlagType`
    * @param module vanu module being sought
-   * @param mockOwner location whose amenities will be searched
    * @return module node that spawned the module, if it can be determined; else `CradleNotFound`
    */
-  def ThatSpawnedThis(module: VanuModule, mockOwner: AmenityOwner): FoundModuleCradle = {
-    mockOwner
+  def ThatSpawnedThis(module: VanuModule): FoundModuleCradle = {
+    module.Owner
       .Amenities
       .collectFirst { case o: VanuModuleNode if o.ValidFlagType == module.ValidFlagType => o }
       .map { o =>

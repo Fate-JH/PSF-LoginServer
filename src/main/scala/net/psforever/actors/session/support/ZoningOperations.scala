@@ -1632,7 +1632,6 @@ class ZoningOperations(
         spawn.interimSpecialCarryFlag = Some(flag)
         continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.StopTrackingModule(flag))
         TaskWorkflow.execute(GUIDTask.unregisterObject(continent.GUID, flag))
-        flag.Continent = continent.id
       }
     Deployables.Disown(continent, avatar, context.self)
     spawn.drawDeloyableIcon = spawn.RedrawDeployableIcons //important for when SetCurrentAvatar initializes the UI next zone

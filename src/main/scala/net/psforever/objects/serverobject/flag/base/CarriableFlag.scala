@@ -47,6 +47,8 @@ object CarriableFlag {
 
   /** Non-powered (white) */
   case object VanuModuleNonPowered extends CarriableModule(value = "VanuModuleNonPowered", VanuModuleType.NonPowered, CavernBenefit.NamelessBenefit)
+  /** invalid (no aura) */
+  case object VanuModuleInvalid extends CarriableModule(value = "invalid", VanuModuleType.Invalid, CavernBenefit.NamelessBenefit)
 
   /** Mysterious MacGuffins tied to the Bending */
   case object MonolithUnit extends CarriableFlag(value = FlagCategory.MonolithUnit.value, FlagCategory.MonolithUnit)

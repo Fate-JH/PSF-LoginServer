@@ -9,7 +9,7 @@ import net.psforever.types.{PlanetSideEmpire, VanuModuleType}
 
 import scala.util.{Success, Try}
 
-class VanuModuleCanisterConverter extends ObjectCreateConverter[VanuModule]() {
+object VanuModuleCanisterConverter extends ObjectCreateConverter[VanuModule]() {
   override def ConstructorData(obj: VanuModule): Try[VanuModuleCanisterData] = {
     Success(
       VanuModuleCanisterData(

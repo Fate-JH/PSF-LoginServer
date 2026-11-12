@@ -42,16 +42,10 @@ class VanuModuleCradleControl(obj: VanuModuleNode)
     //if the module is no longer faction-aligned with the cradle/facility, destroy it; no freebies
     //if the facility has gone neutral, destroy it regardless of faction-alignment
     obj.captureFlag.collect { case flag: VanuModule
-      if flag.Faction != obj.Faction || terminal.Faction == PlanetSideEmpire.NEUTRAL =>
+      if flag.FlagFaction != obj.Faction || terminal.Faction == PlanetSideEmpire.NEUTRAL =>
       TryDestroyModuleInCradle(flag)
     }
   }
-
-  /*
-  override protected def captureTerminalIsHacked(@unused terminal: CaptureTerminal): Unit = {
-    TryFreeModuleFromCradle()
-  }
-  */
 
   private def TryDestroyModuleInCradle(): Unit = {
     obj.captureFlag.collect { case module: VanuModule =>

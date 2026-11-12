@@ -26,6 +26,11 @@ object VanuModuleBeamControl {
   private case class ChargeComplete(player: Player, module: VanuModule)
 
   private case class ExpiredInteractionProtection(playerName: String)
+
+  private def PlayerModuleChargingTests(player: Player, beam: VanuModuleBeam, module: VanuModule): Boolean = {
+    player.isAlive && Vector3.DistanceSquared(player.Position.xy, beam.Position.xy) < 2 * math.pow(beam.Definition.UseRadius, 2) &&
+      !module.Charged.value && !module.Destroyed && module.Carrier.contains(player)
+  }
 }
 
 class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
@@ -58,7 +63,7 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
 
   private val startChargingBehavior: Receive = {
     case CommonMessages.Use(player, Some(module: VanuModule))
-      if subjectOfCharging.isEmpty && PlayerModuleChargingTests(player, module) =>
+      if subjectOfCharging.isEmpty && VanuModuleBeamControl.PlayerModuleChargingTests(player, beam, module) =>
       //start charging module
       AddUser(player)
       RetimeRecontextEvent(
@@ -101,12 +106,12 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
     .orElse(notProtectedBehavior)
     .orElse {
       case msg @ VanuModuleBeamControl.ChargeOngoing(player, module, interval, endTime)
-        if System.currentTimeMillis() + interval < endTime && PlayerModuleChargingTests(player, module) =>
+        if System.currentTimeMillis() + interval < endTime && VanuModuleBeamControl.PlayerModuleChargingTests(player, beam, module) =>
         //pass conditions to continue charging module
         RetimeRecontextEvent(player.Name, interval, msg)
 
       case VanuModuleBeamControl.ChargeOngoing(player, module, interval, endTime)
-        if System.currentTimeMillis() + interval >= endTime && PlayerModuleChargingTests(player, module) =>
+        if System.currentTimeMillis() + interval >= endTime && VanuModuleBeamControl.PlayerModuleChargingTests(player, beam, module) =>
         //goto finish charging module next
         RetimeRecontextEvent(player.Name, interval, VanuModuleBeamControl.ChargeComplete(player, module))
 
@@ -117,7 +122,7 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
         context.become(beforeChargingBehavior)
 
       case VanuModuleBeamControl.ChargeComplete(player, module)
-        if PlayerModuleChargingTests(player, module) =>
+        if VanuModuleBeamControl.PlayerModuleChargingTests(player, beam, module) =>
         //actually charge module
         RemoveUser()
         beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ChargeComplete(module, beam, player))
@@ -147,11 +152,6 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
       subjectOfCharging = None
       beam.RemoveUser(p)
     }
-  }
-
-  private def PlayerModuleChargingTests(player: Player, module: VanuModule): Boolean = {
-    player.isAlive && Vector3.DistanceSquared(player.Position.xy, beam.Position.xy) < 2 * math.pow(beam.Definition.UseRadius, 2) &&
-      !module.Charged.value && !module.Destroyed && module.Carrier.contains(player)
   }
 
   private def HardStopCurrentEvent(label: String): Unit = {

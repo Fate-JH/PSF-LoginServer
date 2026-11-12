@@ -6,7 +6,7 @@ import net.psforever.objects.avatar.AvatarBot
 import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.doors.Door
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.{ModuleChargeState, VanuModule, VanuModuleNode}
+import net.psforever.objects.serverobject.flag.module.{VanuModule, VanuModuleNode}
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mblocker.Locker
 import net.psforever.objects.serverobject.resourcesilo.ResourceSilo
@@ -1635,7 +1635,7 @@ class GeneralOperations(
     if (player.ZoningRequest != Zoning.Method.None) {
       sessionLogic.zoning.CancelZoningProcessWithDescriptiveReason("cancel_use")
     }
-    if (obj.Target == Building.NoBuilding && obj.Charged == ModuleChargeState.Charged && cradle.captureFlag.isEmpty) { // can be installed in first place
+    if (!obj.isInstalled && obj.Charged.value && cradle.captureFlag.isEmpty) { // can be installed in first place
       specialItemSlotGuid match {
         case Some(guid) if guid == obj.GUID && player.Carrying.contains(obj.ValidFlagType.category) =>
           ()

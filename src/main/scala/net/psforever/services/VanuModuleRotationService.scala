@@ -38,12 +38,12 @@ object VanuModuleRotationService {
 }
 
 class VanuModuleRotationService(
-                             context: ActorContext[VanuModuleRotationService.Command],
-                             timer: TimerScheduler[VanuModuleRotationService.Command]
-                           ) {
-
+                                 context: ActorContext[VanuModuleRotationService.Command],
+                                 timer: TimerScheduler[VanuModuleRotationService.Command]
+                               ) {
   import VanuModuleRotationService._
 
+  /* use CarriableFlag.VanuModuleInvalid to indicate a pause in the rotation schedule */
   private val defaultModuleRotationOrder: Seq[CarriableFlag] = Seq(
     CarriableFlag.VanuModuleWeapon,
     CarriableFlag.VanuModuleVehicle,
@@ -64,15 +64,15 @@ class VanuModuleRotationService(
       .receiveMessage[VanuModuleRotationService.Command] {
         case KeepUpdated(endpoint) =>
           managerEndpoints = managerEndpoints :+ endpoint
-          endpoint ! CurrentModulesAvailable(currentlyAvailableModules)
+          endpoint ! CurrentModulesAvailable(currentlyAvailableModules.filterNot(_ == CarriableFlag.VanuModuleInvalid))
           Behaviors.same
 
         case WhatCurrentModulesAreAvailable(sendTo) =>
-          sendTo ! CurrentModulesAvailable(currentlyAvailableModules)
+          sendTo ! CurrentModulesAvailable(currentlyAvailableModules.filterNot(_ == CarriableFlag.VanuModuleInvalid))
           Behaviors.same
 
         case RotateAvailability =>
-          val previousModules: Seq[CarriableFlag] = currentlyAvailableModules
+          val previousModules: Seq[CarriableFlag] = currentlyAvailableModules.filterNot(_ == CarriableFlag.VanuModuleInvalid)
           val size: Int = defaultModuleRotationOrder.size
           currentIndex = (currentIndex + rotationSample) % size
           val nextIndex: Int = currentIndex + rotationSample
@@ -81,7 +81,9 @@ class VanuModuleRotationService(
           } else {
             defaultModuleRotationOrder.slice(currentIndex, nextIndex)
           }
-          managerEndpoints.foreach(_ ! RotationHasOccurred(previousModules, currentlyAvailableModules))
+          val publishPreviousModules = previousModules.filterNot(_ == CarriableFlag.VanuModuleInvalid)
+          val publishNextModules = currentlyAvailableModules.filterNot(_ == CarriableFlag.VanuModuleInvalid)
+          managerEndpoints.foreach(_ ! RotationHasOccurred(publishPreviousModules, publishNextModules))
           Behaviors.same
       }
       .receiveSignal {

@@ -11,6 +11,7 @@ object ModuleChargeState {
   case object Charging extends ModuleChargeState(value = false)
   case object Charged extends ModuleChargeState(value = true)
   case object Demo extends ModuleChargeState(value = true)
+  case class Expired(override val value: Boolean) extends ModuleChargeState(value)
 }
 
 class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
@@ -40,10 +41,14 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
 
   override def Faction: PlanetSideEmpire.Value = Carrier.map(_.Faction).getOrElse(super.Faction)
 
-  override def DisplayFlagType: CarriableFlag = if (charged != ModuleChargeState.NonPowered) {
-    ValidFlagType
-  } else {
-    CarriableFlag.VanuModuleNonPowered
+  override def DisplayFlagType: CarriableFlag = {
+    if (Destroyed) {
+      CarriableFlag.VanuModuleInvalid
+    } else if (charged.value) {
+      ValidFlagType
+    } else {
+      CarriableFlag.VanuModuleNonPowered
+    }
   }
 
   def SetTime(durationTime: Long): Unit = {

@@ -113,6 +113,8 @@ class OwnedFlag(private val fDef: FlagDefinition, validFlagType: CarriableFlag)
   def Carrier: Option[Player] = flag.Carrier
   def Carrier_=(newCarrier: Option[Player]) : Option[Player] = flag.Carrier_=(newCarrier)
 
+  def isInstalled: Boolean = Carrier.isEmpty && Target != Building.NoBuilding
+
   def LastCollectionTime: Long = flag.LastCollectionTime
 
   def InitialSpawnTime: Long = flag.InitialSpawnTime
