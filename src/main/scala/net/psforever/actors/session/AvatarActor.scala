@@ -12,7 +12,6 @@ import net.psforever.objects.avatar.ModePermissions
 import net.psforever.objects.avatar.scoring.{Assist, Death, EquipmentStat, KDAStat, Kill, Life, ScoreCard, SupportActivity}
 import net.psforever.objects.serverobject.flag.base.FlagCategory
 import net.psforever.objects.sourcing.{TurretSource, VehicleSource}
-import net.psforever.packet.game.packets
 import net.psforever.packet.game.packets.{ActionProgressMessage, AvatarStatisticsMessage, AvatarVehicleTimerMessage, BattleExperienceMessage, CharacterInfoMessage, CreateShortcutMessage, DeathStatistic, DisplayedAwardMessage, FavoritesMessage, FriendsResponse, ImplantAction, ItemTransactionResultMessage, PlanetSideZoneID, PlanetsideAttributeMessage, RibbonBarSlot, SessionStatistic, Shortcut}
 import net.psforever.services.avatar.AvatarStamp
 import net.psforever.services.base.envelope.GenericResponseEnvelope

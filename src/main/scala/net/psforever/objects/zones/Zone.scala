@@ -1944,8 +1944,8 @@ object Zone {
    */
   def serverSideDamage(
                         zone: Zone,
-                        source: PlanetSideGameObject with FactionAffinity with Vitality,
-                        createInteraction: (PlanetSideGameObject with FactionAffinity with Vitality, PlanetSideGameObject with FactionAffinity with Vitality) => DamageInteraction
+                        source: PlanetSideGameObject with FactionAffinity,
+                        createInteraction: (PlanetSideGameObject with FactionAffinity, PlanetSideGameObject with FactionAffinity with Vitality) => DamageInteraction
                       ): List[PlanetSideServerObject] = {
     source.Definition.innateDamage match {
       case Some(damage) =>
@@ -1971,10 +1971,10 @@ object Zone {
     */
   def serverSideDamage(
                         zone: Zone,
-                        source: PlanetSideGameObject with FactionAffinity with Vitality,
-                        createInteraction: (PlanetSideGameObject with FactionAffinity with Vitality, PlanetSideGameObject with FactionAffinity with Vitality) => DamageInteraction,
+                        source: PlanetSideGameObject with FactionAffinity,
+                        createInteraction: (PlanetSideGameObject with FactionAffinity, PlanetSideGameObject with FactionAffinity with Vitality) => DamageInteraction,
                         testTargetsFromZone: (PlanetSideGameObject, PlanetSideGameObject, Float) => Boolean,
-                        acquireTargetsFromZone: (Zone, PlanetSideGameObject with FactionAffinity with Vitality, DamageWithPosition) => List[PlanetSideServerObject with Vitality]
+                        acquireTargetsFromZone: (Zone, PlanetSideGameObject with FactionAffinity, DamageWithPosition) => List[PlanetSideServerObject with Vitality]
                     ): List[PlanetSideServerObject] = {
     source.Definition.innateDamage match {
       case Some(damage) =>
@@ -2008,11 +2008,11 @@ object Zone {
     */
   def serverSideDamage(
                         zone: Zone,
-                        source: PlanetSideGameObject with FactionAffinity with Vitality,
+                        source: PlanetSideGameObject with FactionAffinity,
                         properties: DamageWithPosition,
-                        createInteraction: (PlanetSideGameObject with FactionAffinity with Vitality, PlanetSideGameObject with FactionAffinity with Vitality) => DamageInteraction,
+                        createInteraction: (PlanetSideGameObject with FactionAffinity, PlanetSideGameObject with FactionAffinity with Vitality) => DamageInteraction,
                         testTargetsFromZone: (PlanetSideGameObject, PlanetSideGameObject, Float) => Boolean,
-                        acquireTargetsFromZone: (Zone, PlanetSideGameObject with FactionAffinity with Vitality, DamageWithPosition) => List[PlanetSideServerObject with Vitality]
+                        acquireTargetsFromZone: (Zone, PlanetSideGameObject with FactionAffinity, DamageWithPosition) => List[PlanetSideServerObject with Vitality]
                       ): List[PlanetSideServerObject] = {
     //collect targets that can be damaged
     val pssos = acquireTargetsFromZone(zone, source, properties)
@@ -2089,7 +2089,7 @@ object Zone {
     */
   def findAllTargets(
                       zone: Zone,
-                      source: PlanetSideGameObject with Vitality,
+                      source: PlanetSideGameObject,
                       damagePropertiesBySource: DamageWithPosition
                     ): List[PlanetSideServerObject with Vitality] = {
     findAllTargets(
@@ -2115,7 +2115,7 @@ object Zone {
     */
   def findAllTargets(
                       zone: Zone,
-                      source: PlanetSideGameObject with Vitality,
+                      source: PlanetSideGameObject,
                       sourcePosition: Vector3,
                       damagePropertiesBySource: DamageWithPosition
                     ): List[PlanetSideServerObject with Vitality] = {
@@ -2141,7 +2141,7 @@ object Zone {
     */
   def findAllTargets(
                       zone: Zone,
-                      source: PlanetSideGameObject with Vitality,
+                      source: PlanetSideGameObject,
                       sourcePosition: Vector3,
                       damagePropertiesBySource: DamageWithPosition,
                       radius: Float,
@@ -2156,7 +2156,7 @@ object Zone {
 
   def findAllTargets(
                       sector: SectorPopulation,
-                      source: PlanetSideGameObject with Vitality,
+                      source: PlanetSideGameObject,
                       damagePropertiesBySource: DamageWithPosition,
                       getTargetsFromSector: SectorPopulation => List[PlanetSideServerObject with Vitality]
                     ): List[PlanetSideServerObject with Vitality] = {
@@ -2262,7 +2262,7 @@ object Zone {
                        instigation: Option[DamageResult]
                      )
                      (
-                       source: PlanetSideGameObject with FactionAffinity with Vitality,
+                       source: PlanetSideGameObject with FactionAffinity,
                        target: PlanetSideGameObject with FactionAffinity with Vitality
                      ): DamageInteraction = {
     explosionDamage(instigation, target.Position)(source, target)
@@ -2281,7 +2281,7 @@ object Zone {
                        explosionPosition: Vector3
                      )
                      (
-                       source: PlanetSideGameObject with FactionAffinity with Vitality,
+                       source: PlanetSideGameObject with FactionAffinity,
                        target: PlanetSideGameObject with FactionAffinity with Vitality
                      ): DamageInteraction = {
     DamageInteraction(

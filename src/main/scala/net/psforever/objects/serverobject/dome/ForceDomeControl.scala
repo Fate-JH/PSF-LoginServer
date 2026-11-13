@@ -226,7 +226,7 @@ object ForceDomeControl {
    * @return a `DamageInteraction` object
    */
   private def makesContactWithForceDome(
-                                         source: PlanetSideGameObject with FactionAffinity with Vitality,
+                                         source: PlanetSideGameObject with FactionAffinity,
                                          target: PlanetSideGameObject with FactionAffinity with Vitality
                                        ): DamageInteraction = {
     DamageInteraction(
@@ -357,7 +357,7 @@ object ForceDomeControl {
                               )
                               (
                                 zone: Zone,
-                                source: PlanetSideGameObject with Vitality,
+                                source: PlanetSideGameObject,
                                 damagePropertiesBySource: DamageWithPosition
                               ): List[PlanetSideServerObject with Vitality] = {
     val sector = zone.blockMap.sector(source.Position.xy, radius)

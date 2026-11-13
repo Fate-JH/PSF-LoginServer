@@ -6,7 +6,12 @@ import net.psforever.objects.definition.converter.{ObjectCreateConverter, Packet
 import net.psforever.objects.geometry.GeometryForm
 import net.psforever.objects.geometry.d3.VolumetricGeometry
 import net.psforever.objects.serverobject.deploy.{Interference, InterferenceRange}
+import net.psforever.objects.vital.prop.DamageWithPosition
 import net.psforever.types.OxygenState
+
+object ObjectDefinition {
+  final val DefaultPacketConverter: PacketConverter = new ObjectCreateConverter[PlanetSideGameObject]() { }
+}
 
 /**
   * Associate an object's canned in-game representation with its basic game identification unit.
@@ -25,8 +30,10 @@ abstract class ObjectDefinition(private val objectId: Int)
   extends BasicDefinition {
   var registerAs: String = "generic"
 
+  def ObjectId: Int = objectId
+
   /** a data converter for this type of object */
-  protected var packet: PacketConverter = new ObjectCreateConverter[PlanetSideGameObject]() {}
+  protected var packet: PacketConverter = ObjectDefinition.DefaultPacketConverter
   Name = "object_definition"
 
   private var useRadius: Float = 0f
@@ -127,5 +134,23 @@ abstract class ObjectDefinition(private val objectId: Int)
    */
   var interference: InterferenceRange = Interference.AllowAll
 
-  def ObjectId: Int = objectId
+  /**
+   * Characteristics of the objects dealing area of effect damage
+   * under guidance of the server motivated by client actions.
+   * Although "vitality" has nothing to do with explosions directly,
+   * exploding objects tend to be entities with `Vitality` (lowest common denominator inheritance).
+   */
+  var explodes: Boolean = false
+
+  /**
+   * damage that is inherent to the object, used for explosions, mainly
+   */
+  private var _innateDamage: Option[DamageWithPosition] = None
+
+  def innateDamage: Option[DamageWithPosition] = _innateDamage
+
+  def innateDamage_=(combustion: DamageWithPosition): Option[DamageWithPosition] = {
+    _innateDamage = Some(combustion)
+    _innateDamage
+  }
 }

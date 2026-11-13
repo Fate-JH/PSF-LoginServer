@@ -2,7 +2,6 @@
 package net.psforever.objects.vital
 
 import net.psforever.objects.vital.base.DamageModifiers
-import net.psforever.objects.vital.prop.DamageWithPosition
 
 /**
   * na<br>
@@ -149,26 +148,6 @@ trait VitalityDefinition extends DamageModifiers {
   def RepairMod_=(mod: Int): Int = {
     repairMod = mod
     RepairMod
-  }
-
-  /**
-    * Characteristics of the objects dealing area of effect damage
-    * under guidance of the server motivated by client actions.
-    * Although "vitality" has nothing to do with explosions directly,
-    * exploding objects tend to be entities with `Vitality` (lowest common denominator inheritance).
-    */
-  var explodes: Boolean = false
-
-  /**
-    * damage that is inherent to the object, used for explosions, mainly
-    */
-  private var _innateDamage: Option[DamageWithPosition] = None
-
-  def innateDamage: Option[DamageWithPosition] = _innateDamage
-
-  def innateDamage_=(combustion: DamageWithPosition): Option[DamageWithPosition] = {
-    _innateDamage = Some(combustion)
-    _innateDamage
   }
 
   val collision: CollisionData = new CollisionData()

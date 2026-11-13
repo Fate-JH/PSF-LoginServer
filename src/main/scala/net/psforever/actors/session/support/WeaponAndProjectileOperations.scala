@@ -1705,7 +1705,7 @@ object WeaponAndProjectileOperations {
    */
   def detonateLittleBuddy(
                            zone: Zone,
-                           source: PlanetSideGameObject with FactionAffinity with Vitality,
+                           source: PlanetSideGameObject with FactionAffinity,
                            proxy: Projectile,
                            owner: SourceEntry
                          )(): List[PlanetSideServerObject] = {
@@ -1731,7 +1731,7 @@ object WeaponAndProjectileOperations {
                                           explosionPosition: Vector3
                                         )
                                         (
-                                          source: PlanetSideGameObject with FactionAffinity with Vitality,
+                                          source: PlanetSideGameObject with FactionAffinity,
                                           target: PlanetSideGameObject with FactionAffinity with Vitality
                                         ): DamageInteraction = {
     DamageInteraction(SourceEntry(target), OicwLilBuddyReason(owner, projectileId, target.DamageModel), explosionPosition)

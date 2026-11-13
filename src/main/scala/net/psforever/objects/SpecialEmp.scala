@@ -185,7 +185,7 @@ object SpecialEmp {
                             position: Vector3
                           )
                           (
-                            source: PlanetSideGameObject with FactionAffinity with Vitality,
+                            source: PlanetSideGameObject with FactionAffinity,
                             target: PlanetSideGameObject with FactionAffinity with Vitality
                           ): DamageInteraction = {
     DamageInteraction(
@@ -266,7 +266,7 @@ object SpecialEmp {
                     )
                     (
                       zone: Zone,
-                      obj: PlanetSideGameObject with FactionAffinity with Vitality,
+                      obj: PlanetSideGameObject with FactionAffinity,
                       properties: DamageWithPosition
                     ): List[PlanetSideServerObject with Vitality] = {
     zone

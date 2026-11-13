@@ -5,7 +5,6 @@ import net.psforever.objects.PlanetSideGameObject
 import net.psforever.objects.definition.ObjectDefinition
 import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.sourcing.SourceEntry
-import net.psforever.objects.vital.{Vitality, VitalityDefinition}
 import net.psforever.objects.vital.base.{DamageModifiers, DamageReason, DamageResolution}
 import net.psforever.objects.vital.interaction.{DamageInteraction, DamageResult}
 import net.psforever.objects.vital.prop.{DamageProperties, DamageWithPosition}
@@ -55,11 +54,11 @@ object ExplodingEntityReason {
     * @return an `ExplodingEntityReason` entity
     */
   def apply(
-             entity: PlanetSideGameObject with FactionAffinity with Vitality,
+             entity: PlanetSideGameObject with FactionAffinity,
              damageModel: DamageAndResistance,
              instigation: Option[DamageResult]
            ): ExplodingEntityReason = {
-    val definition = entity.Definition.asInstanceOf[ObjectDefinition with VitalityDefinition]
+    val definition = entity.Definition
     assert(definition.innateDamage.nonEmpty, "causal entity does not explode")
     ExplodingEntityReason(SourceEntry(entity), definition.innateDamage.get, damageModel, instigation)
   }

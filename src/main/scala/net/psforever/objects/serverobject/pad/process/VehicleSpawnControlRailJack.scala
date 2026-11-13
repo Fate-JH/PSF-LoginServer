@@ -58,7 +58,7 @@ object VehicleSpawnControlRailJack {
                              vehicle: SourceEntry
                            ):
                            (
-                             PlanetSideGameObject with FactionAffinity with Vitality,
+                             PlanetSideGameObject with FactionAffinity,
                              PlanetSideGameObject with FactionAffinity with Vitality
                            ) => DamageInteraction = {
     vehicleSpawnExplosion(
@@ -78,7 +78,7 @@ object VehicleSpawnControlRailJack {
                              cause: Option[DamageResult]
                            )
                            (
-                             source: PlanetSideGameObject with FactionAffinity with Vitality,
+                             source: PlanetSideGameObject with FactionAffinity,
                              target: PlanetSideGameObject with FactionAffinity with Vitality
                            ): DamageInteraction = {
     DamageInteraction(
