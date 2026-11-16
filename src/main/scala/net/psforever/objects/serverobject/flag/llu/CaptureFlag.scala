@@ -2,7 +2,7 @@
 package net.psforever.objects.serverobject.flag.llu
 
 import net.psforever.objects.serverobject.flag.base.{FlagDefinition, CarriableFlag, OwnedFlag}
-import net.psforever.objects.serverobject.structures.{AmenityOwner, Building}
+import net.psforever.objects.serverobject.structures.Building
 import net.psforever.objects.GlobalDefinitions
 import net.psforever.types.{PlanetSideEmpire, Vector3}
 
@@ -26,7 +26,7 @@ object CaptureFlag {
     new OwnedFlag(tDef, CarriableFlag.CaptureFlag)
   }
 
-  def Constructor(pos: Vector3, ori: Vector3, target: Building, owner: AmenityOwner, faction: PlanetSideEmpire.Value) : OwnedFlag = {
+  def Constructor(pos: Vector3, ori: Vector3, target: Building, owner: Building, faction: PlanetSideEmpire.Value) : OwnedFlag = {
     val obj = CaptureFlag(GlobalDefinitions.capture_flag)
     obj.Position = pos
     obj.Orientation = ori

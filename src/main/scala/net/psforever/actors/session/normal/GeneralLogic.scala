@@ -42,7 +42,7 @@ import net.psforever.objects.vital.etc.{ForceDomeExposure, SuicideReason}
 import net.psforever.objects.vital.interaction.DamageInteraction
 import net.psforever.objects.zones.{ZoneProjectile, Zoning}
 import net.psforever.packet.PlanetSideGamePacket
-import net.psforever.packet.game.packets.{ActionCancelMessage, ActionResultMessage, AvatarFirstTimeEventMessage, AvatarImplantMessage, AvatarJumpMessage, BattleplanMessage, BindPlayerMessage, BugReportMessage, ChangeFireModeMessage, ChangeShortcutBankMessage, CharacterCreateRequestMessage, CharacterRequestAction, CharacterRequestMessage, ChatMsg, CollisionIs, ConnectToWorldRequestMessage, CreateShortcutMessage, DeadState, DeployObjectMessage, DisplayedAwardMessage, DropItemMessage, EmoteMsg, FacilityBenefitShieldChargeRequestMessage, FriendsRequest, GenericAction, GenericActionMessage, GenericCollisionMsg, GenericObjectActionAtPositionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HitHint, InvalidTerrainMessage, LootItemMessage, MoveItemMessage, ObjectDetectedMessage, ObjectHeldMessage, OutfitMembershipRequest, OutfitMembershipRequestAction, OutfitMembershipResponse, OutfitRequest, OutfitRequestAction, PickupItemMessage, PlanetsideAttributeMessage, PlayerStateMessageUpstream, RequestDestroyMessage, TargetingImplantRequest, TerrainCondition, TradeMessage, UnuseItemMessage, UseItemMessage, VoiceHostInfo, VoiceHostRequest, ZipLineMessage}
+import net.psforever.packet.game.packets.{ActionCancelMessage, ActionResultMessage, AvatarFirstTimeEventMessage, AvatarImplantMessage, AvatarJumpMessage, BattleplanMessage, BindPlayerMessage, BugReportMessage, ChangeFireModeMessage, ChangeShortcutBankMessage, CharacterCreateRequestMessage, CharacterRequestAction, CharacterRequestMessage, ChatMsg, CollisionIs, ConnectToWorldRequestMessage, CreateShortcutMessage, DeadState, DeployObjectMessage, DisplayedAwardMessage, DropItemMessage, EmoteMsg, FacilityBenefitShieldChargeRequestMessage, FriendsRequest, GenericAction, GenericActionMessage, GenericCollisionMsg, GenericObjectActionAtPositionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HitHint, InvalidTerrainMessage, LootItemMessage, MoveItemMessage, ObjectDetectedMessage, ObjectHeldMessage, OutfitMembershipRequest, OutfitMembershipRequestAction, OutfitMembershipResponse, OutfitRequest, OutfitRequestAction, PickupItemMessage, PlanetsideAttributeMessage, PlayerStateMessageUpstream, RequestDestroyMessage, TargetingImplantRequest, TerrainCondition, TradeMessage, TriggerSoundMessage, TriggeredSound, UnuseItemMessage, UseItemMessage, VoiceHostInfo, VoiceHostRequest, ZipLineMessage}
 import net.psforever.services.account.{AccountPersistenceService, RetrieveAccountData}
 import net.psforever.services.avatar.AvatarAction
 import net.psforever.services.base.envelope.MessageEnvelope
@@ -90,6 +90,8 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     }
   }
 
+  sessionLogic.general.progressBarValue = Some(0f)
+
   def handlePlayerStateUpstream(pkt: PlayerStateMessageUpstream): Unit = {
     val PlayerStateMessageUpstream(
     avatarGuid,
@@ -122,12 +124,17 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     }
     ops.fallHeightTracker(pos.z)
     if (isCrouching && !player.Crouching) {
-      val flag = new VanuModule(GlobalDefinitions.vanu_module, CarriableFlag.VanuModuleEnergy)
-      flag.Position = pos + Vector3.z(value = 1f)
-      flag.Orientation = Vector3(0,0, player.Orientation.z)
-      flag.GUID = PlanetSideGUID(12000)
-      val pkt = OCM.apply(flag)
-      sendResponse(pkt)
+      val sounds = List(
+        TriggeredSound.ModuleAlarmBeep,
+        TriggeredSound.ModuleDrop,
+        TriggeredSound.ModulePickup,
+        TriggeredSound.ModuleStabilized,
+        TriggeredSound.ModuleExpiration,
+        TriggeredSound.ModuleFFIntercept
+      )
+      val value = sessionLogic.general.progressBarValue.get.toInt
+      sendResponse(TriggerSoundMessage(sounds(value), player.Position, 15, 0.8f))
+      sessionLogic.general.progressBarValue = Some((value + 1).toFloat)
     }
     player.Position = pos
     player.Velocity = vel
@@ -172,7 +179,7 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     }
     //llu destruction check
     if (player.Carrying.contains(FlagCategory.CaptureFlag)) {
-      CaptureFlagManager.ReasonToLoseFlagViolently(continent, sessionLogic.general.specialItemSlotGuid, player)
+      OwnedFlag.ReasonToLoseFlagViolently(continent, sessionLogic.general.specialItemSlotGuid, player)
     }
     //
     val eagleEye: Boolean = ops.canSeeReallyFar

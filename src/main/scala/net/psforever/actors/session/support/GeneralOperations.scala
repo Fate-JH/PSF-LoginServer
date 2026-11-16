@@ -533,7 +533,7 @@ class GeneralOperations(
               }
           }
         }
-        if (!CaptureFlagManager.ReasonToLoseFlagViolently(continent, Some(guid), player)) {
+        if (!OwnedFlag.ReasonToLoseFlagViolently(continent, Some(guid), player)) {
           continent.LocalEvents ! FlagEnvelope(CaptureFlagManager.DropFlag(llu))
         }
       case Some(otherCarrier) =>
@@ -554,7 +554,7 @@ class GeneralOperations(
       case None =>
         failToDropFlagCleanup(category = "vanu module", reason = "nobody is holding it")
     }
-//    if (!CaptureFlagManager.ReasonToLoseFlagViolently(continent, Some(guid), player)) {
+//    if (!OwnedFlag.ReasonToLoseFlagViolently(continent, Some(guid), player)) {
 //      continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.DropFlag(module))
 //    }
   }

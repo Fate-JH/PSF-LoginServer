@@ -2,6 +2,7 @@
 package net.psforever.objects.serverobject.flag.module
 
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagDefinition, OwnedFlag}
+import net.psforever.objects.serverobject.interior.{InteriorAware, Sidedness}
 import net.psforever.types.PlanetSideEmpire
 
 sealed abstract class ModuleChargeState(val value: Boolean)
@@ -20,6 +21,8 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
   private var expirationEnd: Long = Long.MaxValue
 
   private var charged: ModuleChargeState = ModuleChargeState.NonPowered
+
+  private[module] var sidednessFunction: InteriorAware = new InitializationWhichSide(entity = this)
 
   def Charged: ModuleChargeState = charged
 
@@ -50,6 +53,8 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
       CarriableFlag.VanuModuleNonPowered
     }
   }
+
+  override def WhichSide: Sidedness = Carrier.map(_.WhichSide).getOrElse(super.WhichSide)
 
   def SetTime(durationTime: Long): Unit = {
     SetTime(durationTime, System.currentTimeMillis())
@@ -116,4 +121,28 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
       defaultTime
     }
   }
+}
+
+private class RegularWhichSide(entity: VanuModule)
+  extends InteriorAware {
+
+  def WhichSide: Sidedness = {
+    entity.Carrier.map(_.WhichSide).getOrElse(entity.WhichSide)
+  }
+
+  def WhichSide_=(thisSide: Sidedness): Sidedness =
+    entity.WhichSide_=(thisSide)
+}
+
+private class InitializationWhichSide(entity: VanuModule)
+  extends InteriorAware {
+
+  def WhichSide: Sidedness = {
+    val out = entity.WhichSide
+    entity.sidednessFunction = new RegularWhichSide(entity)
+    out
+  }
+
+  def WhichSide_=(thisSide: Sidedness): Sidedness =
+    entity.WhichSide_=(thisSide)
 }

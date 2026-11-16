@@ -4,7 +4,6 @@ package net.psforever.objects.serverobject.flag.base
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.serverobject.affinity.FactionAffinity
 import net.psforever.objects.{PlanetSideGameObject, Player}
-import net.psforever.objects.serverobject.structures.{Amenity, AmenityDefinition, Building}
 import net.psforever.types.{PlanetSideEmpire, Vector3}
 
 /**
@@ -32,8 +31,9 @@ trait IsAFlag
   def InitialSpawnTime: Long
 }
 
-class Flag(private val fDef: FlagDefinition, validFlagType: CarriableFlag)
+class Flag(fDef: FlagDefinition, validFlagType: CarriableFlag)
     extends PlanetSideGameObject
+      with FactionAffinity
       with IsAFlag {
   private var faction: PlanetSideEmpire.Value = PlanetSideEmpire.NEUTRAL
   private var carrier: Option[Player] = None
@@ -74,50 +74,4 @@ class Flag(private val fDef: FlagDefinition, validFlagType: CarriableFlag)
   def InitialSpawnTime: Long = spawnedTime
 
   def Definition: FlagDefinition = fDef
-}
-
-class OwnedFlag(private val fDef: FlagDefinition, validFlagType: CarriableFlag)
-  extends Amenity
-    with IsAFlag {
-  private val flag: Flag = new Flag(fDef, ValidFlagType)
-  private var target: Building = Building.NoBuilding
-
-  def ValidFlagType: CarriableFlag = validFlagType
-
-  /**
-   * If a facility spawns a flag, that is the flag's `owner`.
-   * The target facility is the expectorant destination of the flag while it is been carried or
-   * the current installed facility while it is away from it origin (`owner`) facility.
-   */
-  def Target: Building = target
-  def Target_=(newTarget: Building): Building = {
-    target = newTarget
-    target
-  }
-
-  override def Faction: PlanetSideEmpire.Value = flag.Faction
-  override def Faction_=(newFaction: PlanetSideEmpire.Value): PlanetSideEmpire.Value = {
-    flag.Faction_=(newFaction)
-  }
-
-  override def Position: Vector3 = flag.Position
-  override def Position_=(vec: Vector3): Vector3 = {
-    flag.Position_=(vec)
-  }
-
-  override def Orientation: Vector3 = flag.Position
-  override def Orientation_=(vec: Vector3): Vector3 = {
-    flag.Orientation_=(vec)
-  }
-
-  def Carrier: Option[Player] = flag.Carrier
-  def Carrier_=(newCarrier: Option[Player]) : Option[Player] = flag.Carrier_=(newCarrier)
-
-  def isInstalled: Boolean = Carrier.isEmpty && Target != Building.NoBuilding
-
-  def LastCollectionTime: Long = flag.LastCollectionTime
-
-  def InitialSpawnTime: Long = flag.InitialSpawnTime
-
-  def Definition: AmenityDefinition = fDef
 }

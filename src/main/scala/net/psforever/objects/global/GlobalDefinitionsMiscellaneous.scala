@@ -1029,9 +1029,25 @@ object GlobalDefinitionsMiscellaneous {
 
   vanu_module.Name = "vanu_module"
   vanu_module.Packet = VanuModuleCanisterConverter
+  vanu_module.innateDamage = new DamageWithPosition {
+    CausesDamageType = DamageType.One
+    Damage0 = 250
+    Damage1 = 400
+    DamageRadius = 30
+    DamageAtEdge = 0.1f
+    Modifiers = ExplodingRadialDegrade
+  }
 
   vanu_module_canister.Name = "vanu_module_canister"
   vanu_module_canister.Packet = VanuModuleCanisterConverter
+  vanu_module_canister.innateDamage = new DamageWithPosition {
+    CausesDamageType = DamageType.One
+    Damage0 = 250
+    Damage1 = 400
+    DamageRadius = 30
+    DamageAtEdge = 0.1f
+    Modifiers = ExplodingRadialDegrade
+  }
 
   vanu_module_node.Name = "vanu_module_node"
 

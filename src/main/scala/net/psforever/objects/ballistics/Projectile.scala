@@ -3,6 +3,7 @@ package net.psforever.objects.ballistics
 
 import net.psforever.objects.serverobject.interior.TraditionalInteriorAware
 import net.psforever.objects.sourcing.SourceEntry
+import net.psforever.types.PlanetSideEmpire
 
 import java.util.concurrent.atomic.AtomicLong
 //
@@ -55,7 +56,8 @@ final case class Projectile(
                              fire_time: Long = System.currentTimeMillis()
                            ) extends PlanetSideGameObject
   with BlockMapEntity
-  with TraditionalInteriorAware {
+  with TraditionalInteriorAware
+  with FactionAffinity {
   Position = shot_origin
   Orientation = shot_angle
   Velocity = shot_velocity.getOrElse {
@@ -70,6 +72,8 @@ final case class Projectile(
   /** Information about the current world coordinates and orientation of the projectile */
   val current: SimpleWorldEntity                   = new SimpleWorldEntity()
   private var resolved: DamageResolution.Value = DamageResolution.Unresolved
+
+  def Faction: PlanetSideEmpire.Value = owner.Faction
 
   /**
    * Create a copy of this projectile with all the same information

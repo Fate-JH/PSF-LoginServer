@@ -346,7 +346,11 @@ class VanuModuleManager(zone: Zone) extends Actor {
       case None =>
         zone.LocalEvents ! MessageEnvelope(zone.id, SendResponse(OCM.apply(module))) //spawn invalid flag that explodes
     }
-    //todo Zone.serverSideDamage()
+    Zone.serverSideDamage(
+      zone,
+      module,
+      Zone.explosionDamage(None, module.Position)
+    )
     untrackModule(module)
     module.SetTime(Long.MaxValue)
     module.SetExpirationTime(durationTime = 2000L) //will vanish after this
@@ -407,6 +411,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
         val playerPosition = player.Position
         val flagCategory = flag.ValidFlagType.category
         flag.Carrier = Some(player)
+        flag.WhichSide = player.WhichSide
         player.Carrying = Some(flagCategory)
         cradle.captureFlag = None
         flag.Target = Building.NoBuilding
@@ -440,6 +445,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
         flag.Position = flagPosition
         flag.Orientation = flagOrientation
         flag.Carrier = None
+        flag.WhichSide = player.WhichSide
         player.Carrying = None
         zone.LocalEvents ! BundledEnvelope(
           MessageEnvelope(zoneid, LocalAction.TriggerSound(TriggeredSound.ModuleDrop, playerPosition, 15, volume = 0.8f)),
@@ -542,6 +548,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
         flag.Target = owner
         flag.Faction = cradle.Faction
         flag.Carrier = None
+        flag.WhichSide = cradle.WhichSide
         player.Carrying = None
         cradle.captureFlag = flag
         cradle.Owner.Actor ! BuildingActor.AmenityStateChange(cradle)
@@ -588,6 +595,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
         flag.Zone = zone
         flag.Position = position
         flag.Orientation = orientation
+        flag.WhichSide = spawner.WhichSide
         flag.Charged = ModuleChargeState.Demo
         TaskWorkflow.execute(registerVanuModuleAssociatedWithSpawner(spawner, flag))
       case _ => ()
@@ -621,7 +629,6 @@ class VanuModuleManager(zone: Zone) extends Actor {
     val zone = socket.Zone
     val zoneid = zone.id
     val owner = socket.Owner.asInstanceOf[Building]
-    owner.Amenities = flag
     flag.Target = owner
     flag.Faction = socket.Faction
     socket.captureFlag = flag
@@ -741,7 +748,6 @@ class VanuModuleManager(zone: Zone) extends Actor {
   private def tryDespawnModuleAssociatedWithNode(cradle: VanuModuleNode, module: VanuModule): Unit = {
     val cradleOwner = cradle.Owner
     cradle.captureFlag = None
-    cradleOwner.RemoveAmenity(module)
     cradleOwner.Actor ! BuildingActor.AmenityStateChange(cradle)
     handleFlagDespawnLocal(module)
   }

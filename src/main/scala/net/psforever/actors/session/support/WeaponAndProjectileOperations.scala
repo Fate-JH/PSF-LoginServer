@@ -837,9 +837,9 @@ class WeaponAndProjectileOperations(
 
   private def queueLittleBuddyDamage(proxy: Projectile, orientation: Vector3, distance: Float): Unit = {
     //explosion
-    val obj = new DummyExplodingEntity(proxy, proxy.owner.Faction)
-    obj.Position = obj.Position + orientation * distance
-    val explosionFunc: ()=>Unit = WeaponAndProjectileOperations.detonateLittleBuddy(continent, obj, proxy, proxy.owner)
+
+    proxy.Position = proxy.Position + orientation * distance
+    val explosionFunc: ()=>Unit = WeaponAndProjectileOperations.detonateLittleBuddy(continent, proxy, proxy.owner)
     context.system.scheduler.scheduleOnce(500.milliseconds) { explosionFunc() }
   }
 
@@ -1705,11 +1705,10 @@ object WeaponAndProjectileOperations {
    */
   def detonateLittleBuddy(
                            zone: Zone,
-                           source: PlanetSideGameObject with FactionAffinity,
-                           proxy: Projectile,
+                           source: Projectile,
                            owner: SourceEntry
                          )(): List[PlanetSideServerObject] = {
-    Zone.serverSideDamage(zone, source, littleBuddyExplosionDamage(owner, proxy.id, source.Position))
+    Zone.serverSideDamage(zone, source, littleBuddyExplosionDamage(owner, source.id, source.Position))
   }
 
   /**

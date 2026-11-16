@@ -3,16 +3,13 @@ package net.psforever.services.local.support
 
 import akka.actor.{Actor, ActorContext, ActorRef, Cancellable, Props}
 import net.psforever.objects.definition.converter.OCM
-import net.psforever.objects.{Default, GlobalDefinitions, PlanetSideGameObject, Player}
+import net.psforever.objects.{Default, GlobalDefinitions, Player}
 import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, TaskWorkflow}
-import net.psforever.objects.serverobject.environment.{EnvironmentAttribute, EnvironmentTrait}
-import net.psforever.objects.serverobject.environment.interaction.InteractWithEnvironment
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
 import net.psforever.objects.serverobject.flag.llu.CaptureFlagSocket
-import net.psforever.objects.serverobject.structures.{Building, WarpGate}
+import net.psforever.objects.serverobject.structures.Building
 import net.psforever.objects.serverobject.terminals.capture.CaptureTerminal
 import net.psforever.objects.zones.Zone
-import net.psforever.objects.zones.interaction.InteractsWithZone
 import net.psforever.packet.game.packets.{CaptureFlagUpdateMessage, ChatMsg, FlagInfo, GenericObjectActionEnum, ObjectAttachMessage, ObjectDetachMessage, TriggerSoundMessage, TriggeredSound}
 import net.psforever.services.ServiceManager
 import net.psforever.services.ServiceManager.{Lookup, LookupResult}
@@ -82,7 +79,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
         LocalAction.TriggerSound(TriggeredSound.LLUInstall, flag.Target.CaptureTerminal.get.Position, 20, 0.8000001f)
       )
       // Broadcast capture chat message
-      CaptureFlagManager.ChatBroadcast(zone, CaptureFlagChatMessageStrings.CTF_Success(name, flag.Faction, flag.Owner.asInstanceOf[Building].Name))
+      CaptureFlagManager.ChatBroadcast(zone, CaptureFlagChatMessageStrings.CTF_Success(name, flag.Faction, flag.Owner.Name))
       // Despawn flag
       HandleFlagDespawn(flag)
 
@@ -91,16 +88,16 @@ class CaptureFlagManager(zone: Zone) extends Actor {
         case CaptureFlagLostReasonEnum.Resecured =>
           CaptureFlagManager.ChatBroadcast(
             zone,
-            CaptureFlagChatMessageStrings.CTF_Failed_SourceResecured(flag.Owner.asInstanceOf[Building].Name, flag.Owner.asInstanceOf[Building].Faction)
+            CaptureFlagChatMessageStrings.CTF_Failed_SourceResecured(flag.Owner.Name, flag.Owner.Faction)
           )
         case CaptureFlagLostReasonEnum.TimedOut  =>
-          val building = flag.Owner.asInstanceOf[Building]
+          val building = flag.Owner
           CaptureFlagManager.ChatBroadcast(
             zone,
             CaptureFlagChatMessageStrings.CTF_Failed_TimedOut(building.Name, flag.Target.Name, flag.Faction)
           )
         case CaptureFlagLostReasonEnum.FlagLost  =>
-          val building = flag.Owner.asInstanceOf[Building]
+          val building = flag.Owner
           CaptureFlagManager.ChatBroadcast(
             zone,
             CaptureFlagChatMessageStrings.CTF_Failed_FlagLost(building.Name, flag.Faction),
@@ -133,7 +130,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
           // Send dropped chat message
           CaptureFlagManager.ChatBroadcast(
             zone,
-            CaptureFlagChatMessageStrings.CTF_FlagDropped(player.Name, player.Faction, flag.Owner.asInstanceOf[Building].Name),
+            CaptureFlagChatMessageStrings.CTF_FlagDropped(player.Name, player.Faction, flag.Owner.Name),
             fanfare = false
           )
         case _ =>
@@ -151,7 +148,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
       )
       CaptureFlagManager.ChatBroadcast(
         zone,
-        CaptureFlagChatMessageStrings.CTF_FlagPickedUp(player.Name, player.Faction, flag.Owner.asInstanceOf[Building].Name),
+        CaptureFlagChatMessageStrings.CTF_FlagPickedUp(player.Name, player.Faction, flag.Owner.Name),
         fanfare = false
       )
 
@@ -200,8 +197,6 @@ class CaptureFlagManager(zone: Zone) extends Actor {
     val zone = socket.Zone
     val zoneid = zone.id
     val owner = socket.Owner.asInstanceOf[Building]
-    // Add the flag as an amenity
-    socket.Owner.Amenities = flag
     socket.captureFlag = flag
     // Track new flag
     TrackFlag(flag)
@@ -220,7 +215,7 @@ class CaptureFlagManager(zone: Zone) extends Actor {
 
   private def DoMapUpdate(): Unit = {
     val flagInfo = flags.map { case entry @ CaptureFlagManager.CaptureFlagEntry(flag) =>
-      val owner = flag.Owner.asInstanceOf[Building]
+      val owner = flag.Owner
       val pos = flag.Position
       val hackTimeRemaining = owner.infoUpdateMessage().hack_time_remaining
       val nextMessageAfterMinutes = CaptureFlagManager.CaptureFlagCountdownMessages(entry.currentMessageIndex)
@@ -261,9 +256,8 @@ class CaptureFlagManager(zone: Zone) extends Actor {
 
   private def HandleFlagDespawn(flag: OwnedFlag): Unit = {
     // Remove the flag as an amenity
-    val flagOwner = flag.Owner.asInstanceOf[Building]
+    val flagOwner = flag.Owner
     flagOwner.GetFlagSocket.get.captureFlag = None
-    flagOwner.RemoveAmenity(flag)
     UntrackFlag(flag)
     val deleteMsgs = flag.Carrier match {
       case Some(carrier) =>
@@ -328,57 +322,6 @@ object CaptureFlagManager {
       case time =>
         CTF_Warning_NoCarrier(buildingName, flag.Faction, flag.Target.Name, time)
     }
-  }
-
-  /**
-   * na
-   * @param flagGuid flag that may exist
-   * @param target evaluate this to determine if to continue with this loss
-   */
-  def ReasonToLoseFlagViolently(
-                                 zone: Zone,
-                                 flagGuid: Option[PlanetSideGUID],
-                                 target: PlanetSideGameObject with InteractsWithZone
-                               ): Boolean = {
-    zone
-      .GUID(flagGuid)
-      .collect {
-        case flag: OwnedFlag
-          if flag.ValidFlagType == CarriableFlag.CaptureFlag &&
-            LoseFlagViolentlyToEnvironment(target, Set(EnvironmentAttribute.Water, EnvironmentAttribute.Lava, EnvironmentAttribute.Death)) /*||
-            LoseFlagViolentlyToWarpGateEnvelope(zone, target)*/ =>
-          flag.Destroyed = true
-          zone.LocalEvents ! CaptureEnvelope(HackCaptureActor.FlagLost(flag))
-          true
-      }
-      .getOrElse(false)
-  }
-
-  def LoseFlagViolentlyToEnvironment(
-                                      target: PlanetSideGameObject with InteractsWithZone,
-                                      deniedEnvironments: Set[EnvironmentTrait]
-                                    ): Boolean = {
-      target
-        .interaction()
-        .collectFirst { case env: InteractWithEnvironment => env.OngoingInteractions }
-        .map(_.intersect(deniedEnvironments))
-        .getOrElse(Set())
-        .nonEmpty
-  }
-
-  def LoseFlagViolentlyToWarpGateEnvelope(
-                                           zone: Zone,
-                                           target: PlanetSideGameObject with InteractsWithZone
-                                         ): Boolean = {
-    val position = target.Position
-    zone
-      .blockMap
-      .sector(position, range = 10f)
-      .buildingList
-      .collectFirst {
-        case gate: WarpGate if Vector3.DistanceSquared(position, gate.Position) < math.pow(gate.Definition.SOIRadius, 2f) => gate
-      }
-      .nonEmpty
   }
 }
 

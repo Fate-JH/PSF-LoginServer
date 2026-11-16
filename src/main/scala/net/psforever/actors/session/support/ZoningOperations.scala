@@ -13,7 +13,7 @@ import net.psforever.objects.avatar.scoring.{CampaignStatistics, ScoreCard, Sess
 import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.inventory.InventoryItem
-import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
+import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, FlagSocket, OwnedFlag}
 import net.psforever.objects.serverobject.flag.module.VanuModule
 import net.psforever.objects.serverobject.interior.Sidedness
 import net.psforever.objects.serverobject.mount.Seat
@@ -1279,16 +1279,17 @@ class ZoningOperations(
         }
 
       // sync capture flags
-      case llu: OwnedFlag if llu.ValidFlagType == CarriableFlag.CaptureFlag =>
-        // Create LLU
-        sendResponse(OCM.apply(llu))
-        // Attach it to a player if it has a carrier
-        if (llu.Carrier.nonEmpty) {
-          continent.LocalEvents ! MessageEnvelope(
-            continent.id,
-            PlanetSideGUID(-1),
-            SendResponse(ObjectAttachMessage(llu.Carrier.get.GUID, llu.GUID, Player.SpecialCarrySlot))
-          )
+      case socket: FlagSocket =>
+        // Create flag and attached to a carrier (if any)
+        socket.captureFlag match {
+          case Some(flag) if flag.ValidFlagType == CarriableFlag.CaptureFlag =>
+          sendResponse(OCM.apply(flag))
+          flag.Carrier.foreach { carrier =>
+            continent.LocalEvents ! MessageEnvelope(
+              continent.id,
+              SendResponse(ObjectAttachMessage(carrier.GUID, flag.GUID, Player.SpecialCarrySlot))
+            )
+          }
         }
       case _ => ()
     }

@@ -8,7 +8,7 @@ import net.psforever.actors.session.support.{SessionData, SessionVehicleHandlers
 import net.psforever.objects.{Default, GlobalDefinitions, Player, Vehicle, Vehicles}
 import net.psforever.objects.equipment.{Equipment, JammableMountedWeapons, JammableUnit}
 import net.psforever.objects.guid.{GUIDTask, TaskWorkflow}
-import net.psforever.objects.serverobject.flag.base.FlagCategory
+import net.psforever.objects.serverobject.flag.base.{FlagCategory, OwnedFlag}
 import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
 import net.psforever.objects.serverobject.mount.Mountable
 import net.psforever.objects.serverobject.pad.VehicleSpawnPad
@@ -58,7 +58,7 @@ class VehicleHandlerLogic(val ops: SessionVehicleHandlers, implicit val context:
         continent
           .GUID(player.VehicleSeated)
           .collect { case vehicle: Vehicle =>
-            CaptureFlagManager.ReasonToLoseFlagViolently(continent, sessionLogic.general.specialItemSlotGuid, vehicle)
+            OwnedFlag.ReasonToLoseFlagViolently(continent, sessionLogic.general.specialItemSlotGuid, vehicle)
           }
       }
 
