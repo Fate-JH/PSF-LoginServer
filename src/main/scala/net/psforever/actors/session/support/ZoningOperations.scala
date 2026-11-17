@@ -1283,13 +1283,14 @@ class ZoningOperations(
         // Create flag and attached to a carrier (if any)
         socket.captureFlag match {
           case Some(flag) if flag.ValidFlagType == CarriableFlag.CaptureFlag =>
-          sendResponse(OCM.apply(flag))
-          flag.Carrier.foreach { carrier =>
-            continent.LocalEvents ! MessageEnvelope(
-              continent.id,
-              SendResponse(ObjectAttachMessage(carrier.GUID, flag.GUID, Player.SpecialCarrySlot))
-            )
-          }
+            sendResponse(OCM.apply(flag))
+            flag.Carrier.foreach { carrier =>
+              continent.LocalEvents ! MessageEnvelope(
+                continent.id,
+                SendResponse(ObjectAttachMessage(carrier.GUID, flag.GUID, Player.SpecialCarrySlot))
+              )
+            }
+          case _ => ()
         }
       case _ => ()
     }

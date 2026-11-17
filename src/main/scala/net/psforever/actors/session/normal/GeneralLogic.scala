@@ -125,16 +125,18 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
     ops.fallHeightTracker(pos.z)
     if (isCrouching && !player.Crouching) {
       val sounds = List(
-        TriggeredSound.ModuleAlarmBeep,
         TriggeredSound.ModuleDrop,
         TriggeredSound.ModulePickup,
         TriggeredSound.ModuleStabilized,
         TriggeredSound.ModuleExpiration,
+        TriggeredSound.ModuleAlarmBeep,
         TriggeredSound.ModuleFFIntercept
       )
       val value = sessionLogic.general.progressBarValue.get.toInt
-      sendResponse(TriggerSoundMessage(sounds(value), player.Position, 15, 0.8f))
-      sessionLogic.general.progressBarValue = Some((value + 1).toFloat)
+      val currentSound = sounds(value)
+      sendResponse(TriggerSoundMessage(currentSound, player.Position, 15, 0.8f))
+      println(s"$currentSound")
+      sessionLogic.general.progressBarValue = Some(((value + 1) % 6).toFloat)
     }
     player.Position = pos
     player.Velocity = vel

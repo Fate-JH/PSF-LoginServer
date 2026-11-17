@@ -8,7 +8,7 @@ import net.psforever.actors.zone.BuildingActor
 import net.psforever.objects.{Default, GlobalDefinitions, Player}
 import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.guid.{GUIDTask, StraightforwardTask, TaskBundle, TaskWorkflow}
-import net.psforever.objects.serverobject.beam.VanuModuleBeam
+import net.psforever.objects.serverobject.beam.{VanuModuleBeam, VanuModuleBeamControl}
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.flag.base.{CarriableFlag, OwnedFlag}
 import net.psforever.objects.serverobject.flag.module.{ModuleChargeState, VanuModule, VanuModuleNode}
@@ -92,14 +92,41 @@ object VanuModuleManager {
 
   private case object PeriodicModuleOperations extends Command
 
+  /**
+   * A temporary module charge state intended to visualize an uncharged Vanu module as charged while in its spawn cradle.
+   * If the module is removed from the cradle outside of appropriate mechanisms, it will be known.
+   */
+  case object Demo extends ModuleChargeState(value = true)
+  /**
+   * A temporary module state intended to represent an ongoing process -
+   * that of transforming a Vanu module from a `NonPowered` charge state to a `Charged` charge state.
+   * @param sequence how long the charging process will occur (seconds)
+   * @param beam reference to the Vanu module beam used in the charging process
+   * @param player reference to the player responsible for the charging process;
+   *               will usually be the same as the module's carrier, unless the module is dropped mid-charge
+   */
+  case class Charging(sequence: Int, beam: VanuModuleBeam, player: Player) extends ModuleChargeState(value = false)
+  /**
+   * A temporary state intended to represent the Vanu module's end of life operations.
+   * @param value visual charge state confirmation value;
+   *              in this case, it should be set to carry over the value of the module charge state it is replacing
+   */
+  case class Expired(override val value: Boolean) extends ModuleChargeState(value)
+
   def CradleReadyToFunctionStatus(cradle: VanuModuleNode): Boolean = {
     cradle.Faction != PlanetSideEmpire.NEUTRAL &&
       cradle.Owner.asInstanceOf[Building].CaptureTerminal.forall(_.HackedBy.isEmpty)
   }
 
   private def ModuleIsFunctionalStatus(module: VanuModule): Boolean = {
-    !module.Charged.isInstanceOf[ModuleChargeState.Expired] &&
+    !module.Charged.isInstanceOf[VanuModuleManager.Expired] &&
       (module.GetRemainingTimeAlive() > 0L || module.GetRemainingExpirationTime() > 0L)
+  }
+
+  def PlayerModuleChargingTests(player: Player, beam: VanuModuleBeam, module: VanuModule): Boolean = {
+    player.isAlive &&
+      !module.Charged.value && !module.Destroyed && module.Carrier.contains(player) &&
+      Vector3.DistanceSquared(player.Position.xy, beam.Position.xy) < 2 * math.pow(beam.Definition.UseRadius, 2)
   }
 
   private def IdealModuleRoamingLifetime(module: VanuModule, suggestedTime: Long): Long = {
@@ -312,34 +339,56 @@ class VanuModuleManager(zone: Zone) extends Actor {
   }
 
   /**
-   * Examine all known Vanu modules in a give zone and determine their end-of-life status.
-   * All modules will be tested and will follow one of the following paths:
-   * continue existing in their current state,
-   * be set to explode,
-   * explode,
-   * or deconstruct permanently.
+   * Examine all known Vanu modules in a give zone and determine their current life trajectory or their end-of-life status.
    * This is an expression of the natural module lifecycle.
    */
   private def handleModuleLifecycle(): Unit = {
-    val (_expiredSomehow, _haveNotExpired) = trackedModules.partition(_.Charged.isInstanceOf[ModuleChargeState.Expired])
-    val (ongoingCountdown, _functionallyExpired) = _expiredSomehow.partition(_.GetRemainingTimeAlive() > 0L)
-    val (_haveExploded, haveNotExplodedYet) = _functionallyExpired.partition(_.Destroyed)
-    val (lingering, alreadyExploded) = _haveExploded.partition(_.GetRemainingExpirationTime() > 0L)
+    val (charging, _chargedOrUncharged) = trackedModules.partition(_.Charged.isInstanceOf[VanuModuleManager.Charging])
+    val (_expiredSomehow, _haveNotExpired) = _chargedOrUncharged.partition(_.Charged.isInstanceOf[VanuModuleManager.Expired])
+    val (decayingOutsideOfCradle, _functionallyExpired) = _expiredSomehow.partition(_.GetRemainingTimeAlive() > 0L)
+    val (_shouldHaveExploded, haveNotExplodedYet) = _functionallyExpired.partition(_.Destroyed)
+    val (lingeringAfterExplosion, explodedReadyForCleanup) = _shouldHaveExploded.partition(_.GetRemainingExpirationTime() > 0L)
     val (_ongoing, outOfRoamingTime) = _haveNotExpired.partition(_.GetRemainingTimeAlive() > 0L)
-    val (active, _outOfInstallationTime) = _ongoing.partition(_.GetRemainingExpirationTime() > 0L)
+    val (installedAndStable, _outOfInstallationTime) = _ongoing.partition(_.GetRemainingExpirationTime() > 0L)
     val (despawnWhenInstalled, explodeWhenNotInstalled) = _outOfInstallationTime.partition(_.isInstalled)
     val modulesToBeArmed = outOfRoamingTime ++ explodeWhenNotInstalled
-    trackedModules = ongoingCountdown ++ haveNotExplodedYet ++ lingering ++ modulesToBeArmed ++ active
+    trackedModules = charging ++ decayingOutsideOfCradle ++ haveNotExplodedYet ++ lingeringAfterExplosion ++ modulesToBeArmed ++ installedAndStable
+    //charging modules
+    charging.foreach(periodicChargingEvent)
     //modules that just vanish
-    (alreadyExploded ++ despawnWhenInstalled).foreach(startModuleCleanup)
+    (explodedReadyForCleanup ++ despawnWhenInstalled).foreach(startModuleCleanup)
     //modules that explode (not been installed in a cradle recently)
     haveNotExplodedYet.foreach(explodeModule)
     //modules that will explode later (too long outside of a cradle)
     modulesToBeArmed.foreach(armedModule)
   }
 
+  private def periodicChargingEvent(module: VanuModule): Unit = {
+    val VanuModuleManager.Charging(sequence, beam, player) = module.Charged
+    module.Carrier match {
+      case None =>
+        //not being carried anymore - stop
+        stopChargingModuleBasics(module, beam)
+        beam.Actor ! VanuModuleBeamControl.ChargeEnd(player, module)
+      case Some(carrier)
+        if sequence <= 0 && VanuModuleManager.PlayerModuleChargingTests(carrier, beam, module) =>
+        //charge complete
+        stopChargingModule(module, beam, carrier)
+        chargeModuleHeldByPlayer(module, carrier)
+        beam.Actor ! VanuModuleBeamControl.ChargeComplete(carrier, module)
+      case Some(carrier)
+        if sequence > 0 && VanuModuleManager.PlayerModuleChargingTests(carrier, beam, module) =>
+        //continue charging process ...
+        module.Charged = VanuModuleManager.Charging(sequence - 1, beam, carrier)
+      case Some(player) =>
+        //conditions where charge should be stopped (process failed?)
+        stopChargingModule(module, beam, player)
+        beam.Actor ! VanuModuleBeamControl.ChargeFailed(player, module)
+    }
+  }
+
   private def explodeModule(module: VanuModule): Unit = {
-    module.Destroyed = true
+    module.Destroyed = true //set module to invalid
     module.Carrier match {
       case Some(_) =>
         dropModule(module)
@@ -350,7 +399,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
       zone,
       module,
       Zone.explosionDamage(None, module.Position)
-    )
+    ) //cause damage
     untrackModule(module)
     module.SetTime(Long.MaxValue)
     module.SetExpirationTime(durationTime = 2000L) //will vanish after this
@@ -358,15 +407,14 @@ class VanuModuleManager(zone: Zone) extends Actor {
 
   private def armedModule(module: VanuModule): Unit = {
     val calculatedExplosionTime = 1000L //between 1s and 5min
-    module.Charged = ModuleChargeState.Expired(module.Charged.value)
+    module.Charged = VanuModuleManager.Expired(module.Charged.value)
     module.SetTime(IdealModuleRoamingLifetime(module, calculatedExplosionTime))
     module.SetExpirationTime(Long.MaxValue)
     zone.LocalEvents ! MessageEnvelope(zone.id, LocalAction.TriggerSound(TriggeredSound.ModuleAlarmBeep, module.Position, 15, volume = 0.8f))
   }
 
   private def updateVanuModuleIcons(): Unit = {
-    val outputList = trackedModules
-      .map { module => (module.DisplayFlagType, module.Faction, 0L, module.Position.xy) }
+    val outputList = trackedModules.map { module => (module.DisplayFlagType, module.Faction, 0L, module.Position.xy) }
     galaxyService ! MessageEnvelope("", VanuModuleUpdate(zone.Number, outputList))
   }
 
@@ -476,19 +524,23 @@ class VanuModuleManager(zone: Zone) extends Actor {
     zone.LocalEvents ! MessageEnvelope(zone.id, PlanetsideAttribute(player.GUID, 73, 1)) //charging pose
     //todo progress event @VanuModuleChargeProgress?
     //todo event banner @ChargingVanuModuleMessage?
-    module.Charged = ModuleChargeState.Charging
+    module.Charged = VanuModuleManager.Charging(60, beam, player)
     player.Actor ! Damageable.MakeInvulnerable
   }
 
   private def stopChargingModule(module: VanuModule, @unused beam: VanuModuleBeam, player: Player): Unit = {
     zone.LocalEvents ! MessageEnvelope(zone.id, PlanetsideAttribute(player.GUID, 73, 0)) //undo charging pose
-    module.Charged = ModuleChargeState.NonPowered
     player.Actor ! Damageable.MakeVulnerable
+    stopChargingModuleBasics(module, beam)
+  }
+
+  private def stopChargingModuleBasics(module: VanuModule, @unused beam: VanuModuleBeam): Unit = {
+    module.Charged = ModuleChargeState.NonPowered
   }
 
   private def chargeComplete(module: VanuModule, beam: VanuModuleBeam, player: Player): Unit = {
     stopChargingModule(module, beam, player)
-    if (module.Charged == ModuleChargeState.Charging) {
+    if (module.Charged.isInstanceOf[VanuModuleManager.Charging]) {
       chargeModuleHeldByPlayer(module, player)
     }
   }
@@ -525,7 +577,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
   }
 
   private def chargeModuleBasics(module: VanuModule): Unit = {
-    module.Charged = true
+    module.Charged = ModuleChargeState.Charged
     module.Continent = "spawnCavern" //flag to renew lifespan of module when it leaves cavern
     VanuModuleNode.ThatSpawnedThis(module).ClearModule()
   }
@@ -596,7 +648,7 @@ class VanuModuleManager(zone: Zone) extends Actor {
         flag.Position = position
         flag.Orientation = orientation
         flag.WhichSide = spawner.WhichSide
-        flag.Charged = ModuleChargeState.Demo
+        flag.Charged = VanuModuleManager.Demo
         TaskWorkflow.execute(registerVanuModuleAssociatedWithSpawner(spawner, flag))
       case _ => ()
     }

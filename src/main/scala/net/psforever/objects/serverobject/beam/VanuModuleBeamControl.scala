@@ -10,7 +10,6 @@ import net.psforever.objects.vital.Vitality
 import net.psforever.objects.vital.etc.VanuModuleBeamReason
 import net.psforever.objects.vital.interaction.DamageInteraction
 import net.psforever.services.local.support.{VanuModuleEnvelope, VanuModuleManager}
-import net.psforever.types.Vector3
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -21,16 +20,13 @@ object VanuModuleBeamControl {
   final val ChargingDuration: Long = 5000L
   final val ProtectionDuration: Long = 5000L
 
-  private case class ChargeOngoing(player: Player, module: VanuModule, interval: Long, endTime: Long)
+  case class ChargeEnd(player: Player, module: VanuModule)
 
-  private case class ChargeComplete(player: Player, module: VanuModule)
+  case class ChargeFailed(player: Player, module: VanuModule)
+
+  case class ChargeComplete(player: Player, module: VanuModule)
 
   private case class ExpiredInteractionProtection(playerName: String)
-
-  private def PlayerModuleChargingTests(player: Player, beam: VanuModuleBeam, module: VanuModule): Boolean = {
-    player.isAlive && Vector3.DistanceSquared(player.Position.xy, beam.Position.xy) < 2 * math.pow(beam.Definition.UseRadius, 2) &&
-      !module.Charged.value && !module.Destroyed && module.Carrier.contains(player)
-  }
 }
 
 class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
@@ -61,22 +57,6 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
       () //still protected from redundant interaction while exposed to beam
   }
 
-  private val startChargingBehavior: Receive = {
-    case CommonMessages.Use(player, Some(module: VanuModule))
-      if subjectOfCharging.isEmpty && VanuModuleBeamControl.PlayerModuleChargingTests(player, beam, module) =>
-      //start charging module
-      AddUser(player)
-      RetimeRecontextEvent(
-        player.Name,
-        VanuModuleBeamControl.ChargingInterval,
-        VanuModuleBeamControl.ChargeOngoing(player, module, VanuModuleBeamControl.ChargingInterval, System.currentTimeMillis() + VanuModuleBeamControl.ChargingDuration)
-      )
-      beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.StartChargingModule(module, beam, player))
-      context.become(chargingBehavior)
-
-    //todo bfr imprinting? might be a separate beam
-  }
-
   private val notProtectedBehavior: Receive = {
     case CommonMessages.Use(player, _)
       if player.isAlive =>
@@ -94,6 +74,42 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
       HardStopCurrentEvent(name)
   }
 
+  private val startChargingBehavior: Receive = {
+    case CommonMessages.Use(player, Some(module: VanuModule))
+      if subjectOfCharging.isEmpty &&
+        VanuModuleManager.PlayerModuleChargingTests(player, beam, module) =>
+      //start charging module
+      AddUser(player)
+      beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.StartChargingModule(module, beam, player))
+      context.become(chargingBehavior)
+
+    //todo bfr imprinting? might be a separate beam
+  }
+
+  private val justChargingBehavior: Receive = {
+      case CommonMessages.Use(_, _) =>
+        //interaction while ongoing charge; protectedBehavior will ensure the appropriate carrier can get to this point
+        ()
+
+      case VanuModuleBeamControl.ChargeEnd(player, _) =>
+        //stopped charging
+        RemoveUser()
+        RetimeRecontextEvent(player.Name, VanuModuleBeamControl.ProtectionDuration, VanuModuleBeamControl.ExpiredInteractionProtection(player.Name))
+        context.become(beforeChargingBehavior)
+
+      case VanuModuleBeamControl.ChargeFailed(player, _) =>
+        //stopped charging
+        RemoveUser()
+        HardStopCurrentEvent(player.Name)
+        context.become(beforeChargingBehavior)
+
+      case VanuModuleBeamControl.ChargeComplete(player, _) =>
+        //actually charged module
+        RemoveUser()
+        RetimeRecontextEvent(player.Name, VanuModuleBeamControl.ProtectionDuration, VanuModuleBeamControl.ExpiredInteractionProtection(player.Name))
+        context.become(beforeChargingBehavior)
+    }
+
   private val beforeChargingBehavior: Receive =
     protectedBehavior
       .orElse(startChargingBehavior)
@@ -102,41 +118,13 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
         case _ => ()
       }
 
-  private val chargingBehavior: Receive = protectedBehavior
-    .orElse(notProtectedBehavior)
-    .orElse {
-      case msg @ VanuModuleBeamControl.ChargeOngoing(player, module, interval, endTime)
-        if System.currentTimeMillis() + interval < endTime && VanuModuleBeamControl.PlayerModuleChargingTests(player, beam, module) =>
-        //pass conditions to continue charging module
-        RetimeRecontextEvent(player.Name, interval, msg)
-
-      case VanuModuleBeamControl.ChargeOngoing(player, module, interval, endTime)
-        if System.currentTimeMillis() + interval >= endTime && VanuModuleBeamControl.PlayerModuleChargingTests(player, beam, module) =>
-        //goto finish charging module next
-        RetimeRecontextEvent(player.Name, interval, VanuModuleBeamControl.ChargeComplete(player, module))
-
-      case VanuModuleBeamControl.ChargeOngoing(player, module, _, _) =>
-        //failed conditions to continue charging
-        RemoveUser()
-        beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.StopChargingModule(module, beam, player))
-        context.become(beforeChargingBehavior)
-
-      case VanuModuleBeamControl.ChargeComplete(player, module)
-        if VanuModuleBeamControl.PlayerModuleChargingTests(player, beam, module) =>
-        //actually charge module
-        RemoveUser()
-        beam.Zone.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.ChargeComplete(module, beam, player))
-        RetimeRecontextEvent(player.Name, VanuModuleBeamControl.ProtectionDuration, VanuModuleBeamControl.ExpiredInteractionProtection(player.Name))
-        context.become(beforeChargingBehavior)
-
-      case VanuModuleBeamControl.ChargeComplete(player, _) =>
-        //failed to charge module at the very last second
-        RemoveUser()
-        HardStopCurrentEvent(player.Name)
-        context.become(beforeChargingBehavior)
-
-      case _ => ()
-    }
+  private val chargingBehavior: Receive =
+    protectedBehavior
+      .orElse(justChargingBehavior)
+      .orElse(notProtectedBehavior)
+      .orElse {
+        case _ => ()
+      }
 
   val receive: Receive = beforeChargingBehavior
 
@@ -164,7 +152,7 @@ class VanuModuleBeamControl(beam: VanuModuleBeam) extends Actor {
 
   private def RetimeRecontextEvent(label: String, interval: Long, newMessage: Any): Unit = {
     StopCurrentEvent(label)
-    safeInteractionCooldowns.addOne(
+    safeInteractionCooldowns.update(
       label,
       context.system.scheduler.scheduleOnce(interval milliseconds, self, newMessage)
     )

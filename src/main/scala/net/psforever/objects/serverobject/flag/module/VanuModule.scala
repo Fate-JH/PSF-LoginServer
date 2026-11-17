@@ -5,14 +5,21 @@ import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagDefiniti
 import net.psforever.objects.serverobject.interior.{InteriorAware, Sidedness}
 import net.psforever.types.PlanetSideEmpire
 
-sealed abstract class ModuleChargeState(val value: Boolean)
+/**
+ * The current functional state of a Vanu module.
+ * The values of `NonPowered` and `Charged` are fixed and stable states.
+ * Until a module is "charged", it is "non-powered" and is seen with a white corona effect visually.
+ * After it is charged, it will appear with an appropriately tinted corona pulsation
+ * and will identify itself as a "some-kind-of" module.
+ * @param value visual charge state confirmation value,
+ *              where `true` is `Charged` and `false` is `NonPowered`;
+ *              this allows the state to be used as an alternate state's progress monitor without jeopardizing the visual state
+ */
+abstract class ModuleChargeState(val value: Boolean)
 
 object ModuleChargeState {
   case object NonPowered extends ModuleChargeState(value = false)
-  case object Charging extends ModuleChargeState(value = false)
   case object Charged extends ModuleChargeState(value = true)
-  case object Demo extends ModuleChargeState(value = true)
-  case class Expired(override val value: Boolean) extends ModuleChargeState(value)
 }
 
 class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
