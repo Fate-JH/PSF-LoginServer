@@ -595,7 +595,7 @@ class ZoningOperations(
           triggerAutomatedTurretFire(turret)
       }
     //vanu modules (installed, carried, or dropped)
-    continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.WhichModulesToDisplay(name))
+    continent.LocalEvents ! VanuModuleEnvelope(VanuModuleManager.DisplayWhichModules(name))
     //remote projectiles and radiation clouds
     continent.Projectiles.foreach { projectile =>
       sendResponse(OCM.apply(projectile))

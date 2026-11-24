@@ -4,6 +4,7 @@ package net.psforever.packet.game.packets
 import enumeratum.values.IntEnum
 import net.psforever.packet.{GamePacketOpcode, Marshallable, PacketHelpers, PlanetSideGamePacket}
 import net.psforever.types._
+import scodec.bits.BitVector
 import scodec.codecs._
 import scodec.{Attempt, Codec, Err}
 import shapeless.{::, HNil}
@@ -114,8 +115,8 @@ final case class BuildingInfoUpdateMessage(
     boost_generator_pain: Boolean
 ) extends PlanetSideGamePacket {
   type Packet = BuildingInfoUpdateMessage
-  def opcode = GamePacketOpcode.BuildingInfoUpdateMessage
-  def encode = BuildingInfoUpdateMessage.encode(this)
+  def opcode: GamePacketOpcode.Value = GamePacketOpcode.BuildingInfoUpdateMessage
+  def encode: Attempt[BitVector] = BuildingInfoUpdateMessage.encode(this)
 }
 
 object BuildingInfoUpdateMessage extends Marshallable[BuildingInfoUpdateMessage] {
@@ -129,25 +130,46 @@ object BuildingInfoUpdateMessage extends Marshallable[BuildingInfoUpdateMessage]
   ).as[Additional1]
 
   /**
+   * Shortcut to avoid having to calculate
+   * `(math.log(x) / math.log(2)).round.toInt`
+   * for every cavern benefit originating from an installed Vanu module.
+   * The benefit's value is this `x` - a power of 2 whose exponent is our result.
+   * @see `moduleBenefitsCodec`
+   * @param benefit cavern benefit
+   * @return index of cavern benefit
+   */
+  private def moduleBenefitMatch(benefit: CavernBenefit): Int = benefit match {
+    case CavernBenefit.SpeedModule => 2
+    case CavernBenefit.ShieldModule => 3
+    case CavernBenefit.VehicleModule => 4
+    case CavernBenefit.EquipmentModule => 5
+    case CavernBenefit.HealthModule => 6
+    case CavernBenefit.PainModule => 7
+    case _ => 0
+  }
+
+
+  /**
     * A `Codec` for a set of additional fields.
     */
-  private val moduleBenefitsCodec: Codec[CavernBenefitsFromModule] = (
-    ("benefit" | uint4) ::
-      ("time_remaining" | uint32L)
-  ).xmap[CavernBenefitsFromModule](
-    {
-      case benefitIndex :: time :: HNil =>
-        CavernBenefit.values.find(_.value == benefitIndex) match {
-          case Some(benefit) =>
-            CavernBenefitsFromModule(benefit, time)
-          case None =>
-            CavernBenefitsFromModule(CavernBenefit.None, time)
-        }
-    }, {
-      case CavernBenefitsFromModule(benefit, time) =>
-        (Math.log(benefit.value) / Math.log(2)).toInt :: time :: HNil
-    }
-  )
+  private val moduleBenefitsCodec: Codec[CavernBenefitsFromModule] =
+    (
+      ("benefit" | uint4) ::
+        ("time_remaining" | uint32L)
+      ).xmap[CavernBenefitsFromModule](
+      {
+        case benefitIndex :: time :: HNil =>
+          CavernBenefit.values.find(_.value == math.pow(2, benefitIndex).toInt) match {
+            case Some(benefit) =>
+              CavernBenefitsFromModule(benefit, time)
+            case None =>
+              CavernBenefitsFromModule(CavernBenefit.None, time)
+          }
+      }, {
+        case CavernBenefitsFromModule(benefit, time) =>
+          moduleBenefitMatch(benefit) :: time :: HNil
+      }
+    )
 
   /**
     * A `Codec` for a set of additional fields.
@@ -169,7 +191,7 @@ object BuildingInfoUpdateMessage extends Marshallable[BuildingInfoUpdateMessage]
   private def benefitCodecFunc[T <: CaptureBenefit](bits: Int, objClass: IntEnum[T]): Codec[Set[T]] = {
     assert(
       math.pow(2, bits) >= objClass.values.maxBy(data => data.value).value,
-      s"BuildingInfoUpdateMessage - $bits is not enough bits to represent ${objClass.getClass().getSimpleName()}"
+      s"BuildingInfoUpdateMessage - $bits is not enough bits to represent ${objClass.getClass.getSimpleName}"
     )
     uintL(bits).xmap[Set[T]](
       {
@@ -180,7 +202,7 @@ object BuildingInfoUpdateMessage extends Marshallable[BuildingInfoUpdateMessage]
             .values
             .sortBy(_.value)(Ordering.Int.reverse)
             .dropRight(1) //drop value == 0
-        var curr = n
+          var curr = n
           values
             .collect {
               case benefit if benefit.value <= curr =>

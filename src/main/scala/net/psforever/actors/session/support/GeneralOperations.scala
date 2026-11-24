@@ -543,7 +543,7 @@ class GeneralOperations(
     }
   }
 
-  private def dropVanuModule(module: OwnedFlag): Unit = {
+  private def dropVanuModule(module: VanuModule): Unit = {
     module.Carrier match {
       case Some(carrier) if carrier.GUID == player.GUID =>
         specialItemSlotGuid = None

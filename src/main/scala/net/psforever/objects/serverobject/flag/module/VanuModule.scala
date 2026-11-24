@@ -63,11 +63,11 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
 
   override def WhichSide: Sidedness = Carrier.map(_.WhichSide).getOrElse(super.WhichSide)
 
-  def SetTime(durationTime: Long): Unit = {
-    SetTime(durationTime, System.currentTimeMillis())
+  def SetRoamingTime(durationTime: Long): Unit = {
+    SetRoamingTime(durationTime, System.currentTimeMillis())
   }
 
-  def SetTime(durationTime: Long, startTime: Long = System.currentTimeMillis()): Unit = {
+  def SetRoamingTime(durationTime: Long, startTime: Long = System.currentTimeMillis()): Unit = {
     try {
       end = startTime + durationTime
     } catch {
@@ -76,18 +76,18 @@ class VanuModule(fDef: FlagDefinition, validFlagType: CarriableFlag)
     }
   }
 
-  def isDurationSet: Boolean = {
+  def isRoamingTimeSet: Boolean = {
     end < Long.MaxValue
   }
 
-  def GetRemainingTimeAlive(): Long = {
-    GetRemainingTimeAlive(defaultTime = Long.MaxValue)
+  def GetRoamingTime(): Long = {
+    GetRoamingTime(defaultTime = Long.MaxValue)
   }
 
-  def GetRemainingTimeAlive(defaultTime: Long): Long = {
+  def GetRoamingTime(defaultTime: Long): Long = {
     if (Destroyed) {
       0L
-    } else if (isDurationSet) {
+    } else if (isRoamingTimeSet) {
       math.max(end - System.currentTimeMillis(), 0L)
     } else {
       defaultTime

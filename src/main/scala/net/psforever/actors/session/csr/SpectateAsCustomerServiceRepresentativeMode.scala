@@ -41,6 +41,9 @@ class SpectatorCSRModeLogic(data: SessionData) extends ModeLogic {
       continent,
       SquadAction.Membership(SquadRequestType.Leave, player.CharId, Some(player.CharId), player.Name, None)
     )
+    if (player.Carrying.nonEmpty) {
+      data.general.dropSpecialSlotItem()
+    }
     if (requireDismount(data, continent, player)) {
       CustomerServiceRepresentativeMode.renderPlayer(data, continent, player)
     }
@@ -61,6 +64,9 @@ class SpectatorCSRModeLogic(data: SessionData) extends ModeLogic {
     //
     player.spectator = false
     data.chat.LeaveChannel(SpectatorChannel)
+    if (player.Carrying.nonEmpty) {
+      data.general.dropSpecialSlotItem()
+    }
     continent.AvatarEvents ! MessageEnvelope(
       continent.id,
       pguid,

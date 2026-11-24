@@ -9,7 +9,8 @@ import net.psforever.types.{CavernBenefit, LatticeBenefit, PlanetSideEmpire, Pla
 import scodec.bits._
 
 class BuildingInfoUpdateMessageTest extends Specification {
-  val string = hex"a0 04 00 09 00 16 00 00 00 00 80 00 00 00 17 00  00 00 00 00 00 40"
+  val string = hex"a0040009001600000000800000001700000000000040"
+  val string_module = hex"a0040009001600000000800000001700024010000006010000000000000040"
 
   "decode" in {
     PacketCoding.decodePacket(string).require match {
@@ -63,6 +64,57 @@ class BuildingInfoUpdateMessageTest extends Specification {
     }
   }
 
+  "decode (module)" in {
+    PacketCoding.decodePacket(string_module).require match {
+      case BuildingInfoUpdateMessage(
+      continent_guid,
+      building_guid,
+      ntu_level,
+      is_hacked,
+      empire_hack,
+      hack_time_remaining,
+      empire_own,
+      unk1,
+      unk1x,
+      generator_state,
+      spawn_tubes_normal,
+      force_dome_active,
+      lattice_benefit,
+      cavern_benefit,
+      module_benefit,
+      unk5,
+      unk6,
+      virus_id,
+      virus_installed_by,
+      boost_spawn_pain,
+      boost_generator_pain
+      ) =>
+        continent_guid mustEqual 4
+        building_guid mustEqual 9
+        ntu_level mustEqual 1
+        is_hacked mustEqual false
+        empire_hack mustEqual PlanetSideEmpire.NEUTRAL
+        hack_time_remaining mustEqual 0
+        empire_own mustEqual PlanetSideEmpire.NC
+        unk1 mustEqual 0
+        unk1x.isEmpty mustEqual true
+        generator_state mustEqual PlanetSideGeneratorState.Normal
+        spawn_tubes_normal mustEqual true
+        force_dome_active mustEqual false
+        lattice_benefit mustEqual Set(LatticeBenefit.TechnologyPlant, LatticeBenefit.InterlinkFacility, LatticeBenefit.BioLaboratory)
+        cavern_benefit mustEqual Set(CavernBenefit.None)
+        module_benefit mustEqual List(CavernBenefitsFromModule(CavernBenefit.VehicleModule, 1L), CavernBenefitsFromModule(CavernBenefit.HealthModule, 1L))
+        unk5 mustEqual 0
+        unk6 mustEqual false
+        virus_id mustEqual 8
+        virus_installed_by.isEmpty mustEqual true
+        boost_spawn_pain mustEqual false
+        boost_generator_pain mustEqual false
+      case _ =>
+        ko
+    }
+  }
+
   "encode" in {
     val msg = BuildingInfoUpdateMessage(
       4,
@@ -90,5 +142,34 @@ class BuildingInfoUpdateMessageTest extends Specification {
     val pkt = PacketCoding.encodePacket(msg).require.toByteVector
 
     pkt mustEqual string
+  }
+
+  "encode (module)" in {
+    val msg = BuildingInfoUpdateMessage(
+      4,
+      9,
+      1,
+      false,
+      PlanetSideEmpire.NEUTRAL,
+      0,
+      PlanetSideEmpire.NC,
+      0,
+      None,
+      PlanetSideGeneratorState.Normal,
+      true,
+      false,
+      Set(LatticeBenefit.TechnologyPlant, LatticeBenefit.InterlinkFacility, LatticeBenefit.BioLaboratory),
+      Set(CavernBenefit.None),
+      List(CavernBenefitsFromModule(CavernBenefit.VehicleModule, 1L), CavernBenefitsFromModule(CavernBenefit.HealthModule, 1L)),
+      0,
+      false,
+      8,
+      None,
+      false,
+      false
+    )
+    val pkt = PacketCoding.encodePacket(msg).require.toByteVector
+
+    pkt mustEqual string_module
   }
 }

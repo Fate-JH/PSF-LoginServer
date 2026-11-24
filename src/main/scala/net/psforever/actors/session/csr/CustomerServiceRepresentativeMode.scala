@@ -57,6 +57,9 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
     requireDismount(continent, player)
     data.keepAlivePersistenceFunc = keepAlivePersistanceCSR
     //
+    if (player.Carrying.nonEmpty) {
+      data.general.dropSpecialSlotItem()
+    }
     CustomerServiceRepresentativeMode.renderPlayer(data, continent, player)
     player.allowInteraction = false
     if (player.silenced) {
@@ -86,6 +89,9 @@ class CustomerServiceRepresentativeMode(data: SessionData) extends ModeLogic {
     requireDismount(continent, player)
     data.keepAlivePersistenceFunc = data.keepAlivePersistence
     //
+    if (player.Carrying.nonEmpty) {
+      data.general.dropSpecialSlotItem()
+    }
     CustomerServiceRepresentativeMode.renderPlayer(data, continent, player)
     player.allowInteraction = true
     data.chat.LeaveChannel(SpectatorChannel)

@@ -9,7 +9,6 @@ import net.psforever.objects.{Account, BoomerDeployable, BoomerTrigger, Construc
 import net.psforever.objects.avatar.{Avatar, AvatarBot, PlayerControl}
 import net.psforever.objects.ballistics.Projectile
 import net.psforever.objects.ce.{Deployable, DeployedItem}
-import net.psforever.objects.definition.converter.OCM
 import net.psforever.objects.definition.{BasicDefinition, KitDefinition, SpecialExoSuitDefinition}
 import net.psforever.objects.entity.WorldEntity
 import net.psforever.objects.equipment.Equipment
@@ -20,8 +19,8 @@ import net.psforever.objects.serverobject.containable.Containable
 import net.psforever.objects.serverobject.damage.Damageable
 import net.psforever.objects.serverobject.dome.ForceDomePhysics
 import net.psforever.objects.serverobject.doors.Door
-import net.psforever.objects.serverobject.flag.base.{CarriableFlag, FlagCategory, OwnedFlag}
-import net.psforever.objects.serverobject.flag.module.{VanuModule, VanuModuleNode}
+import net.psforever.objects.serverobject.flag.base.{FlagCategory, OwnedFlag}
+import net.psforever.objects.serverobject.flag.module.VanuModuleNode
 import net.psforever.objects.serverobject.generator.Generator
 import net.psforever.objects.serverobject.interior.Sidedness.OutsideOf
 import net.psforever.objects.serverobject.locks.IFFLock
@@ -42,12 +41,11 @@ import net.psforever.objects.vital.etc.{ForceDomeExposure, SuicideReason}
 import net.psforever.objects.vital.interaction.DamageInteraction
 import net.psforever.objects.zones.{ZoneProjectile, Zoning}
 import net.psforever.packet.PlanetSideGamePacket
-import net.psforever.packet.game.packets.{ActionCancelMessage, ActionResultMessage, AvatarFirstTimeEventMessage, AvatarImplantMessage, AvatarJumpMessage, BattleplanMessage, BindPlayerMessage, BugReportMessage, ChangeFireModeMessage, ChangeShortcutBankMessage, CharacterCreateRequestMessage, CharacterRequestAction, CharacterRequestMessage, ChatMsg, CollisionIs, ConnectToWorldRequestMessage, CreateShortcutMessage, DeadState, DeployObjectMessage, DisplayedAwardMessage, DropItemMessage, EmoteMsg, FacilityBenefitShieldChargeRequestMessage, FriendsRequest, GenericAction, GenericActionMessage, GenericCollisionMsg, GenericObjectActionAtPositionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HitHint, InvalidTerrainMessage, LootItemMessage, MoveItemMessage, ObjectDetectedMessage, ObjectHeldMessage, OutfitMembershipRequest, OutfitMembershipRequestAction, OutfitMembershipResponse, OutfitRequest, OutfitRequestAction, PickupItemMessage, PlanetsideAttributeMessage, PlayerStateMessageUpstream, RequestDestroyMessage, TargetingImplantRequest, TerrainCondition, TradeMessage, TriggerSoundMessage, TriggeredSound, UnuseItemMessage, UseItemMessage, VoiceHostInfo, VoiceHostRequest, ZipLineMessage}
+import net.psforever.packet.game.packets.{ActionCancelMessage, ActionResultMessage, AvatarFirstTimeEventMessage, AvatarImplantMessage, AvatarJumpMessage, BattleplanMessage, BindPlayerMessage, BugReportMessage, ChangeFireModeMessage, ChangeShortcutBankMessage, CharacterCreateRequestMessage, CharacterRequestAction, CharacterRequestMessage, ChatMsg, CollisionIs, ConnectToWorldRequestMessage, CreateShortcutMessage, DeadState, DeployObjectMessage, DisplayedAwardMessage, DropItemMessage, EmoteMsg, FacilityBenefitShieldChargeRequestMessage, FriendsRequest, GenericAction, GenericActionMessage, GenericCollisionMsg, GenericObjectActionAtPositionMessage, GenericObjectActionMessage, GenericObjectStateMsg, HitHint, InvalidTerrainMessage, LootItemMessage, MoveItemMessage, ObjectDetectedMessage, ObjectHeldMessage, OutfitMembershipRequest, OutfitMembershipRequestAction, OutfitMembershipResponse, OutfitRequest, OutfitRequestAction, PickupItemMessage, PlanetsideAttributeMessage, PlayerStateMessageUpstream, RequestDestroyMessage, TargetingImplantRequest, TerrainCondition, TradeMessage, UnuseItemMessage, UseItemMessage, VoiceHostInfo, VoiceHostRequest, ZipLineMessage}
 import net.psforever.services.account.{AccountPersistenceService, RetrieveAccountData}
 import net.psforever.services.avatar.AvatarAction
 import net.psforever.services.base.envelope.MessageEnvelope
 import net.psforever.services.base.message.PlanetsideAttribute
-import net.psforever.services.local.support.CaptureFlagManager
 import net.psforever.types.{CapacitorStateType, ChatMessageType, Cosmetic, ExoSuitType, ImplantType, PlanetSideEmpire, PlanetSideGUID, Vector3}
 import net.psforever.util.Config
 import net.psforever.zones.Zones.zones
@@ -123,20 +121,40 @@ class GeneralLogic(val ops: GeneralOperations, implicit val context: ActorContex
       }
     }
     ops.fallHeightTracker(pos.z)
+//    if (isCrouching && !player.Crouching) {
+//      //dev stuff goes here
+//    }
     if (isCrouching && !player.Crouching) {
-      val sounds = List(
-        TriggeredSound.ModuleDrop,
-        TriggeredSound.ModulePickup,
-        TriggeredSound.ModuleStabilized,
-        TriggeredSound.ModuleExpiration,
-        TriggeredSound.ModuleAlarmBeep,
-        TriggeredSound.ModuleFFIntercept
+      val list: Seq[String] = Seq(
+        "@VehicleMount_CannotMountDueToVanuModule", //wants a mountable name
+        "@VehicleMount_CannotMountVehicleDueToVanuModule", //wants vehicle name
+        "@VehicleCargoMount_CannotMountDueToVanuModule", //wants the ferrying vehicle name
+        "@VehicleCargoMount_CannotMountDueFrameNotCrouched",  //wants the BFR name
+        "@VehicleSpeedIsLimitedDueToVanuModule",
+        "@VehiclePurchaseTerminalCannotUseDueToVanuModule",
+        "@CloakDisabledByCaptureFlag",
+        "@CloakDisabledByMonolithUnit",
+        "@CloakDisabledByVanuModule",
+        "@CloakDisabledByBall",
+        //"@FavoriteErrorArmorHasMonolithUnit", do not render to any message under UNK_277?
+        "@FavoriteErrorArmorHasVanuModule",
+        "@FavoriteErrorArmorHasCaptureFlag",
+        "@ArmorHasMonolithUnit",
+        "@ArmorHasVanuModule",
+        "@ArmorHasCaptureFlag",
+        "@TerminalErrorHasMonolithUnit",
+        "@TerminalErrorHasVanuModule",
+        "@TerminalErrorHasCaptureFlag",
+        //        "@CMT_REMOVE_VANUMODULE",
+        //        "@CMT_ADD_VANUMODULE",
+        "@VanuModuleFortifierUncharged",
+        "@VanuModuleFortifier"
       )
-      val value = sessionLogic.general.progressBarValue.get.toInt
-      val currentSound = sounds(value)
-      sendResponse(TriggerSoundMessage(currentSound, player.Position, 15, 0.8f))
-      println(s"$currentSound")
-      sessionLogic.general.progressBarValue = Some(((value + 1) % 6).toFloat)
+      val current = sessionLogic.general.progressBarValue.get.toInt
+      val currentText = list(current)
+      sessionLogic.general.progressBarValue = Some(((current + 1) % list.size).toFloat)
+      sendResponse(ChatMsg(ChatMessageType.UNK_227, currentText))
+      log.info(s"Displaying $currentText ...")
     }
     player.Position = pos
     player.Velocity = vel

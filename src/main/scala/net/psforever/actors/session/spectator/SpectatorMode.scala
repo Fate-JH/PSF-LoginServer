@@ -114,6 +114,9 @@ class SpectatorModeLogic(data: SessionData) extends ModeLogic {
     if (player.silenced) {
       data.chat.commandIncomingSilence(session, ChatMsg(ChatMessageType.CMT_SILENCE, "player 0"))
     }
+    if (player.Carrying.nonEmpty) {
+      data.general.dropSpecialSlotItem()
+    }
     //
     player.spectator = true
     player.allowInteraction = false
@@ -149,6 +152,9 @@ class SpectatorModeLogic(data: SessionData) extends ModeLogic {
     val zoning = data.zoning
     val pguid = player.GUID
     val sendResponse: PlanetSidePacket => Unit = data.sendResponse
+    if (player.Carrying.nonEmpty) {
+      data.general.dropSpecialSlotItem()
+    }
     //
     player.spectator = false
     player.allowInteraction = true
